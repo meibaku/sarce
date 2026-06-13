@@ -11,6 +11,7 @@
 | [PHASES.md](./PHASES.md) | Phase 1–3 roadmap and status |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Local-first system design |
 | [QUALITY_GATES.md](./QUALITY_GATES.md) | CI, tests, branch rules, rulesets |
+| [CODE_REVIEW.md](./CODE_REVIEW.md) | Human + Greptile review; foundation guardrails |
 | [adr/](./adr/) | Architecture Decision Records |
 
 ## Repository root

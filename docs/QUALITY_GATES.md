@@ -10,6 +10,8 @@ How Sarce stays true to [PHILOSOPHY.md](./PHILOSOPHY.md) as the codebase grows.
 ├─────────────────────────────────────────────────────────────┤
 │  Gate 1 — CI (every PR)     lint → unit → arch → build      │
 ├─────────────────────────────────────────────────────────────┤
+│  Gate 1.5 — Greptile        .greptile/ foundation lock      │
+├─────────────────────────────────────────────────────────────┤
 │  Gate 2 — Contracts         API shape, schema, metrics      │
 ├─────────────────────────────────────────────────────────────┤
 │  Gate 3 — Golden analysis   Stockfish tier regression       │
@@ -91,6 +93,26 @@ When Supabase + API run in CI (or locally before release):
 
 ---
 
+## Gate 1.5 — Greptile (AI review, foundation lock)
+
+Configured in `.greptile/` — see [CODE_REVIEW.md](./CODE_REVIEW.md).
+
+| File | Purpose |
+|------|---------|
+| `.greptile/config.json` | Strictness 2, ignore patterns, rule IDs for foundations |
+| `.greptile/rules.md` | What Greptile must not suggest changing |
+| `.greptile/files.json` | PHILOSOPHY, PRODUCT_SPEC, ADR, key services |
+| `apps/api/.greptile/config.json` | Routers thin, eval persistence |
+| `apps/web/.greptile/config.json` | Brilliant gauge, no client secrets |
+
+**Foundation rules (high severity):** no removing Brilliant tier, no replacing Brilliant % headline, no ML Phase 1, Stockfish server-only, no punitive UX, ADR required for philosophy changes.
+
+Greptile complements CI — it does **not** replace `test_philosophy_contracts.py` or `test_architecture.py`.
+
+**Not required for merge yet.** Add as ruleset check only after 2–3 PRs validate low false-positive rate.
+
+---
+
 ## Gate 6 — Human review (PR template)
 
 Reviewers confirm:
@@ -99,6 +121,7 @@ Reviewers confirm:
 - [ ] Brilliant % remains headline metric (if UI touched)
 - [ ] Style vector version bumped if schema changed
 - [ ] ADR added if contradicting PHILOSOPHY.md
+- [ ] Greptile foundation comments dismissed or addressed (see CODE_REVIEW.md)
 
 ---
 

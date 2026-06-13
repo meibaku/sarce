@@ -1,0 +1,47 @@
+{
+  "files": [
+    {
+      "path": "docs/PHILOSOPHY.md",
+      "description": "Product constitution — non-negotiable. Style over accuracy. Brilliant % headline. Engine as mirror not judge."
+    },
+    {
+      "path": "docs/PRODUCT_SPEC.md",
+      "description": "Master spec — phase scope, what is built vs planned. Do not suggest out-of-phase features."
+    },
+    {
+      "path": "docs/adr/0001-style-over-accuracy.md",
+      "description": "Accepted ADR — Brilliant tier and headline metric are locked unless new ADR."
+    },
+    {
+      "path": "docs/CODE_REVIEW.md",
+      "description": "Human and AI reviewer guide — what to flag vs push back on."
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "description": "Local-first monorepo architecture — web, api, supabase, Stockfish server-side."
+    },
+    {
+      "path": "docs/QUALITY_GATES.md",
+      "description": "CI gates and philosophy contracts — automated invariants Greptile should not contradict."
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "description": "Contribution workflow, conventions, what to preserve."
+    },
+    {
+      "path": "supabase/migrations/20250613000000_initial_schema.sql",
+      "description": "Database schema — RLS, brilliant tier, style_vectors, reference tables.",
+      "scope": ["supabase/**", "apps/api/app/services/**", "apps/api/app/db/**"]
+    },
+    {
+      "path": "apps/api/app/services/brilliant.py",
+      "description": "Tal-style brilliant heuristics — intentional approximations, not bugs.",
+      "scope": ["apps/api/app/services/**"]
+    },
+    {
+      "path": "apps/api/app/services/move_classifier.py",
+      "description": "Move quality tiers including brilliant and miss — rule-based Phase 1.",
+      "scope": ["apps/api/app/services/**"]
+    }
+  ]
+}
