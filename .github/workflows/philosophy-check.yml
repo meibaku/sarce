@@ -4,10 +4,6 @@ name: Philosophy Check
 on:
   pull_request:
     branches: [main]
-    paths:
-      - "apps/web/src/**"
-      - "apps/api/app/services/**"
-      - "docs/PHILOSOPHY.md"
 
 jobs:
   philosophy-copy:
