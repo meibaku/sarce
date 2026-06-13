@@ -6,6 +6,7 @@
 
 | Doc | Purpose |
 |-----|---------|
+| [PRODUCT_SPEC.md](./PRODUCT_SPEC.md) | **Master spec** — Phases 1–4+, roadmap, success metrics |
 | [PHILOSOPHY.md](./PHILOSOPHY.md) | Product constitution — style over accuracy |
 | [PHASES.md](./PHASES.md) | Phase 1–3 roadmap and status |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Local-first system design |

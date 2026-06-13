@@ -11,6 +11,7 @@ Track progress toward a Tal-inspired playing identity: **6–10% Brilliant** sac
 
 | Doc | Description |
 |-----|-------------|
+| [docs/PRODUCT_SPEC.md](docs/PRODUCT_SPEC.md) | **Master spec** — full vision & build roadmap |
 | [docs/PHILOSOPHY.md](docs/PHILOSOPHY.md) | Product constitution |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Local-first system design |
 | [docs/PHASES.md](docs/PHASES.md) | Roadmap (Phase 1–3) |

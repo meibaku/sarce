@@ -5,7 +5,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
-- Phase 2 planning for reference player comparison
+- `docs/PRODUCT_SPEC.md` — master product specification (Phases 1–4+)
+- Phase 2 redefined: video position capture + transcript context
+- Phase 3 redefined: move intent narratives + personal chess journal
 
 ## [0.1.0] - 2026-06-13
 
