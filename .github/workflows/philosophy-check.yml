@@ -1,0 +1,30 @@
+# PR philosophy check — lightweight guard on copy and metric changes
+name: Philosophy Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  philosophy-copy:
+    name: philosophy-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reject punitive user-facing copy
+        run: |
+          ! grep -rniE "you failed|bad player|terrible|shame|accuracy score" \
+            apps/web/src/components/ apps/web/src/app/ 2>/dev/null || \
+            (echo "Punitive copy detected — see docs/PHILOSOPHY.md" && exit 1)
+
+      - name: Brilliant gauge must remain in dashboard
+        run: |
+          grep -q "BrilliantGauge" apps/web/src/components/dashboard.tsx
+          grep -q "brilliantPct" apps/web/src/components/dashboard.tsx
+
+      - name: Philosophy doc anchors present
+        run: |
+          grep -q "Brilliant" docs/PHILOSOPHY.md
+          grep -q "mirror" docs/PHILOSOPHY.md
+          grep -q "Tal" docs/PHILOSOPHY.md

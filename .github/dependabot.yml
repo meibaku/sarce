@@ -1,0 +1,35 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      nextjs:
+        patterns:
+          - "next"
+          - "react*"
+          - "@next/*"
+          - "eslint*"
+
+  - package-ecosystem: npm
+    directory: /apps/web
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: pip
+    directory: /apps/api
+    schedule:
+      interval: weekly
+    groups:
+      api-runtime:
+        patterns:
+          - "fastapi*"
+          - "uvicorn*"
+          - "python-chess*"
+          - "supabase*"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

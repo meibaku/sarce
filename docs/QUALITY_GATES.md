@@ -102,16 +102,35 @@ Reviewers confirm:
 
 ---
 
-## Branch protection (GitHub settings)
+## Branch protection (GitHub)
 
-Recommended for `main`:
+Recommended for `main` — config in `.github/branch-protection.json`:
 
 | Rule | Setting |
 |------|---------|
-| Require PR | ✅ |
-| Require CI status checks | `api-test`, `web-lint`, `web-build` |
-| Require up to date | ✅ |
-| No direct push to main | ✅ |
+| Require PR before merge | ✅ |
+| Require status checks | `api-test`, `web-lint`, `web-build`, `migration-check`, `philosophy-check` |
+| Require branches up to date | ✅ (strict) |
+| Require conversation resolution | ✅ |
+| Block force push | ✅ |
+| Enforce for admins | ✅ |
+
+**Apply automatically:**
+
+```powershell
+.\.github\scripts\apply-branch-protection.ps1
+```
+
+Or via GitHub Rulesets UI: import `.github/rulesets/main.json` at
+Settings → Rules → Rulesets.
+
+**Also configured:**
+
+- `.github/CODEOWNERS` — philosophy/classification paths
+- `.github/dependabot.yml` — weekly npm/pip updates
+- `.github/workflows/philosophy-check.yml` — PR copy guard
+- Issue templates with philosophy alignment checkboxes
+- `SECURITY.md` — vulnerability reporting
 
 ---
 

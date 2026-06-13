@@ -1,0 +1,11 @@
+# Sarce code owners — auto-requested on PRs touching these paths
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+* @meibaku
+
+/docs/PHILOSOPHY.md @meibaku
+/docs/adr/ @meibaku
+/apps/api/app/services/brilliant.py @meibaku
+/apps/api/app/services/move_classifier.py @meibaku
+/apps/api/tests/test_philosophy_contracts.py @meibaku
+/apps/api/tests/test_architecture.py @meibaku
