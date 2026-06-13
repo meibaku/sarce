@@ -1,14 +1,31 @@
 # Sarce
 
-Personal chess companion focused on **style analysis** — not "what was the best move," but "did this game match my preferred style?"
+[![CI](https://github.com/meibaku/sarce/actions/workflows/ci.yml/badge.svg)](https://github.com/meibaku/sarce/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+Personal chess companion focused on **style analysis** — not "what was the best move," but "did this game feel like *you*?"
+
+Track progress toward a Tal-inspired playing identity: **6–10% Brilliant** sacrificial moves, game by game. The engine is a mirror for self-development, not a judge.
+
+## Documentation
+
+| Doc | Description |
+|-----|-------------|
+| [docs/PHILOSOPHY.md](docs/PHILOSOPHY.md) | Product constitution |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Local-first system design |
+| [docs/PHASES.md](docs/PHASES.md) | Roadmap (Phase 1–3) |
+| [docs/QUALITY_GATES.md](docs/QUALITY_GATES.md) | CI, tests, rulesets |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute |
+| [SECURITY.md](SECURITY.md) | Report vulnerabilities |
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
 
 ## Architecture (local-first)
-
-Everything runs on your machine during development. See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for the full diagram and **[docs/PHASES.md](docs/PHASES.md)** for phase roadmap.
 
 ```
 Next.js :3000  →  FastAPI :8000  →  Stockfish (local) + Supabase local :54321
 ```
+
+See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for the full diagram.
 
 ## Stack
 
@@ -18,7 +35,7 @@ Next.js :3000  →  FastAPI :8000  →  Stockfish (local) + Supabase local :5432
 | Mobile (future) | Expo / React Native |
 | Backend | Python (FastAPI) + `python-chess` |
 | Engine | Stockfish (server-side, local binary) |
-| Database & Auth | Supabase (Postgres) — `supabase start` for local |
+| Database & Auth | Supabase (Postgres) |
 | Game source | Chess.com public API |
 
 ## Monorepo layout
@@ -28,85 +45,68 @@ sarce/
 ├── apps/
 │   ├── web/          # Next.js dashboard
 │   └── api/          # FastAPI — import, analysis, classification
-├── docs/             # Architecture + phase docs
+├── docs/             # Architecture, philosophy, ADRs
 ├── supabase/         # Migrations, seed, local config
 └── package.json
 ```
 
 ## Quick start (local)
 
-### 1. Prerequisites
+### Prerequisites
 
 - Node.js 18+
 - Python 3.11+
-- [Supabase CLI](https://supabase.com/docs/guides/cli)
+- [Supabase CLI](https://supabase.com/docs/guides/cli) + Docker Desktop
 - Stockfish binary in `STOCKFISH_PATH` (see `.env.example`)
 
-### 2. Supabase local
+### Setup
 
 ```powershell
+# Supabase
 supabase start
-supabase db reset    # applies migrations + seed.sql (local user)
-supabase status      # copy URL + keys to .env
-```
+supabase db reset
+supabase status          # copy keys → .env
 
-### 3. Environment
-
-```powershell
+# Environment
 cp .env.example .env
-# Fill in keys from `supabase status`
-```
 
-### 4. Backend
-
-```powershell
+# Backend
 cd apps/api
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
-```
 
-### 5. Frontend
-
-```powershell
+# Frontend (new terminal)
 npm install
 npm run dev:web
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Enter your Chess.com username to import and analyze.
+Open [http://localhost:3000](http://localhost:3000) — enter your Chess.com username.
 
-### 6. Tests
-
-```powershell
-npm run test:api
-```
-
-### 7. Tal benchmark (optional)
+### Tests
 
 ```powershell
-cd apps/api
-python -m scripts.process_tal_benchmark --max-games 5
+npm run ci              # full gate
+npm run test:golden     # Stockfish regression (local)
 ```
 
-## Phase 1 — Complete
+## Phase status
 
-- ✅ Chess.com import + PGN storage
-- ✅ Stockfish classification (depth 18, user moves only)
-- ✅ Brilliant detection (Tal-style rules)
-- ✅ Baseline aggregation + dashboard with live data
-- ✅ Brilliant % timeline chart
-- ✅ Tal reference benchmark pipeline
-- ✅ pytest suite
+| Phase | Status |
+|-------|--------|
+| **1** — Import, classify, Brilliant %, Tal benchmark | ✅ Complete |
+| **2** — Reference player comparison | 🔲 Planned |
+| **3** — Per-move highlights, style goals | 🔲 Planned |
 
-## Phase 2 — Next
+## Contributing
 
-Reference player comparison by Chess.com username. Schema ready.
+Contributions welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/PHILOSOPHY.md](docs/PHILOSOPHY.md) first. All changes go through PR + CI.
 
-## Phase 3 — Later
+## Security
 
-Per-move highlights, adjustable style goals, community groupings.
+Report vulnerabilities privately via [GitHub Security Advisories](https://github.com/meibaku/sarce/security/advisories/new). See [SECURITY.md](SECURITY.md).
 
 ## License
 
-Private — meibaku/sarce
+[MIT License](LICENSE) — Copyright (c) 2026 meibaku
