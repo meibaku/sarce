@@ -1,0 +1,19 @@
+{
+  "name": "sarce",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chess style analysis — track how your games match your preferred playing style",
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace=apps/web",
+    "build:web": "npm run build --workspace=apps/web",
+    "dev:api": "cd apps/api && uvicorn app.main:app --reload --port 8000",
+    "test:api": "cd apps/api && pytest tests -v -m \"not stockfish\"",
+    "test:golden": "cd apps/api && pytest tests/test_golden_analysis.py -m stockfish -v",
+    "test:arch": "cd apps/api && pytest tests/test_architecture.py tests/test_philosophy_contracts.py -v",
+    "lint:web": "npm run lint --workspace=apps/web",
+    "ci": "npm run test:api && npm run lint:web && npm run build:web"
+  }
+}

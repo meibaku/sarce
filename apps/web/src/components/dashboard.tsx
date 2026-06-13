@@ -1,0 +1,161 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import {
+  getTalBenchmark,
+  getTimeline,
+  getUserBaseline,
+  importChessComGames,
+  listGames,
+} from "@/lib/api";
+import { BrilliantGauge } from "./brilliant-gauge";
+import { BrilliantTimeline } from "./brilliant-timeline";
+import { DistributionChart } from "./distribution-chart";
+import { ImportGamesForm } from "./import-games-form";
+import { StyleSummary } from "./style-summary";
+import type {
+  ReferenceBenchmark,
+  TimelinePoint,
+  UserBaseline,
+} from "@/types/chess";
+
+const EMPTY_BASELINE: UserBaseline = {
+  brilliantPct: 0,
+  distribution: {
+    best: 0,
+    excellent: 0,
+    good: 0,
+    inaccuracy: 0,
+    mistake: 0,
+    blunder: 0,
+    miss: 0,
+    brilliant: 0,
+  },
+  gamesAnalyzed: 0,
+  targetBrilliantMin: 6,
+  targetBrilliantMax: 10,
+};
+
+export function Dashboard() {
+  const [baseline, setBaseline] = useState<UserBaseline>(EMPTY_BASELINE);
+  const [talBenchmark, setTalBenchmark] = useState<ReferenceBenchmark | null>(
+    null,
+  );
+  const [timeline, setTimeline] = useState<TimelinePoint[]>([]);
+  const [importStatus, setImportStatus] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [polling, setPolling] = useState(false);
+
+  const refreshData = useCallback(async (chessUsername?: string) => {
+    const u = chessUsername ?? username ?? undefined;
+    try {
+      const [b, t, tal] = await Promise.all([
+        getUserBaseline(u),
+        getTimeline(u),
+        getTalBenchmark(),
+      ]);
+      setBaseline(b);
+      setTimeline(t.points);
+      setTalBenchmark(tal);
+      return b;
+    } catch {
+      return null;
+    }
+  }, [username]);
+
+  const pollUntilComplete = useCallback(
+    async (chessUsername: string) => {
+      setPolling(true);
+      for (let i = 0; i < 60; i++) {
+        await new Promise((r) => setTimeout(r, 5000));
+        const gamesRes = await listGames(chessUsername).catch(() => null);
+        const pending = gamesRes?.games?.some(
+          (g) =>
+            g.analysisStatus === "pending" || g.analysisStatus === "processing",
+        );
+        await refreshData(chessUsername);
+        if (!pending) break;
+      }
+      setPolling(false);
+    },
+    [refreshData],
+  );
+
+  useEffect(() => {
+    refreshData();
+  }, [refreshData]);
+
+  async function handleImport(chessUsername: string) {
+    setLoading(true);
+    setImportStatus(null);
+    setUsername(chessUsername);
+    try {
+      const result = await importChessComGames(chessUsername);
+      setImportStatus(result.message);
+      if (result.imported > 0) {
+        pollUntilComplete(chessUsername);
+      }
+    } catch (err) {
+      setImportStatus(
+        err instanceof Error
+          ? err.message
+          : "Import failed — is the API running on :8000?",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-6xl space-y-8 px-6 py-8">
+      <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="space-y-6">
+          <ImportGamesForm onImport={handleImport} loading={loading || polling} />
+          {importStatus && (
+            <p className="rounded-lg border border-white/10 bg-surface px-4 py-3 text-sm text-foreground/80">
+              {importStatus}
+              {polling && " Analyzing with Stockfish…"}
+            </p>
+          )}
+          <StyleSummary baseline={baseline} />
+        </div>
+        <BrilliantGauge
+          brilliantPct={baseline.brilliantPct}
+          targetMin={baseline.targetBrilliantMin}
+          targetMax={baseline.targetBrilliantMax}
+        />
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <DistributionChart
+          title="Your move quality"
+          distribution={baseline.distribution}
+          gamesAnalyzed={baseline.gamesAnalyzed}
+        />
+        <DistributionChart
+          title={`${talBenchmark?.playerName ?? "Mikhail Tal"} reference`}
+          distribution={talBenchmark?.distribution ?? EMPTY_BASELINE.distribution}
+          gamesAnalyzed={talBenchmark?.gamesSampled ?? 0}
+          subtitle={
+            talBenchmark?.status === "complete"
+              ? "Calibrated from Tal PGN corpus"
+              : "Run: python -m scripts.process_tal_benchmark"
+          }
+        />
+      </section>
+
+      <section className="rounded-xl border border-white/10 bg-surface p-6">
+        <h2 className="mb-2 text-lg font-medium">Brilliant % over time</h2>
+        <p className="mb-4 text-sm text-foreground/50">
+          Target band: {baseline.targetBrilliantMin}–{baseline.targetBrilliantMax}%
+        </p>
+        <BrilliantTimeline
+          points={timeline}
+          targetMin={baseline.targetBrilliantMin}
+          targetMax={baseline.targetBrilliantMax}
+        />
+      </section>
+    </div>
+  );
+}
