@@ -44,6 +44,7 @@ class TestRepoDocs:
             "ARCHITECTURE.md",
             "PHASES.md",
             "QUALITY_GATES.md",
+            "PRODUCT_SPEC.md",
             "README.md",
         ],
     )
