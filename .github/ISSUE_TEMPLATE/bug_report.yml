@@ -1,0 +1,44 @@
+name: Bug report
+description: Something broken in Sarce
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Sarce tracks **style identity**, not engine accuracy —
+        see [PHILOSOPHY.md](../docs/PHILOSOPHY.md).
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Import (Chess.com)
+        - Analysis / Stockfish
+        - Brilliant detection
+        - Dashboard
+        - Supabase / DB
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. ... 2. ..."

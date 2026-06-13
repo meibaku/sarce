@@ -6,9 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# Status check names match job ids — used by branch protection rules
 jobs:
   api-test:
-    name: API — unit, arch, philosophy
+    name: api-test
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -27,7 +28,7 @@ jobs:
         run: pytest tests -v -m "not stockfish"
 
   web-lint:
-    name: Web — ESLint
+    name: web-lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,7 +45,7 @@ jobs:
         run: npm run lint:web
 
   web-build:
-    name: Web — production build
+    name: web-build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -64,7 +65,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
 
   migration-check:
-    name: Supabase — migration sanity
+    name: migration-check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -77,3 +78,10 @@ jobs:
           echo "$sql" | grep -q "games"
           echo "$sql" | grep -q "brilliant"
           echo "$sql" | grep -q "style_vectors"
+
+      - name: Verify philosophy docs exist
+        shell: bash
+        run: |
+          test -f docs/PHILOSOPHY.md
+          test -f docs/QUALITY_GATES.md
+          test -f docs/adr/0001-style-over-accuracy.md

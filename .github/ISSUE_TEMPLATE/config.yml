@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Philosophy & vision
+    url: https://github.com/meibaku/sarce/blob/main/docs/PHILOSOPHY.md
+    about: Read the product constitution before opening an issue
+  - name: Quality gates
+    url: https://github.com/meibaku/sarce/blob/main/docs/QUALITY_GATES.md
+    about: CI, tests, and branch protection

@@ -1,0 +1,41 @@
+name: Feature request
+description: Suggest an improvement aligned with Sarce's vision
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        New features should align with [PHILOSOPHY.md](../docs/PHILOSOPHY.md).
+        If this changes what "style" means, an ADR may be required.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Which phase?
+      options:
+        - Phase 1 — MVP
+        - Phase 2 — Reference players
+        - Phase 3 — Polish
+        - Vision (future)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: philosophy
+    attributes:
+      label: Philosophy alignment
+      options:
+        - label: Keeps Brilliant % as headline metric (or proposes ADR to change)
+          required: true
+        - label: Does not frame style play as failure
+          required: true
+        - label: Engine remains mirror, not judge
+          required: false
