@@ -102,27 +102,67 @@ Reviewers confirm:
 
 ---
 
-## Branch protection (GitHub)
+## Branch protection & rulesets (GitHub)
 
-Recommended for `main` — config in `.github/branch-protection.json`:
+Sarce uses **two mechanisms** — you should prefer **Rulesets** (modern) over classic branch protection.
+
+### Current state
+
+| Mechanism | Status | Where to view |
+|-----------|--------|---------------|
+| **Classic branch protection** | ✅ Active on `main` | Settings → Branches |
+| **Repository ruleset** | ⏳ Config ready, apply below | Settings → Rules |
+
+Classic protection was applied first via `.github/branch-protection.json`.
+The ruleset in `.github/rulesets/main.json` is the **canonical config** going forward.
+
+### Classic vs Rulesets
+
+| | Classic protection | Rulesets (recommended) |
+|--|-------------------|------------------------|
+| Location | Settings → Branches | Settings → Rules → Rulesets |
+| Scope | Per-branch | Flexible (default branch, patterns, tags) |
+| Features | PR + status checks | Same + deletion block, non-fast-forward, bypass lists |
+| Config in repo | `branch-protection.json` | `rulesets/main.json` |
+| GitHub direction | Legacy | Current standard |
+
+**Recommendation:** Apply the ruleset, then remove classic protection to avoid duplicate rules:
+
+```powershell
+.\.github\scripts\apply-ruleset.ps1 -Replace
+```
+
+### Rules enforced (both configs)
 
 | Rule | Setting |
 |------|---------|
 | Require PR before merge | ✅ |
-| Require status checks | `api-test`, `web-lint`, `web-build`, `migration-check`, `philosophy-check` |
-| Require branches up to date | ✅ (strict) |
+| Required status checks | `api-test`, `web-lint`, `web-build`, `migration-check`, `philosophy-check` |
+| Branches must be up to date | ✅ (strict) |
 | Require conversation resolution | ✅ |
-| Block force push | ✅ |
+| Block branch deletion | ✅ (ruleset only) |
+| Block force push / non-fast-forward | ✅ |
 | Enforce for admins | ✅ |
 
-**Apply automatically:**
+### Apply ruleset
+
+```powershell
+# Create or update ruleset
+.\.github\scripts\apply-ruleset.ps1
+
+# Migrate from classic → rulesets only
+.\.github\scripts\apply-ruleset.ps1 -Replace
+```
+
+Or manually: **Settings → Rules → Rulesets → New** → paste `.github/rulesets/main.json`
+
+Verify: https://github.com/meibaku/sarce/settings/rules
+
+### Re-apply classic protection (fallback)
 
 ```powershell
 .\.github\scripts\apply-branch-protection.ps1
 ```
-
-Or via GitHub Rulesets UI: import `.github/rulesets/main.json` at
-Settings → Rules → Rulesets.
 
 **Also configured:**
 
