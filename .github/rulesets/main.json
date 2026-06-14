@@ -1,7 +1,3 @@
-# Repository ruleset for main branch (GitHub Rulesets API — alternative to classic protection)
-# Apply via: gh ruleset create --repo meibaku/sarce --config .github/rulesets/main.json
-# Or import in GitHub UI: Settings → Rules → Rulesets → New
-
 {
   "name": "Protect main",
   "target": "branch",
@@ -13,12 +9,8 @@
     }
   },
   "rules": [
-    {
-      "type": "deletion"
-    },
-    {
-      "type": "non_fast_forward"
-    },
+    { "type": "deletion" },
+    { "type": "non_fast_forward" },
     {
       "type": "pull_request",
       "parameters": {
