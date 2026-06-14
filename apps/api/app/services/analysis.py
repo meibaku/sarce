@@ -57,7 +57,6 @@ def build_style_vector_v1(
             signal in move.get("signals", [])
             for signal in (
                 "tactical_resource",
-                "initiative",
                 "momentum_shift",
                 "evaluation_swing",
                 "breakthrough_sacrifice",
