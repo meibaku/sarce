@@ -3,7 +3,9 @@
 
 * @meibaku
 
+/.greptile/ @meibaku
 /docs/PHILOSOPHY.md @meibaku
+/docs/CODE_REVIEW.md @meibaku
 /docs/adr/ @meibaku
 /apps/api/app/services/brilliant.py @meibaku
 /apps/api/app/services/move_classifier.py @meibaku
