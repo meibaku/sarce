@@ -124,7 +124,7 @@ class TestGreptileConfig:
         config = (REPO_ROOT / ".greptile" / "config.json").read_text(encoding="utf-8")
         assert "foundation-no-remove-brilliant" in config
         assert "foundation-headline-brilliant-pct" in config
-        assert "PHILOSOPHY" in config or "style" in config.lower()
+        assert "PHILOSOPHY" in config
 
     def test_greptile_files_json_includes_philosophy(self):
         files = (REPO_ROOT / ".greptile" / "files.json").read_text(encoding="utf-8")
