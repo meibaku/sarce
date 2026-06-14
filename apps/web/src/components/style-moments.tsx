@@ -79,7 +79,7 @@ export function StyleMoments({ moments }: StyleMomentsProps) {
                 <p className="tabular-nums">
                   {formatEval(moment.evalBefore)} to {formatEval(moment.evalAfter)}
                 </p>
-                {moment.cpLoss !== null && (
+                {moment.cpLoss !== null && moment.quality !== "brilliant" && (
                   <p className="mt-1 text-xs text-foreground/40">
                     {moment.cpLoss.toFixed(0)} cp loss
                   </p>

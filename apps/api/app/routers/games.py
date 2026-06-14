@@ -189,7 +189,11 @@ async def list_style_moments(
 
 
 @router.get("/{game_id}")
-async def get_game_detail(game_id: str):
+async def get_game_detail(
+    game_id: str,
+    username: str | None = Query(None),
+    user_id: str | None = Query(None),
+):
     """Game metadata plus classified user moves."""
     from app.db.supabase import get_supabase
 
@@ -198,9 +202,14 @@ async def get_game_detail(game_id: str):
         sb.table("games")
         .select("id, played_at, opponent, opponent_rating, result, user_color, time_control, analysis_status, game_analyses(brilliant_pct, distribution, total_moves)")
         .eq("id", game_id)
-        .maybe_single()
-        .execute()
     )
+    uid = resolve_user_id(user_id) if user_id or not username else None
+    if uid:
+        game_res = game_res.eq("user_id", uid)
+    if username:
+        game_res = game_res.eq("chess_com_username", username)
+
+    game_res = game_res.maybe_single().execute()
     if not game_res.data:
         raise HTTPException(status_code=404, detail="Game not found")
 

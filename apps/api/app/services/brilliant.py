@@ -56,9 +56,8 @@ def material_sacrifice(board: chess.Board, move: chess.Move) -> int:
     moved_piece_after = board.piece_at(move.to_square)
     if moved_piece_after and moved_piece_after.color == color:
         moved_value = piece_value(moved_piece_after)
-        for reply in board.legal_moves:
-            if reply.to_square == move.to_square:
-                offered_loss = max(offered_loss, moved_value - captured_value)
+        if any(reply.to_square == move.to_square for reply in board.legal_moves):
+            offered_loss = max(offered_loss, moved_value - captured_value)
 
     board.pop()
 
