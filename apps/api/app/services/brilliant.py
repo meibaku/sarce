@@ -46,6 +46,8 @@ def material_sacrifice(board: chess.Board, move: chess.Move) -> int:
     moving_piece = board.piece_at(move.from_square)
     captured_piece = board.piece_at(move.to_square)
     captured_value = piece_value(captured_piece)
+    if board.is_en_passant(move):
+        captured_value = PIECE_VALUES[chess.PAWN]
 
     before = material_for_side(board, color)
     board.push(move)

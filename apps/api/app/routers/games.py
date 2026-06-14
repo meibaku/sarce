@@ -215,11 +215,15 @@ async def get_game_detail(
 
     moves_res = (
         sb.table("game_moves")
-        .select("ply, uci, quality, cp_loss, eval_before, eval_after, is_brilliant")
-        .eq("game_id", game_id)
-        .order("ply")
-        .execute()
+        .select("ply, uci, quality, cp_loss, eval_before, eval_after, is_brilliant, games!inner(user_id, chess_com_username)")
+        .eq("game_id", game["id"])
     )
+    if uid:
+        moves_res = moves_res.eq("games.user_id", uid)
+    if username:
+        moves_res = moves_res.eq("games.chess_com_username", username)
+
+    moves_res = moves_res.order("ply").execute()
 
     game = game_res.data
     analyses = game.pop("game_analyses", None)
