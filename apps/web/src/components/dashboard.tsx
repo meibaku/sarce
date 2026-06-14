@@ -59,12 +59,12 @@ export function Dashboard() {
     async (chessUsername?: string) => {
       const u = chessUsername ?? username ?? undefined;
       try {
-        const [b, t, tal, profile] = await Promise.all([
+        const [b, t, tal] = await Promise.all([
           getUserBaseline(u),
           getTimeline(u),
           getTalBenchmark(),
-          getStyleProfile(u),
         ]);
+        const profile = await getStyleProfile(u).catch(() => null);
         const momentRes = await listStyleMoments(u).catch(() => ({
           moments: [],
         }));
