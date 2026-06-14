@@ -11,6 +11,7 @@ Thank you for helping build a chess companion focused on **style identity**, not
 | [PHILOSOPHY.md](docs/PHILOSOPHY.md) | Always — before any feature or copy change |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Structural or infrastructure changes |
 | [QUALITY_GATES.md](docs/QUALITY_GATES.md) | CI, tests, branch rules |
+| [CODE_REVIEW.md](docs/CODE_REVIEW.md) | Human + Greptile review guide |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community interaction |
 | [SECURITY.md](SECURITY.md) | Security issues |
 
@@ -81,6 +82,16 @@ git push -u origin feat/your-feature
 - Punitive copy ("blunder rate" as shame metric)
 - Competitive leaderboards
 - Merging Brilliant into Best
+
+## AI code review (Greptile)
+
+Sarce uses [Greptile](https://www.greptile.com/) with `.greptile/` configs that **lock product foundations** — Brilliant tier, Brilliant % headline, server-side Stockfish, no ML in Phase 1.
+
+- Read [docs/CODE_REVIEW.md](docs/CODE_REVIEW.md) before arguing with Greptile comments
+- Do not disable foundation rule IDs in root `.greptile/config.json`
+- Foundation change suggestions require an ADR, not a drive-by refactor
+
+Maintainers: install the Greptile GitHub App on the repo to enable reviews.
 
 ## Commits & PRs
 

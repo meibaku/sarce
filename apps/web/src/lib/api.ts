@@ -95,4 +95,13 @@ export async function listStyleMoments(username?: string) {
   }>(`/games/moments${params}`);
 }
 
+export async function listStyleMoments(username?: string) {
+  const params = username
+    ? `?username=${encodeURIComponent(username)}`
+    : "";
+  return fetchApi<{
+    moments: import("@/types/chess").StyleMoment[];
+  }>(`/games/moments${params}`);
+}
+
 export { LOCAL_USER_ID };

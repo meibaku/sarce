@@ -18,6 +18,11 @@ _Sarce tracks style identity, not engine accuracy. Brilliant % is the headline m
 - [ ] `npm run ci` passes locally
 - [ ] `npm run test:golden` (if classification thresholds changed + Stockfish available)
 
+## Greptile / AI review
+
+- [ ] Greptile foundation comments (Brilliant tier, headline metric, ML, client Stockfish) dismissed only with ADR or fix
+- [ ] See [docs/CODE_REVIEW.md](../docs/CODE_REVIEW.md) for false positives vs real issues
+
 ## Docs
 
 - [ ] Updated `docs/PHASES.md` status if completing a stage

@@ -1,0 +1,86 @@
+{
+  "strictness": 2,
+  "commentTypes": ["logic", "syntax", "style", "info"],
+  "triggerOnUpdates": true,
+  "ignorePatterns": [
+    "node_modules/**",
+    ".next/**",
+    "dist/**",
+    "build/**",
+    "*.egg-info/**",
+    "__pycache__/**",
+    ".pytest_cache/**",
+    "package-lock.json",
+    "apps/api/.cache/**",
+    "**/*.generated.*"
+  ],
+  "instructions": "Sarce is a chess STYLE identity app (Tal-inspired, 6-10% Brilliant target) — NOT an engine accuracy coach. Read docs/PHILOSOPHY.md and .greptile/rules.md before reviewing. Never suggest removing Brilliant tier, replacing Brilliant % as headline metric, adding ML classification, moving Stockfish to client, or punitive UX. Flag security (RLS, service_role exposure) and real bugs. Push back on refactors that change product foundations without an ADR in docs/adr/.",
+  "rules": [
+    {
+      "id": "foundation-no-remove-brilliant",
+      "rule": "NEVER suggest removing, merging, or deprecating the 'brilliant' move quality tier. It is a first-class product concept.",
+      "severity": "high"
+    },
+    {
+      "id": "foundation-headline-brilliant-pct",
+      "rule": "NEVER suggest replacing Brilliant % as the headline dashboard metric with accuracy, centipawn loss, or engine-match percentage.",
+      "severity": "high"
+    },
+    {
+      "id": "foundation-no-ml-phase1",
+      "rule": "Do not suggest ML/sklearn/torch/tensorflow for move classification unless an ADR exists in docs/adr/. Phase 1 is rule-based Stockfish only.",
+      "severity": "high"
+    },
+    {
+      "id": "foundation-stockfish-server-only",
+      "rule": "Stockfish must stay server-side in apps/api. Flag any suggestion to run the engine in apps/web or client bundles.",
+      "severity": "high"
+    },
+    {
+      "id": "foundation-no-punitive-ux",
+      "rule": "Flag user-facing copy that frames sacrificial/style play as failure, shame, or moral wrongness. Low Brilliant % is distance from goal, not failure.",
+      "severity": "high",
+      "scope": ["apps/web/**"]
+    },
+    {
+      "id": "foundation-adr-required",
+      "rule": "If a suggestion changes what 'style' means, removes a philosophy principle, or adds competitive leaderboards, require an ADR in docs/adr/ first — do not recommend the change as a simple fix.",
+      "severity": "high"
+    },
+    {
+      "id": "security-no-service-role-client",
+      "rule": "Flag any SUPABASE_SERVICE_ROLE_KEY or service role usage in apps/web, NEXT_PUBLIC_* env vars, or client-side code.",
+      "severity": "high"
+    },
+    {
+      "id": "security-rls-on-new-tables",
+      "rule": "New tables in supabase/migrations must enable RLS and have appropriate policies. Flag tables without RLS in public schema.",
+      "severity": "high",
+      "scope": ["supabase/**"]
+    },
+    {
+      "id": "arch-routers-thin",
+      "rule": "Routers in apps/api/app/routers/ must not import chess, chess.engine, or Stockfish. Business logic belongs in services/.",
+      "severity": "medium",
+      "scope": ["apps/api/app/routers/**"]
+    },
+    {
+      "id": "arch-style-vector-version",
+      "rule": "Changes to style vector meaning require bumping version field in schema and docs — flag silent schema redefinitions.",
+      "severity": "medium",
+      "scope": ["apps/api/**", "supabase/**", "apps/web/src/types/**"]
+    },
+    {
+      "id": "heuristic-brilliant-do-not-refactor",
+      "rule": "Do not suggest rewriting brilliant.py or move_classifier.py heuristics as 'bugs' unless there is a concrete failing test. These are tunable Phase 1 approximations.",
+      "severity": "low",
+      "scope": ["apps/api/app/services/brilliant.py", "apps/api/app/services/move_classifier.py"]
+    },
+    {
+      "id": "scope-no-premature-infra",
+      "rule": "Do not suggest Redis, Celery, microservices, or Kubernetes for Phase 1. BackgroundTasks and local-first are intentional.",
+      "severity": "medium"
+    }
+  ],
+  "disabledRules": []
+}

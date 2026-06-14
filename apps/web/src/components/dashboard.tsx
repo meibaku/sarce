@@ -7,6 +7,7 @@ import {
   getTimeline,
   getUserBaseline,
   importChessComGames,
+  listGames,
   listStyleMoments,
 } from "@/lib/api";
 import { AnalysisWorkspace } from "./analysis-workspace";
@@ -53,6 +54,7 @@ export function Dashboard() {
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [polling, setPolling] = useState(false);
   const [analysisRefreshToken, setAnalysisRefreshToken] = useState(0);
 
   const refreshData = useCallback(
@@ -81,6 +83,25 @@ export function Dashboard() {
     [username],
   );
 
+  const pollUntilComplete = useCallback(
+    async (chessUsername: string) => {
+      setPolling(true);
+      for (let i = 0; i < 60; i++) {
+        await new Promise((r) => setTimeout(r, 5000));
+        const gamesRes = await listGames(chessUsername).catch(() => null);
+        const pending = gamesRes?.games?.some(
+          (g) =>
+            g.analysisStatus === "pending" || g.analysisStatus === "processing",
+        );
+        await refreshData(chessUsername);
+        setAnalysisRefreshToken((current) => current + 1);
+        if (!pending) break;
+      }
+      setPolling(false);
+    },
+    [refreshData],
+  );
+
   useEffect(() => {
     refreshData();
   }, [refreshData]);
@@ -95,6 +116,7 @@ export function Dashboard() {
       if (result.imported > 0) {
         await refreshData(chessUsername);
         setAnalysisRefreshToken((current) => current + 1);
+        pollUntilComplete(chessUsername);
       }
     } catch (err) {
       setImportStatus(
@@ -111,10 +133,14 @@ export function Dashboard() {
     <div className="mx-auto max-w-6xl space-y-8 px-6 py-8">
       <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
-          <ImportGamesForm onImport={handleImport} loading={loading} />
+          <ImportGamesForm
+            onImport={handleImport}
+            loading={loading || polling}
+          />
           {importStatus && (
             <p className="rounded-lg border border-white/10 bg-surface px-4 py-3 text-sm text-foreground/80">
               {importStatus}
+              {polling && " Analyzing with Stockfish..."}
             </p>
           )}
           <StyleSummary baseline={baseline} />
