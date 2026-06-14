@@ -20,7 +20,8 @@ This file tracks **what's built vs planned**. The phase definitions below match 
 | 1.4 | Baseline + dashboard | ✅ |
 | 1.5 | Tal reference benchmark | ✅ |
 | 1.6 | Tests + CI + quality gates | ✅ |
-| 1.7 | ECO opening extraction | 🔲 |
+| 1.7 | Recent style moments + move drilldown | ✅ |
+| 1.8 | ECO opening extraction | 🔲 |
 
 ---
 
@@ -72,6 +73,8 @@ Rule-based from Stockfish (no ML). Details in [PRODUCT_SPEC.md § 1.2](./PRODUCT
 |--------|------|
 | POST | `/games/import` |
 | GET | `/games` |
+| GET | `/games/moments` |
+| GET | `/games/{id}` |
 | POST | `/games/analyze` |
 | GET | `/analysis/baseline/{id}` |
 | GET | `/analysis/timeline/{id}` |

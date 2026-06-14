@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import io
 import logging
+import re
 import zipfile
 from pathlib import Path
 
@@ -24,6 +25,34 @@ logger = logging.getLogger(__name__)
 
 TAL_PGN_URL = "https://www.pgnmentor.com/players/Tal.zip"
 TAL_PLAYER_NAME = "Mikhail Tal"
+
+
+def infer_player_color(game: chess.pgn.Game, player_name: str) -> str:
+    """Infer whether the reference player had white or black in a PGN."""
+    white = game.headers.get("White", "")
+    black = game.headers.get("Black", "")
+    if _matches_player_name(black, player_name):
+        return "black"
+    if _matches_player_name(white, player_name):
+        return "white"
+    return "white"
+
+
+def _name_tokens(name: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", name.lower())
+
+
+def _matches_player_name(header_name: str, player_name: str) -> bool:
+    header = " ".join(_name_tokens(header_name))
+    player = " ".join(_name_tokens(player_name))
+    if not header or not player:
+        return False
+    if player in header:
+        return True
+
+    player_tokens = _name_tokens(player_name)
+    header_tokens = set(_name_tokens(header_name))
+    return bool(player_tokens) and set(player_tokens).issubset(header_tokens)
 
 
 class ReferenceService:
@@ -101,8 +130,11 @@ class ReferenceService:
                 continue
             board = game.board()
             moves = list(game.mainline_moves())
-            # Tal played both colors in corpus — classify white moves as proxy
-            classified = classifier.classify_game(board, moves, "white")
+            classified = classifier.classify_game(
+                board,
+                moves,
+                infer_player_color(game, TAL_PLAYER_NAME),
+            )
             dist = BaselineService.compute_distribution([m["quality"] for m in classified])
             for k in merged:
                 merged[k] += dist.get(k, 0)

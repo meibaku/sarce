@@ -15,6 +15,20 @@ class TestMaterialSacrifice:
         move = chess.Move.from_uci("e2e4")
         assert material_sacrifice(board, move) == 0
 
+    def test_detects_offered_piece_sacrifice(self):
+        board = chess.Board(
+            "rnbqkb1r/pppppppp/5n2/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 1 2"
+        )
+        move = chess.Move.from_uci("d1h5")
+        assert material_sacrifice(board, move) == 9
+
+    def test_en_passant_counts_captured_pawn_value(self):
+        board = chess.Board(
+            "rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3"
+        )
+        move = chess.Move.from_uci("e5f6")
+        assert material_sacrifice(board, move) == 0
+
     def test_sacrifice_when_queen_given(self):
         board = chess.Board("rnbqkb1r/pppp1ppp/5n2/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR b KQkq - 0 3")
         # Black captures queen — from black's perspective not sacrifice
