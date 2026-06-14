@@ -1,0 +1,23 @@
+{
+  "instructions": "Web dashboard only. API calls via src/lib/api.ts — no direct Supabase service role. BrilliantGauge and brilliantPct are required headline UI. Encouraging copy only.",
+  "rules": [
+    {
+      "id": "web-brilliant-gauge-required",
+      "rule": "Do not suggest removing BrilliantGauge, brilliantPct from dashboard, or demoting Brilliant to a secondary metric.",
+      "severity": "high",
+      "scope": ["src/components/dashboard.tsx", "src/components/brilliant-gauge.tsx"]
+    },
+    {
+      "id": "web-no-secrets",
+      "rule": "Flag SUPABASE_SERVICE_ROLE_KEY, non-public secrets, or server-only config in client components or NEXT_PUBLIC_ vars.",
+      "severity": "high",
+      "scope": ["src/**"]
+    },
+    {
+      "id": "web-api-proxy",
+      "rule": "Backend calls should go through src/lib/api.ts fetchApi pattern, not hardcoded external URLs bypassing Next.js rewrite.",
+      "severity": "medium",
+      "scope": ["src/**"]
+    }
+  ]
+}

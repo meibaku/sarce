@@ -45,6 +45,7 @@ class TestRepoDocs:
             "PHASES.md",
             "QUALITY_GATES.md",
             "PRODUCT_SPEC.md",
+            "CODE_REVIEW.md",
             "README.md",
         ],
     )
@@ -108,6 +109,31 @@ class TestSchemaMigration:
         assert "style_vectors" in sql
         assert "reference_players" in sql
         assert "user_baselines" in sql
+
+
+class TestGreptileConfig:
+    """Gate 1.5 — Greptile foundation lock files must exist."""
+
+    def test_root_greptile_config(self):
+        greptile = REPO_ROOT / ".greptile"
+        assert (greptile / "config.json").is_file()
+        assert (greptile / "rules.md").is_file()
+        assert (greptile / "files.json").is_file()
+
+    def test_greptile_config_references_philosophy(self):
+        config = (REPO_ROOT / ".greptile" / "config.json").read_text(encoding="utf-8")
+        assert "foundation-no-remove-brilliant" in config
+        assert "foundation-headline-brilliant-pct" in config
+        assert "PHILOSOPHY" in config
+
+    def test_greptile_files_json_includes_philosophy(self):
+        files = (REPO_ROOT / ".greptile" / "files.json").read_text(encoding="utf-8")
+        assert "PHILOSOPHY.md" in files
+        assert "PRODUCT_SPEC.md" in files
+
+    def test_scoped_greptile_configs_exist(self):
+        assert (REPO_ROOT / "apps" / "api" / ".greptile" / "config.json").is_file()
+        assert (REPO_ROOT / "apps" / "web" / ".greptile" / "config.json").is_file()
 
 
 class TestNoMLInPhase1:

@@ -1,0 +1,17 @@
+{
+  "instructions": "API layer only. Routers stay thin — no Stockfish imports. All chess analysis in services/. Match patterns in existing services. See root .greptile/rules.md for product foundations.",
+  "rules": [
+    {
+      "id": "api-no-stockfish-in-routers",
+      "rule": "Flag chess, chess.engine, or subprocess Stockfish usage in routers/. Must use services/stockfish.py via AnalysisService or MoveClassifier.",
+      "severity": "high",
+      "scope": ["app/routers/**"]
+    },
+    {
+      "id": "api-persist-eval-data",
+      "rule": "Move classification changes must preserve storage of eval_before, eval_after, is_brilliant on game_moves for threshold tuning.",
+      "severity": "medium",
+      "scope": ["app/services/analysis.py", "app/services/move_classifier.py"]
+    }
+  ]
+}
