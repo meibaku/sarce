@@ -19,3 +19,10 @@ class TestInferPlayerColor:
         game.headers["Black"] = "Bent Larsen"
 
         assert infer_player_color(game, "Mikhail Tal") == "white"
+
+    def test_detects_last_name_first_black_header(self):
+        game = chess.pgn.Game()
+        game.headers["White"] = "Bent Larsen"
+        game.headers["Black"] = "Tal, Mikhail N."
+
+        assert infer_player_color(game, "Mikhail Tal") == "black"

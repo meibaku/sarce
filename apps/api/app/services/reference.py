@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import io
 import logging
+import re
 import zipfile
 from pathlib import Path
 
@@ -28,14 +29,30 @@ TAL_PLAYER_NAME = "Mikhail Tal"
 
 def infer_player_color(game: chess.pgn.Game, player_name: str) -> str:
     """Infer whether the reference player had white or black in a PGN."""
-    needle = player_name.lower()
-    white = game.headers.get("White", "").lower()
-    black = game.headers.get("Black", "").lower()
-    if needle in black:
+    white = game.headers.get("White", "")
+    black = game.headers.get("Black", "")
+    if _matches_player_name(black, player_name):
         return "black"
-    if needle in white:
+    if _matches_player_name(white, player_name):
         return "white"
     return "white"
+
+
+def _name_tokens(name: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", name.lower())
+
+
+def _matches_player_name(header_name: str, player_name: str) -> bool:
+    header = " ".join(_name_tokens(header_name))
+    player = " ".join(_name_tokens(player_name))
+    if not header or not player:
+        return False
+    if player in header:
+        return True
+
+    player_tokens = _name_tokens(player_name)
+    header_tokens = set(_name_tokens(header_name))
+    return bool(player_tokens) and set(player_tokens).issubset(header_tokens)
 
 
 class ReferenceService:
