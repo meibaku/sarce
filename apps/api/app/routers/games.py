@@ -213,6 +213,7 @@ async def get_game_detail(
     if not game_res.data:
         raise HTTPException(status_code=404, detail="Game not found")
 
+    game = game_res.data
     moves_res = (
         sb.table("game_moves")
         .select("ply, uci, quality, cp_loss, eval_before, eval_after, is_brilliant, games!inner(user_id, chess_com_username)")
@@ -225,7 +226,6 @@ async def get_game_detail(
 
     moves_res = moves_res.order("ply").execute()
 
-    game = game_res.data
     analyses = game.pop("game_analyses", None)
     analysis = analyses[0] if isinstance(analyses, list) and analyses else analyses
     return {
