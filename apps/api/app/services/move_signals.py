@@ -6,11 +6,14 @@ These signals explain what a move meant without overloading the quality tier.
 from __future__ import annotations
 
 from collections import Counter
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import chess
 
 from app.services.brilliant import material_sacrifice, piece_value
+
+if TYPE_CHECKING:
+    from app.services.move_classifier import MoveQuality
 
 MoveSignal = str
 
@@ -84,7 +87,7 @@ def build_move_signals(
     *,
     board: chess.Board,
     move: chess.Move,
-    quality: str,
+    quality: "MoveQuality | str",
     cp_loss: float,
     eval_before: float | None,
     eval_after: float | None,
