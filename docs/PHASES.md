@@ -1,90 +1,78 @@
-# Sarce — Phases & Stages
+# Sarce — Phases & Implementation Status
 
-## Phase 1 — MVP (Tal-style personal tracker)
+> **Master specification:** [PRODUCT_SPEC.md](./PRODUCT_SPEC.md) — full product vision, Phases 1–4+, success metrics.
 
-**Goal:** Import your games, classify move quality, detect Brilliant sacrificial
-moves, track progress toward 6–10% Brilliant target, compare against Tal benchmark.
+> **Philosophy:** [PHILOSOPHY.md](./PHILOSOPHY.md) — product constitution (CI-enforced).
 
-| Stage | Feature | Status | Key files |
-|-------|---------|--------|-----------|
-| 1.1 | Monorepo scaffold | ✅ Done | `package.json`, `apps/*` |
-| 1.2 | Supabase schema + RLS | ✅ Done | `supabase/migrations/*` |
-| 1.3 | Chess.com import | ✅ Done | `services/chess_com.py`, `routers/games.py` |
-| 1.4 | Stockfish classification | ✅ Done | `services/stockfish.py`, `move_classifier.py` |
-| 1.5 | Brilliant detection (Tal) | ✅ Done | `services/brilliant.py` |
-| 1.6 | Analysis pipeline + persist | ✅ Done | `services/analysis.py` |
-| 1.7 | Baseline aggregation | ✅ Done | `services/baseline.py` |
-| 1.8 | Dashboard (live data) | ✅ Done | `apps/web/src/components/*` |
-| 1.9 | Tal reference benchmark | ✅ Done | `scripts/process_tal_benchmark.py` |
-| 1.10 | Tests | ✅ Done | `apps/api/tests/*` |
-
-### Phase 1 API endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Service health |
-| POST | `/games/import` | Import Chess.com games + queue analysis |
-| GET | `/games` | List games for user/username |
-| POST | `/games/analyze` | Analyze pending games |
-| GET | `/analysis/baseline/{id}` | User baseline (Brilliant %, distribution) |
-| GET | `/analysis/timeline/{id}` | Brilliant % per game over time |
-| GET | `/reference/tal` | Cached Tal benchmark |
+This file tracks **what's built vs planned**. The phase definitions below match PRODUCT_SPEC.md.
 
 ---
 
-## Phase 2 — Reference players
+## Phase 1 — MVP ✅ Complete
 
-**Goal:** Compare your style to any admired player (Chess.com username).
+**Goal:** Import games, classify moves, detect Brilliant plays, track 6–10% target, Tal benchmark.
 
 | Stage | Feature | Status |
 |-------|---------|--------|
-| 2.1 | User picks reference players | 🔲 Planned |
-| 2.2 | Pull + cache reference games | 🔲 Planned |
-| 2.3 | Style vector similarity score | 🔲 Planned |
-| 2.4 | UI: "80% similar to [Player]" | 🔲 Planned |
-
-Schema ready: `reference_players`, `reference_benchmarks`, `style_vectors`.
+| 1.1 | Game import (Chess.com) | ✅ |
+| 1.2 | Move classification (Stockfish) | ✅ |
+| 1.3 | Brilliant detection (Tal rules) | ✅ |
+| 1.4 | Baseline + dashboard | ✅ |
+| 1.5 | Tal reference benchmark | ✅ |
+| 1.6 | Tests + CI + quality gates | ✅ |
+| 1.7 | ECO opening extraction | 🔲 |
 
 ---
 
-## Phase 3 — Polish
+## Phase 2 — Video & Transcript Context 🔲 Planned
 
-**Goal:** Per-move insights, adjustable goals, optional community.
+**Goal:** Capture positions from videos; attach commentary; searchable position library.
 
 | Stage | Feature | Status |
 |-------|---------|--------|
-| 3.1 | Per-move highlight view | 🔲 Planned |
-| 3.2 | Adjustable style goal settings | 🔲 Planned |
-| 3.3 | Community style groupings | 🔲 Planned |
-
-Schema ready: `profiles.style_goal`, `game_moves` eval data for drill-down.
-
----
-
-## Classification tiers (Chess.com-style)
-
-Rule-based from Stockfish centipawn loss (no ML):
-
-| Tier | Centipawn loss |
-|------|----------------|
-| Best | 0 |
-| Excellent | ≤ 25 |
-| Good | ≤ 50 |
-| Inaccuracy | ≤ 100 |
-| Mistake | ≤ 200 |
-| Blunder | > 200 |
-| Miss | Had winning advantage, lost it (see `move_classifier.py`) |
-| Brilliant | Sacrifice + eval within margin (see `brilliant.py`) |
+| 2.1 | Manual position setter (`react-chessboard`) | 🔲 |
+| 2.2 | Screenshot → FEN recognition | 🔲 |
+| 2.3 | YouTube transcript capture | 🔲 |
+| 2.4 | AI-summarized annotations | 🔲 |
 
 ---
 
-## Brilliant detection (Tal-specific)
+## Phase 3 — Move Intent Journal 🔲 Planned
 
-A move is **Brilliant** when ALL hold:
+**Goal:** Post-game intent notes; intent vs engine reality; personal chess journal.
 
-1. Material sacrifice (piece value given up)
-2. Eval after move within `BRILLIANT_EVAL_MARGIN` of best (default 0.3 pawns)
-3. Position not already winning by `BRILLIANT_WINNING_MARGIN` (default 3.0)
-4. More than one reasonable legal move existed
+| Stage | Feature | Status |
+|-------|---------|--------|
+| 3.1 | Post-game annotation prompts | 🔲 |
+| 3.2 | Intent vs reality comparison | 🔲 |
+| 3.3 | Personal chess journal view | 🔲 |
+| 3.4 | Narrative export (MD/PDF) | 🔲 |
 
-Thresholds are env-tunable for calibration against Tal corpus.
+---
+
+## Phase 4+ — Future 🔲 Backlog
+
+See [PRODUCT_SPEC.md § Phase 4+](./PRODUCT_SPEC.md#phase-4--future-enhancements-not-locked) for full list.
+
+Highlights: Lichess import, reference player similarity, Android (Expo), opening matcher, anonymized peer comparison, browser extension, GM training mode.
+
+---
+
+## Classification reference
+
+Rule-based from Stockfish (no ML). Details in [PRODUCT_SPEC.md § 1.2](./PRODUCT_SPEC.md#12-move-classification-engine-rule-based-no-ml) and `apps/api/app/services/move_classifier.py`.
+
+**Brilliant criteria:** sacrifice + eval margin + not already winning + not forced — `brilliant.py`, tunable via `.env`.
+
+---
+
+## API endpoints (Phase 1, live)
+
+| Method | Path |
+|--------|------|
+| POST | `/games/import` |
+| GET | `/games` |
+| POST | `/games/analyze` |
+| GET | `/analysis/baseline/{id}` |
+| GET | `/analysis/timeline/{id}` |
+| GET | `/reference/tal` |
