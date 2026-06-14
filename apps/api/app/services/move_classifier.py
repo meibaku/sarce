@@ -11,6 +11,11 @@ from enum import Enum
 import chess
 
 from app.services.brilliant import is_brilliant_move
+from app.services.move_signals import (
+    build_move_signals,
+    game_phase,
+    move_san,
+)
 from app.services.stockfish import StockfishEngine
 
 
@@ -111,12 +116,17 @@ class MoveClassifier:
 
         with StockfishEngine() as engine:
             temp = board.copy()
+            previous_user_eval_after: float | None = None
             for ply, move in enumerate(moves):
                 if not is_user_ply(ply, user_color):
                     temp.push(move)
                     continue
 
-                best_before, eval_before = engine.analyze_position(temp)
+                phase = game_phase(temp, ply)
+                san = temp.san(move)
+                pv_candidates = engine.analyze_position_multipv(temp, multipv=3)
+                best_before = pv_candidates[0]["move"] if pv_candidates else None
+                eval_before = pv_candidates[0]["eval"] if pv_candidates else None
                 eval_after, _ = engine.eval_after_move(temp, move)
                 best_eval_after = eval_before
                 if best_before:
@@ -140,17 +150,46 @@ class MoveClassifier:
                     if brilliant:
                         quality = MoveQuality.BRILLIANT
 
+                pv = [
+                    {
+                        "rank": index + 1,
+                        "uci": candidate["move"].uci() if candidate.get("move") else None,
+                        "san": move_san(temp, candidate.get("move")),
+                        "eval": candidate.get("eval"),
+                    }
+                    for index, candidate in enumerate(pv_candidates)
+                ]
+                signals, highlight = build_move_signals(
+                    board=temp,
+                    move=move,
+                    quality=quality,
+                    cp_loss=cp_loss,
+                    eval_before=eval_before,
+                    eval_after=eval_after,
+                    best_move=best_before,
+                    pv=pv_candidates,
+                    previous_user_eval_after=previous_user_eval_after,
+                )
+
                 results.append(
                     {
                         "ply": ply,
                         "uci": move.uci(),
+                        "san": san,
                         "quality": quality.value,
                         "cp_loss": round(cp_loss, 1),
                         "eval_before": eval_before,
                         "eval_after": eval_after,
                         "is_brilliant": brilliant,
+                        "phase": phase,
+                        "signals": signals,
+                        "highlight": highlight,
+                        "best_uci": best_before.uci() if best_before else None,
+                        "best_san": move_san(temp, best_before),
+                        "pv": pv,
                     }
                 )
+                previous_user_eval_after = eval_after
                 temp.push(move)
 
         return results

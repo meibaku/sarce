@@ -55,6 +55,34 @@ class TestGamesRoutes:
 
         assert "/games/{game_id}" in routes
 
+    @patch("app.routers.games.analysis_service.analyze_pending", new_callable=AsyncMock)
+    @patch("app.routers.games.game_store.store_imported_games", new_callable=AsyncMock)
+    @patch("app.routers.games.chess_com.fetch_games_from_archive", new_callable=AsyncMock)
+    @patch("app.routers.games.chess_com.fetch_recent_archives", new_callable=AsyncMock)
+    def test_import_normalizes_chess_com_username(
+        self,
+        mock_fetch_archives,
+        mock_fetch_games,
+        mock_store_games,
+        mock_analyze_pending,
+    ):
+        mock_fetch_archives.return_value = [
+            "https://api.chess.com/pub/player/hikaru/games/2026/06"
+        ]
+        mock_fetch_games.return_value = [{"url": "game-1", "pgn": "1. e4 *"}]
+        mock_store_games.return_value = 1
+
+        res = client.post(
+            "/games/import",
+            json={"username": "  HIKARU  ", "max_games": 1, "analyze": True},
+        )
+
+        assert res.status_code == 200
+        assert res.json()["username"] == "hikaru"
+        mock_fetch_archives.assert_awaited_once_with("hikaru", limit=None)
+        assert mock_store_games.await_args.kwargs["username"] == "hikaru"
+        assert mock_analyze_pending.await_args.kwargs["chess_com_username"] == "hikaru"
+
     @patch("app.db.supabase.get_supabase")
     def test_game_detail_scopes_game_and_moves(self, mock_get_supabase):
         class FakeResult:

@@ -68,12 +68,17 @@ export function StyleMoments({ moments }: StyleMomentsProps) {
               </div>
               <div className="min-w-0">
                 <p className="font-mono text-sm text-foreground">
-                  {formatMoveNumber(moment.ply)} {moment.uci}
+                  {formatMoveNumber(moment.ply)} {moment.san ?? moment.uci}
                 </p>
                 <p className="mt-1 truncate text-sm text-foreground/50">
-                  vs {moment.opponent ?? "unknown opponent"}
+                  {moment.highlight ?? `vs ${moment.opponent ?? "unknown opponent"}`}
                   {moment.result ? ` - ${moment.result}` : ""}
                 </p>
+                {moment.signals.length > 0 && (
+                  <p className="mt-1 truncate text-xs text-foreground/40">
+                    {moment.signals.slice(0, 3).join(" / ")}
+                  </p>
+                )}
               </div>
               <div className="text-sm text-foreground/60 md:text-right">
                 <p className="tabular-nums">

@@ -28,7 +28,17 @@ export async function importChessComGames(username: string) {
     "/games/import",
     {
       method: "POST",
-      body: JSON.stringify({ username, max_games: 3, analyze: true }),
+      body: JSON.stringify({ username, analyze: false }),
+    },
+  );
+}
+
+export async function analyzePendingGames(username?: string, limit?: number) {
+  return fetchApi<{ message: string; username: string | null; userId: string }>(
+    "/games/analyze",
+    {
+      method: "POST",
+      body: JSON.stringify({ username, limit }),
     },
   );
 }
@@ -57,15 +67,23 @@ export async function listGames(username?: string) {
   const params = username
     ? `?username=${encodeURIComponent(username)}`
     : "";
-  return fetchApi<{
-    games: Array<{
-      id: string;
-      playedAt: string;
-      opponent: string;
-      analysisStatus: string;
-      brilliantPct: number | null;
-    }>;
-  }>(`/games${params}`);
+  return fetchApi<{ games: import("@/types/chess").GameSummary[] }>(
+    `/games${params}`,
+  );
+}
+
+export async function getStyleProfile(username?: string) {
+  const params = username ? `?username=${encodeURIComponent(username)}` : "";
+  return fetchApi<import("@/types/chess").StyleProfile>(
+    `/analysis/style-profile/${LOCAL_USER_ID}${params}`,
+  );
+}
+
+export async function getGameDetail(gameId: string, username?: string) {
+  const params = username ? `?username=${encodeURIComponent(username)}` : "";
+  return fetchApi<import("@/types/chess").GameDetail>(
+    `/games/${gameId}${params}`,
+  );
 }
 
 export async function listStyleMoments(username?: string) {
