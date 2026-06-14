@@ -36,6 +36,31 @@ class TestReferenceTal:
         assert res.json()["playerName"] == "Mikhail Tal"
 
 
+class TestAnalysisRoutes:
+    @patch(
+        "app.routers.analysis.style_profile_service.get_profile",
+        new_callable=AsyncMock,
+    )
+    def test_style_profile_normalizes_chess_com_username(self, mock_get_profile):
+        mock_get_profile.return_value = {
+            "gamesAnalyzed": 0,
+            "styleLabel": "No analyzed games",
+            "favoriteOpening": None,
+            "openings": [],
+            "phaseDistribution": {},
+            "signalDistribution": {},
+            "resultDistribution": {},
+            "timeControlDistribution": {},
+            "qualityDistribution": {},
+        }
+
+        res = client.get("/analysis/style-profile/local?username=%20DRATIUS%20")
+
+        assert res.status_code == 200
+        mock_get_profile.assert_awaited_once()
+        assert mock_get_profile.await_args.kwargs["chess_com_username"] == "dratius"
+
+
 class TestGamesRoutes:
     def test_style_moments_route_exists(self):
         routes = {

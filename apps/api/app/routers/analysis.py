@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 
 from app.deps import resolve_user_id
+from app.services.chess_com import normalize_chess_com_username
 from app.services.baseline import BaselineService
 from app.services.style_profile import StyleProfileService
 
