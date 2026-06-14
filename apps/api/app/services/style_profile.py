@@ -107,7 +107,7 @@ class StyleProfileService:
         qualities: list[str] = []
 
         for game in games:
-            eco, opening = _pgn_opening(game.get("pgn", ""))
+            eco, opening = _pgn_opening(game.get("pgn") or "")
             opening_counts[opening] += 1
             opening_meta[opening] = {"eco": eco, "name": opening}
             if game.get("result"):
