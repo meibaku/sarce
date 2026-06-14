@@ -19,6 +19,9 @@ PIECE_VALUES = {
     chess.QUEEN: 9,
 }
 
+MIN_BRILLIANT_SACRIFICE_VALUE = PIECE_VALUES[chess.KNIGHT]
+MAX_BRILLIANT_EVAL_LOSS = 0.25
+
 
 def piece_value(piece: chess.Piece | None) -> int:
     """Return simple material value for a piece."""
@@ -86,8 +89,8 @@ def is_brilliant_move(
     """
     Tal-specific brilliant detection. ALL conditions must hold:
 
-    1. Material sacrifice (piece value given up)
-    2. Eval after move within margin of best available
+    1. Real piece sacrifice (minor piece or larger, not a pawn)
+    2. Eval after move within excellent-or-better margin of best available
     3. Position not already crushing (+3 pawns default)
     4. Not a forced-only move
 
@@ -96,10 +99,12 @@ def is_brilliant_move(
     if eval_before is None or eval_after is None or best_eval is None:
         return False
 
-    if material_sacrifice(board, move) < 1:
+    if material_sacrifice(board, move) < MIN_BRILLIANT_SACRIFICE_VALUE:
         return False
 
-    if abs(eval_after - best_eval) > settings.brilliant_eval_margin:
+    # Keep Brilliant above the normal "good move" band even if env margin is looser.
+    allowed_eval_loss = min(settings.brilliant_eval_margin, MAX_BRILLIANT_EVAL_LOSS)
+    if abs(eval_after - best_eval) > allowed_eval_loss:
         return False
 
     if eval_before > settings.brilliant_winning_margin:

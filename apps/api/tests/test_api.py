@@ -36,6 +36,31 @@ class TestReferenceTal:
         assert res.json()["playerName"] == "Mikhail Tal"
 
 
+class TestAnalysisRoutes:
+    @patch(
+        "app.routers.analysis.style_profile_service.get_profile",
+        new_callable=AsyncMock,
+    )
+    def test_style_profile_normalizes_chess_com_username(self, mock_get_profile):
+        mock_get_profile.return_value = {
+            "gamesAnalyzed": 0,
+            "styleLabel": "No analyzed games",
+            "favoriteOpening": None,
+            "openings": [],
+            "phaseDistribution": {},
+            "signalDistribution": {},
+            "resultDistribution": {},
+            "timeControlDistribution": {},
+            "qualityDistribution": {},
+        }
+
+        res = client.get("/analysis/style-profile/local?username=%20DRATIUS%20")
+
+        assert res.status_code == 200
+        mock_get_profile.assert_awaited_once()
+        assert mock_get_profile.await_args.kwargs["chess_com_username"] == "dratius"
+
+
 class TestGamesRoutes:
     def test_style_moments_route_exists(self):
         routes = {
@@ -54,6 +79,34 @@ class TestGamesRoutes:
         }
 
         assert "/games/{game_id}" in routes
+
+    @patch("app.routers.games.analysis_service.analyze_pending", new_callable=AsyncMock)
+    @patch("app.routers.games.game_store.store_imported_games", new_callable=AsyncMock)
+    @patch("app.routers.games.chess_com.fetch_games_from_archive", new_callable=AsyncMock)
+    @patch("app.routers.games.chess_com.fetch_recent_archives", new_callable=AsyncMock)
+    def test_import_normalizes_chess_com_username(
+        self,
+        mock_fetch_archives,
+        mock_fetch_games,
+        mock_store_games,
+        mock_analyze_pending,
+    ):
+        mock_fetch_archives.return_value = [
+            "https://api.chess.com/pub/player/hikaru/games/2026/06"
+        ]
+        mock_fetch_games.return_value = [{"url": "game-1", "pgn": "1. e4 *"}]
+        mock_store_games.return_value = 1
+
+        res = client.post(
+            "/games/import",
+            json={"username": "  HIKARU  ", "max_games": 1, "analyze": True},
+        )
+
+        assert res.status_code == 200
+        assert res.json()["username"] == "hikaru"
+        mock_fetch_archives.assert_awaited_once_with("hikaru", limit=None)
+        assert mock_store_games.await_args.kwargs["username"] == "hikaru"
+        assert mock_analyze_pending.await_args.kwargs["chess_com_username"] == "hikaru"
 
     @patch("app.db.supabase.get_supabase")
     def test_game_detail_scopes_game_and_moves(self, mock_get_supabase):
@@ -91,6 +144,7 @@ class TestGamesRoutes:
                             "user_color": "white",
                             "time_control": "600",
                             "analysis_status": "complete",
+                            "pgn": None,
                             "game_analyses": [
                                 {
                                     "brilliant_pct": 8,
@@ -128,6 +182,7 @@ class TestGamesRoutes:
 
         assert res.status_code == 200
         assert res.json()["moves"][0]["quality"] == "brilliant"
+        assert res.json()["mainline"] == []
         assert ("games", "chess_com_username", "tal") in fake.calls
         assert ("game_moves", "game_id", "game-1") in fake.calls
         assert ("game_moves", "games.chess_com_username", "tal") in fake.calls

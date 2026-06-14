@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  getStyleProfile,
   getTalBenchmark,
   getTimeline,
   getUserBaseline,
@@ -9,15 +10,18 @@ import {
   listGames,
   listStyleMoments,
 } from "@/lib/api";
+import { AnalysisWorkspace } from "./analysis-workspace";
 import { BrilliantGauge } from "./brilliant-gauge";
 import { BrilliantTimeline } from "./brilliant-timeline";
 import { DistributionChart } from "./distribution-chart";
 import { ImportGamesForm } from "./import-games-form";
 import { StyleMoments } from "./style-moments";
+import { StyleProfilePanel } from "./style-profile-panel";
 import { StyleSummary } from "./style-summary";
 import type {
   ReferenceBenchmark,
   StyleMoment,
+  StyleProfile,
   TimelinePoint,
   UserBaseline,
 } from "@/types/chess";
@@ -46,29 +50,38 @@ export function Dashboard() {
   );
   const [timeline, setTimeline] = useState<TimelinePoint[]>([]);
   const [moments, setMoments] = useState<StyleMoment[]>([]);
+  const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [polling, setPolling] = useState(false);
+  const [analysisRefreshToken, setAnalysisRefreshToken] = useState(0);
 
-  const refreshData = useCallback(async (chessUsername?: string) => {
-    const u = chessUsername ?? username ?? undefined;
-    try {
-      const [b, t, tal] = await Promise.all([
-        getUserBaseline(u),
-        getTimeline(u),
-        getTalBenchmark(),
-      ]);
-      const momentRes = await listStyleMoments(u).catch(() => ({ moments: [] }));
-      setBaseline(b);
-      setTimeline(t.points);
-      setTalBenchmark(tal);
-      setMoments(momentRes.moments);
-      return b;
-    } catch {
-      return null;
-    }
-  }, [username]);
+  const refreshData = useCallback(
+    async (chessUsername?: string) => {
+      const u = chessUsername ?? username ?? undefined;
+      try {
+        const [b, t, tal, profile] = await Promise.all([
+          getUserBaseline(u),
+          getTimeline(u),
+          getTalBenchmark(),
+          getStyleProfile(u).catch(() => null),
+        ]);
+        const momentRes = await listStyleMoments(u).catch(() => ({
+          moments: [],
+        }));
+        setBaseline(b);
+        setTimeline(t.points);
+        setTalBenchmark(tal);
+        setStyleProfile(profile);
+        setMoments(momentRes.moments);
+        return b;
+      } catch {
+        return null;
+      }
+    },
+    [username],
+  );
 
   const pollUntilComplete = useCallback(
     async (chessUsername: string) => {
@@ -81,6 +94,7 @@ export function Dashboard() {
             g.analysisStatus === "pending" || g.analysisStatus === "processing",
         );
         await refreshData(chessUsername);
+        setAnalysisRefreshToken((current) => current + 1);
         if (!pending) break;
       }
       setPolling(false);
@@ -100,13 +114,15 @@ export function Dashboard() {
       const result = await importChessComGames(chessUsername);
       setImportStatus(result.message);
       if (result.imported > 0) {
+        await refreshData(chessUsername);
+        setAnalysisRefreshToken((current) => current + 1);
         pollUntilComplete(chessUsername);
       }
     } catch (err) {
       setImportStatus(
         err instanceof Error
           ? err.message
-          : "Import failed — is the API running on :8000?",
+          : "Import failed - is the API running on :8000?",
       );
     } finally {
       setLoading(false);
@@ -117,11 +133,14 @@ export function Dashboard() {
     <div className="mx-auto max-w-6xl space-y-8 px-6 py-8">
       <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
-          <ImportGamesForm onImport={handleImport} loading={loading || polling} />
+          <ImportGamesForm
+            onImport={handleImport}
+            loading={loading || polling}
+          />
           {importStatus && (
             <p className="rounded-lg border border-white/10 bg-surface px-4 py-3 text-sm text-foreground/80">
               {importStatus}
-              {polling && " Analyzing with Stockfish…"}
+              {polling && " Analyzing with Stockfish..."}
             </p>
           )}
           <StyleSummary baseline={baseline} />
@@ -151,10 +170,12 @@ export function Dashboard() {
         />
       </section>
 
+      <StyleProfilePanel profile={styleProfile} />
+
       <section className="rounded-xl border border-white/10 bg-surface p-6">
         <h2 className="mb-2 text-lg font-medium">Brilliant % over time</h2>
         <p className="mb-4 text-sm text-foreground/50">
-          Target band: {baseline.targetBrilliantMin}–{baseline.targetBrilliantMax}%
+          Target band: {baseline.targetBrilliantMin}-{baseline.targetBrilliantMax}%
         </p>
         <BrilliantTimeline
           points={timeline}
@@ -164,6 +185,17 @@ export function Dashboard() {
       </section>
 
       <StyleMoments moments={moments} />
+
+      <AnalysisWorkspace
+        username={username}
+        baseline={baseline}
+        talBenchmark={talBenchmark}
+        refreshToken={analysisRefreshToken}
+        onRefresh={async (chessUsername) => {
+          await refreshData(chessUsername);
+          setAnalysisRefreshToken((current) => current + 1);
+        }}
+      />
     </div>
   );
 }

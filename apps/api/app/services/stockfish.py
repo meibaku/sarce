@@ -58,6 +58,32 @@ class StockfishEngine:
         eval_pawns = score_to_pawns(score, board) if score else None
         return best_move, eval_pawns
 
+    def analyze_position_multipv(self, board: chess.Board, multipv: int = 3) -> list[dict]:
+        """Return top engine candidates with evals from the side-to-move perspective."""
+        if not self._engine:
+            raise RuntimeError("StockfishEngine must be used as a context manager")
+
+        infos = self._engine.analyse(
+            board,
+            chess.engine.Limit(depth=self.depth),
+            multipv=multipv,
+        )
+        if isinstance(infos, dict):
+            infos = [infos]
+
+        candidates = []
+        for info in infos:
+            pv = info.get("pv", [])
+            move = pv[0] if pv else None
+            score = info.get("score")
+            candidates.append(
+                {
+                    "move": move,
+                    "eval": score_to_pawns(score, board) if score else None,
+                }
+            )
+        return candidates
+
     def eval_after_move(
         self, board: chess.Board, move: chess.Move
     ) -> tuple[float | None, chess.Move | None]:

@@ -8,6 +8,38 @@ export type MoveQuality =
   | "miss"
   | "brilliant";
 
+export type MoveSignal =
+  | "forced"
+  | "top_engine_choice"
+  | "top_three_choice"
+  | "clearly_best"
+  | "sacrifice"
+  | "exchange_sacrifice"
+  | "brilliant_sacrifice"
+  | "evaluation_swing"
+  | "tactical_resource"
+  | "momentum_shift"
+  | "breakthrough_sacrifice"
+  | "missed_tactic"
+  | "critical_error"
+  | "clean_move";
+
+export type GamePhase = "opening" | "middlegame" | "endgame";
+
+export interface PrincipalVariation {
+  rank: number;
+  uci: string | null;
+  san: string | null;
+  eval: number | null;
+}
+
+export interface MainlineMove {
+  ply: number;
+  uci: string;
+  san: string;
+  fen: string;
+}
+
 export interface MoveQualityDistribution {
   best: number;
   excellent: number;
@@ -26,8 +58,34 @@ export interface GameSummary {
   opponentRating: number | null;
   result: "win" | "loss" | "draw";
   timeControl: string | null;
-  brilliantPct: number;
-  distribution: MoveQualityDistribution;
+  analysisStatus: "pending" | "processing" | "complete" | "failed";
+  brilliantPct: number | null;
+  totalMoves: number | null;
+}
+
+export interface AnalyzedMove {
+  ply: number;
+  uci: string;
+  san: string | null;
+  quality: MoveQuality;
+  cpLoss: number | null;
+  evalBefore: number | null;
+  evalAfter: number | null;
+  isBrilliant: boolean;
+  phase: GamePhase | null;
+  signals: MoveSignal[];
+  highlight: string | null;
+  bestUci: string | null;
+  bestSan: string | null;
+  pv: PrincipalVariation[];
+}
+
+export interface GameDetail extends GameSummary {
+  userColor: "white" | "black" | null;
+  distribution: MoveQualityDistribution | null;
+  initialFen: string;
+  mainline: MainlineMove[];
+  moves: AnalyzedMove[];
 }
 
 export interface UserBaseline {
@@ -45,6 +103,7 @@ export interface StyleVectorV1 {
   tacticalComplexity: number;
   evalVolatility: number;
   distribution: MoveQualityDistribution;
+  signalDistribution?: Record<string, number>;
 }
 
 export interface ReferenceBenchmark {
@@ -61,6 +120,24 @@ export interface TimelinePoint {
   opponent: string | null;
 }
 
+export interface StyleOpening {
+  eco: string | null;
+  name: string;
+  games: number;
+}
+
+export interface StyleProfile {
+  gamesAnalyzed: number;
+  styleLabel: string;
+  favoriteOpening: { eco: string | null; name: string } | null;
+  openings: StyleOpening[];
+  phaseDistribution: Record<string, number>;
+  signalDistribution: Record<string, number>;
+  resultDistribution: Record<string, number>;
+  timeControlDistribution: Record<string, number>;
+  qualityDistribution: MoveQualityDistribution;
+}
+
 export interface StyleMoment {
   gameId: string;
   playedAt: string | null;
@@ -68,11 +145,18 @@ export interface StyleMoment {
   result: "win" | "loss" | "draw" | null;
   ply: number;
   uci: string;
+  san: string | null;
   quality: MoveQuality;
   cpLoss: number | null;
   evalBefore: number | null;
   evalAfter: number | null;
   isBrilliant: boolean;
+  phase: GamePhase | null;
+  signals: MoveSignal[];
+  highlight: string | null;
+  bestUci: string | null;
+  bestSan: string | null;
+  pv: PrincipalVariation[];
 }
 
 export const EMPTY_DISTRIBUTION: MoveQualityDistribution = {

@@ -15,25 +15,69 @@ import chess.pgn
 from app.db.supabase import get_supabase
 from app.services.baseline import BaselineService, EMPTY_DISTRIBUTION
 from app.services.move_classifier import MoveClassifier
+from app.services.move_signals import signal_distribution
 
 logger = logging.getLogger(__name__)
 
 
-def build_style_vector_v1(distribution: dict, brilliant_pct: float) -> dict:
+def build_style_vector_v1(
+    distribution: dict,
+    brilliant_pct: float,
+    classified_moves: list[dict] | None = None,
+) -> dict:
     """
     Versioned style vector schema (v1).
 
     Evolves in Phase 2+ as similarity features are added.
     """
+    classified_moves = classified_moves or []
     total = sum(distribution.values()) or 1
-    sacrifices = distribution.get("brilliant", 0)
+    signals = signal_distribution(classified_moves)
+    sacrifice_moves = (
+        sum(
+            1
+            for move in classified_moves
+            if any(
+                signal in move.get("signals", [])
+                for signal in (
+                    "sacrifice",
+                    "exchange_sacrifice",
+                    "breakthrough_sacrifice",
+                    "brilliant_sacrifice",
+                )
+            )
+        )
+        if classified_moves
+        else distribution.get("brilliant", 0)
+    )
+    tactical_moves = sum(
+        1
+        for move in classified_moves
+        if any(
+            signal in move.get("signals", [])
+            for signal in (
+                "tactical_resource",
+                "momentum_shift",
+                "evaluation_swing",
+                "breakthrough_sacrifice",
+            )
+        )
+    )
+    eval_swings = [
+        abs(move["eval_after"] - move["eval_before"])
+        for move in classified_moves
+        if move.get("eval_after") is not None and move.get("eval_before") is not None
+    ]
     return {
         "version": 1,
         "brilliantPct": round(brilliant_pct, 2),
-        "sacrificeRate": round(sacrifices / total, 4),
-        "tacticalComplexity": 0.0,
-        "evalVolatility": 0.0,
+        "sacrificeRate": round(sacrifice_moves / total, 4),
+        "tacticalComplexity": round(tactical_moves / total, 4),
+        "evalVolatility": round(sum(eval_swings) / len(eval_swings), 3)
+        if eval_swings
+        else 0.0,
         "distribution": distribution,
+        "signalDistribution": signals,
     }
 
 
@@ -88,11 +132,18 @@ class AnalysisService:
                 "game_id": game_id,
                 "ply": m["ply"],
                 "uci": m["uci"],
+                "san": m.get("san"),
                 "quality": m["quality"],
                 "cp_loss": m["cp_loss"],
                 "eval_before": m["eval_before"],
                 "eval_after": m["eval_after"],
                 "is_brilliant": m["is_brilliant"],
+                "phase": m.get("phase"),
+                "signals": m.get("signals", []),
+                "highlight": m.get("highlight"),
+                "best_uci": m.get("best_uci"),
+                "best_san": m.get("best_san"),
+                "pv": m.get("pv", []),
             }
             for m in classified
         ]
@@ -102,7 +153,7 @@ class AnalysisService:
         qualities = [m["quality"] for m in classified]
         distribution = BaselineService.compute_distribution(qualities)
         brilliant_pct = BaselineService.brilliant_pct(distribution)
-        style_vector = build_style_vector_v1(distribution, brilliant_pct)
+        style_vector = build_style_vector_v1(distribution, brilliant_pct, classified)
 
         sb.table("game_analyses").upsert(
             {
@@ -133,7 +184,7 @@ class AnalysisService:
         self,
         user_id: str | None = None,
         chess_com_username: str | None = None,
-        limit: int = 10,
+        limit: int | None = None,
     ) -> list[dict]:
         """
         Analyze up to `limit` games with status 'pending'.
@@ -145,8 +196,9 @@ class AnalysisService:
             sb.table("games")
             .select("id")
             .eq("analysis_status", "pending")
-            .limit(limit)
         )
+        if limit is not None:
+            query = query.limit(limit)
         if user_id:
             query = query.eq("user_id", user_id)
         if chess_com_username:

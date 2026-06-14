@@ -4,8 +4,9 @@ from pydantic import BaseModel, Field
 from app.config import settings
 from app.deps import resolve_user_id
 from app.services.analysis import AnalysisService
-from app.services.chess_com import ChessComClient
+from app.services.chess_com import ChessComClient, normalize_chess_com_username
 from app.services.game_store import GameStore
+from app.services.pgn_parser import mainline_positions
 
 router = APIRouter()
 chess_com = ChessComClient()
@@ -18,7 +19,7 @@ class ImportRequest(BaseModel):
 
     username: str = Field(min_length=1, max_length=64)
     user_id: str | None = None
-    max_games: int = Field(default=5, ge=1, le=20)
+    max_games: int | None = Field(default=None, ge=1, le=1000)
     analyze: bool = Field(default=True, description="Queue Stockfish analysis after import")
 
 
@@ -31,7 +32,7 @@ class ImportResponse(BaseModel):
 class AnalyzeRequest(BaseModel):
     user_id: str | None = None
     username: str | None = None
-    limit: int = Field(default=5, ge=1, le=10)
+    limit: int | None = Field(default=None, ge=1, le=1000)
 
 
 STYLE_MOMENT_QUALITIES = ("brilliant", "miss", "blunder")
@@ -45,43 +46,48 @@ async def import_games(body: ImportRequest, background_tasks: BackgroundTasks):
     Phase 1: imports last archives, parses PGN via python-chess, stores metadata.
     """
     user_id = resolve_user_id(body.user_id)
+    username = normalize_chess_com_username(body.username)
     try:
-        archives = await chess_com.fetch_recent_archives(body.username, limit=2)
+        archives = await chess_com.fetch_recent_archives(username, limit=None)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Chess.com API error: {exc}") from exc
 
     if not archives:
         return ImportResponse(
             imported=0,
-            message=f"No recent games found for '{body.username}'",
-            username=body.username,
+            message=f"No recent games found for '{username}'",
+            username=username,
         )
 
     games = []
-    for archive_url in archives:
-        batch = await chess_com.fetch_games_from_archive(archive_url)
-        games.extend(batch)
-        if len(games) >= body.max_games:
-            break
+    try:
+        for archive_url in archives:
+            batch = await chess_com.fetch_games_from_archive(archive_url)
+            games.extend(batch)
+            if body.max_games is not None and len(games) >= body.max_games:
+                break
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Chess.com API error: {exc}") from exc
 
-    games = games[: body.max_games]
+    if body.max_games is not None:
+        games = games[: body.max_games]
     stored = await game_store.store_imported_games(
-        username=body.username,
+        username=username,
         user_id=user_id,
         games=games,
     )
 
-    msg = f"Imported {stored} games for '{body.username}'."
+    msg = f"Imported {stored} games for '{username}'."
     if body.analyze and stored > 0:
         background_tasks.add_task(
             analysis_service.analyze_pending,
             user_id=user_id,
-            chess_com_username=body.username,
+            chess_com_username=username,
             limit=stored,
         )
         msg += " Analysis started in background."
 
-    return ImportResponse(imported=stored, message=msg, username=body.username)
+    return ImportResponse(imported=stored, message=msg, username=username)
 
 
 @router.get("")
@@ -96,7 +102,7 @@ async def list_games(
     sb = get_supabase()
     query = (
         sb.table("games")
-        .select("id, played_at, opponent, opponent_rating, result, analysis_status, game_analyses(brilliant_pct, total_moves)")
+        .select("id, played_at, opponent, opponent_rating, result, time_control, analysis_status, game_analyses(brilliant_pct, total_moves)")
         .order("played_at", desc=True)
         .limit(limit)
     )
@@ -104,7 +110,7 @@ async def list_games(
     if uid:
         query = query.eq("user_id", uid)
     if username:
-        query = query.eq("chess_com_username", username)
+        query = query.eq("chess_com_username", normalize_chess_com_username(username))
 
     res = query.execute()
     games = []
@@ -118,6 +124,7 @@ async def list_games(
                 "opponent": row.get("opponent"),
                 "opponentRating": row.get("opponent_rating"),
                 "result": row.get("result"),
+                "timeControl": row.get("time_control"),
                 "analysisStatus": row.get("analysis_status"),
                 "brilliantPct": summary.get("brilliant_pct") if summary else None,
                 "totalMoves": summary.get("total_moves") if summary else None,
@@ -147,7 +154,7 @@ async def list_style_moments(
     if uid:
         games_query = games_query.eq("user_id", uid)
     if username:
-        games_query = games_query.eq("chess_com_username", username)
+        games_query = games_query.eq("chess_com_username", normalize_chess_com_username(username))
 
     games_res = games_query.execute()
     games = games_res.data or []
@@ -157,7 +164,7 @@ async def list_style_moments(
 
     moves_res = (
         sb.table("game_moves")
-        .select("game_id, ply, uci, quality, cp_loss, eval_before, eval_after, is_brilliant")
+        .select("game_id, ply, uci, san, quality, cp_loss, eval_before, eval_after, is_brilliant, phase, signals, highlight, best_uci, best_san, pv")
         .in_("game_id", game_ids)
         .in_("quality", list(STYLE_MOMENT_QUALITIES))
         .order("created_at", desc=True)
@@ -177,11 +184,18 @@ async def list_style_moments(
                 "result": game.get("result"),
                 "ply": move.get("ply"),
                 "uci": move.get("uci"),
+                "san": move.get("san"),
                 "quality": move.get("quality"),
                 "cpLoss": float(move["cp_loss"]) if move.get("cp_loss") is not None else None,
                 "evalBefore": float(move["eval_before"]) if move.get("eval_before") is not None else None,
                 "evalAfter": float(move["eval_after"]) if move.get("eval_after") is not None else None,
                 "isBrilliant": move.get("is_brilliant"),
+                "phase": move.get("phase"),
+                "signals": move.get("signals") or [],
+                "highlight": move.get("highlight"),
+                "bestUci": move.get("best_uci"),
+                "bestSan": move.get("best_san"),
+                "pv": move.get("pv") or [],
             }
         )
 
@@ -200,13 +214,14 @@ async def get_game_detail(
     sb = get_supabase()
     game_res = (
         sb.table("games")
-        .select("id, played_at, opponent, opponent_rating, result, user_color, time_control, analysis_status, game_analyses(brilliant_pct, distribution, total_moves)")
+        .select("id, pgn, played_at, opponent, opponent_rating, result, user_color, time_control, analysis_status, game_analyses(brilliant_pct, distribution, total_moves)")
         .eq("id", game_id)
     )
     uid = resolve_user_id(user_id) if user_id or not username else None
     if uid:
         game_res = game_res.eq("user_id", uid)
     if username:
+        username = normalize_chess_com_username(username)
         game_res = game_res.eq("chess_com_username", username)
 
     game_res = game_res.maybe_single().execute()
@@ -216,7 +231,7 @@ async def get_game_detail(
     game = game_res.data
     moves_res = (
         sb.table("game_moves")
-        .select("ply, uci, quality, cp_loss, eval_before, eval_after, is_brilliant, games!inner(user_id, chess_com_username)")
+        .select("ply, uci, san, quality, cp_loss, eval_before, eval_after, is_brilliant, phase, signals, highlight, best_uci, best_san, pv, games!inner(user_id, chess_com_username)")
         .eq("game_id", game["id"])
     )
     if uid:
@@ -228,6 +243,8 @@ async def get_game_detail(
 
     analyses = game.pop("game_analyses", None)
     analysis = analyses[0] if isinstance(analyses, list) and analyses else analyses
+    pgn_text = game.pop("pgn", "") or ""
+    initial_fen, mainline = mainline_positions(pgn_text)
     return {
         "id": game["id"],
         "playedAt": game.get("played_at"),
@@ -240,15 +257,24 @@ async def get_game_detail(
         "brilliantPct": float(analysis.get("brilliant_pct", 0)) if analysis else None,
         "distribution": analysis.get("distribution") if analysis else None,
         "totalMoves": analysis.get("total_moves") if analysis else None,
+        "initialFen": initial_fen,
+        "mainline": mainline,
         "moves": [
             {
                 "ply": move.get("ply"),
                 "uci": move.get("uci"),
+                "san": move.get("san"),
                 "quality": move.get("quality"),
                 "cpLoss": float(move["cp_loss"]) if move.get("cp_loss") is not None else None,
                 "evalBefore": float(move["eval_before"]) if move.get("eval_before") is not None else None,
                 "evalAfter": float(move["eval_after"]) if move.get("eval_after") is not None else None,
                 "isBrilliant": move.get("is_brilliant"),
+                "phase": move.get("phase"),
+                "signals": move.get("signals") or [],
+                "highlight": move.get("highlight"),
+                "bestUci": move.get("best_uci"),
+                "bestSan": move.get("best_san"),
+                "pv": move.get("pv") or [],
             }
             for move in moves_res.data or []
         ],
@@ -259,17 +285,20 @@ async def get_game_detail(
 async def analyze_pending(body: AnalyzeRequest, background_tasks: BackgroundTasks):
     """Trigger analysis for pending games (manual or after import)."""
     user_id = resolve_user_id(body.user_id) if body.user_id else None
+    username = normalize_chess_com_username(body.username) if body.username else None
 
     async def run():
         await analysis_service.analyze_pending(
             user_id=user_id,
-            chess_com_username=body.username,
+            chess_com_username=username,
             limit=body.limit,
         )
 
     background_tasks.add_task(run)
     return {
-        "message": f"Analysis queued (limit {body.limit})",
-        "username": body.username,
+        "message": "Analysis queued for all pending games"
+        if body.limit is None
+        else f"Analysis queued (limit {body.limit})",
+        "username": username,
         "userId": user_id or settings.local_user_id,
     }
