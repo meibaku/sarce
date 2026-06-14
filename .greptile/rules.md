@@ -22,8 +22,8 @@ Do **not** flag these as bugs or required fixes:
 - `MISS` detection thresholds in `move_classifier.py` — Phase 1 heuristic
 - Classifying **user moves only** (not all plies) — intentional
 - `BackgroundTasks` for analysis instead of Redis/Celery — Phase 1 local-first choice
-- Low brilliant % framed as user failure in copy — CI already guards; don't suggest punitive UX
-- Suggesting "use ML for better classification" — out of scope unless ADR exists
+- Suggestions to make low Brilliant % copy more punitive — CI already guards against shame/failure framing
+- Suggestions to "use ML for better classification" — out of scope unless ADR exists
 
 ## DO flag (high value reviews)
 

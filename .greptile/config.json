@@ -1,6 +1,6 @@
 {
   "strictness": 2,
-  "commentTypes": ["logic", "syntax", "security"],
+  "commentTypes": ["logic", "syntax", "style", "info"],
   "triggerOnUpdates": true,
   "ignorePatterns": "node_modules/**\n.next/**\ndist/**\nbuild/**\n*.egg-info/**\n__pycache__/**\n.pytest_cache/**\npackage-lock.json\napps/api/.cache/**\n**/*.generated.*",
   "instructions": "Sarce is a chess STYLE identity app (Tal-inspired, 6-10% Brilliant target) — NOT an engine accuracy coach. Read docs/PHILOSOPHY.md and .greptile/rules.md before reviewing. Never suggest removing Brilliant tier, replacing Brilliant % as headline metric, adding ML classification, moving Stockfish to client, or punitive UX. Flag security (RLS, service_role exposure) and real bugs. Push back on refactors that change product foundations without an ADR in docs/adr/.",
