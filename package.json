@@ -15,5 +15,8 @@
     "test:arch": "cd apps/api && pytest tests/test_architecture.py tests/test_philosophy_contracts.py -v",
     "lint:web": "npm run lint --workspace=apps/web",
     "ci": "npm run test:api && npm run lint:web && npm run build:web"
+  },
+  "devDependencies": {
+    "supabase": "^2.106.0"
   }
 }

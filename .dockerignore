@@ -1,0 +1,14 @@
+.git
+.github
+.next
+.pytest_cache
+node_modules
+apps/web/.next
+apps/api/.pytest_cache
+apps/api/.cache
+__pycache__
+*.pyc
+.env
+.venv
+npm-debug.log*
+
