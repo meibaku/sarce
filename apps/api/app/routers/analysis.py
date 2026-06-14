@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 
 from app.deps import resolve_user_id
+from app.services.chess_com import normalize_chess_com_username
 from app.services.baseline import BaselineService
 
 router = APIRouter()
@@ -20,7 +21,7 @@ async def get_baseline(
     try:
         return await baseline_service.get_user_baseline(
             user_id=resolve_user_id(user_id),
-            chess_com_username=username,
+            chess_com_username=normalize_chess_com_username(username) if username else None,
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -35,7 +36,7 @@ async def get_timeline(
     try:
         points = await baseline_service.get_timeline(
             user_id=resolve_user_id(user_id),
-            chess_com_username=username,
+            chess_com_username=normalize_chess_com_username(username) if username else None,
         )
         return {"points": points}
     except Exception as exc:

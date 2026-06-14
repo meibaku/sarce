@@ -23,6 +23,19 @@ class GameStore:
             if parsed is None:
                 continue
 
+            existing = (
+                sb.table("games")
+                .select("analysis_status")
+                .eq("external_id", parsed["external_id"])
+                .maybe_single()
+                .execute()
+            )
+            analysis_status = (
+                existing.data.get("analysis_status")
+                if existing and existing.data
+                else "pending"
+            )
+
             row = {
                 "user_id": user_id,
                 "chess_com_username": username,
@@ -34,7 +47,7 @@ class GameStore:
                 "time_control": parsed["time_control"],
                 "result": parsed["result"],
                 "user_color": parsed["user_color"],
-                "analysis_status": "pending",
+                "analysis_status": analysis_status,
             }
 
             sb.table("games").upsert(row, on_conflict="external_id").execute()

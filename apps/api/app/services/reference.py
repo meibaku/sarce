@@ -78,7 +78,7 @@ class ReferenceService:
             .maybe_single()
             .execute()
         )
-        if not bench_res.data:
+        if not bench_res or not bench_res.data:
             return {
                 "playerName": player_res.data["name"],
                 "brilliantPct": 0,

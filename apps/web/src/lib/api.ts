@@ -28,7 +28,7 @@ export async function importChessComGames(username: string) {
     "/games/import",
     {
       method: "POST",
-      body: JSON.stringify({ username, max_games: 3, analyze: true }),
+      body: JSON.stringify({ username, max_games: 3, analyze: false }),
     },
   );
 }

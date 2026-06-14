@@ -18,7 +18,7 @@ export function ImportGamesForm({ onImport, loading }: ImportGamesFormProps) {
     >
       <h2 className="text-lg font-medium">Import from Chess.com</h2>
       <p className="mt-1 text-sm text-foreground/60">
-        Fetch your recent public games and run style analysis.
+        Fetch your recent public games.
       </p>
       <div className="mt-4 flex gap-3">
         <input
@@ -33,7 +33,7 @@ export function ImportGamesForm({ onImport, loading }: ImportGamesFormProps) {
           disabled={loading}
           className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-background transition hover:bg-accent/90 disabled:opacity-50"
         >
-          {loading ? "Importing…" : "Import games"}
+          {loading ? "Importing..." : "Import games"}
         </button>
       </div>
     </form>

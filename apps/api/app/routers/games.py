@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from app.config import settings
 from app.deps import resolve_user_id
 from app.services.analysis import AnalysisService
-from app.services.chess_com import ChessComClient
+from app.services.chess_com import ChessComClient, normalize_chess_com_username
 from app.services.game_store import GameStore
 
 router = APIRouter()
@@ -45,43 +45,47 @@ async def import_games(body: ImportRequest, background_tasks: BackgroundTasks):
     Phase 1: imports last archives, parses PGN via python-chess, stores metadata.
     """
     user_id = resolve_user_id(body.user_id)
+    username = normalize_chess_com_username(body.username)
     try:
-        archives = await chess_com.fetch_recent_archives(body.username, limit=2)
+        archives = await chess_com.fetch_recent_archives(username, limit=2)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Chess.com API error: {exc}") from exc
 
     if not archives:
         return ImportResponse(
             imported=0,
-            message=f"No recent games found for '{body.username}'",
-            username=body.username,
+            message=f"No recent games found for '{username}'",
+            username=username,
         )
 
     games = []
-    for archive_url in archives:
-        batch = await chess_com.fetch_games_from_archive(archive_url)
-        games.extend(batch)
-        if len(games) >= body.max_games:
-            break
+    try:
+        for archive_url in archives:
+            batch = await chess_com.fetch_games_from_archive(archive_url)
+            games.extend(batch)
+            if len(games) >= body.max_games:
+                break
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Chess.com API error: {exc}") from exc
 
     games = games[: body.max_games]
     stored = await game_store.store_imported_games(
-        username=body.username,
+        username=username,
         user_id=user_id,
         games=games,
     )
 
-    msg = f"Imported {stored} games for '{body.username}'."
+    msg = f"Imported {stored} games for '{username}'."
     if body.analyze and stored > 0:
         background_tasks.add_task(
             analysis_service.analyze_pending,
             user_id=user_id,
-            chess_com_username=body.username,
+            chess_com_username=username,
             limit=stored,
         )
         msg += " Analysis started in background."
 
-    return ImportResponse(imported=stored, message=msg, username=body.username)
+    return ImportResponse(imported=stored, message=msg, username=username)
 
 
 @router.get("")
@@ -104,6 +108,7 @@ async def list_games(
     if uid:
         query = query.eq("user_id", uid)
     if username:
+        username = normalize_chess_com_username(username)
         query = query.eq("chess_com_username", username)
 
     res = query.execute()
@@ -147,6 +152,7 @@ async def list_style_moments(
     if uid:
         games_query = games_query.eq("user_id", uid)
     if username:
+        username = normalize_chess_com_username(username)
         games_query = games_query.eq("chess_com_username", username)
 
     games_res = games_query.execute()
@@ -207,6 +213,7 @@ async def get_game_detail(
     if uid:
         game_res = game_res.eq("user_id", uid)
     if username:
+        username = normalize_chess_com_username(username)
         game_res = game_res.eq("chess_com_username", username)
 
     game_res = game_res.maybe_single().execute()
@@ -259,17 +266,18 @@ async def get_game_detail(
 async def analyze_pending(body: AnalyzeRequest, background_tasks: BackgroundTasks):
     """Trigger analysis for pending games (manual or after import)."""
     user_id = resolve_user_id(body.user_id) if body.user_id else None
+    username = normalize_chess_com_username(body.username) if body.username else None
 
     async def run():
         await analysis_service.analyze_pending(
             user_id=user_id,
-            chess_com_username=body.username,
+            chess_com_username=username,
             limit=body.limit,
         )
 
     background_tasks.add_task(run)
     return {
         "message": f"Analysis queued (limit {body.limit})",
-        "username": body.username,
+        "username": username,
         "userId": user_id or settings.local_user_id,
     }

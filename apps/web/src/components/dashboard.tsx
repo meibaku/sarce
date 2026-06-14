@@ -6,7 +6,6 @@ import {
   getTimeline,
   getUserBaseline,
   importChessComGames,
-  listGames,
   listStyleMoments,
 } from "@/lib/api";
 import { BrilliantGauge } from "./brilliant-gauge";
@@ -49,43 +48,29 @@ export function Dashboard() {
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [polling, setPolling] = useState(false);
 
-  const refreshData = useCallback(async (chessUsername?: string) => {
-    const u = chessUsername ?? username ?? undefined;
-    try {
-      const [b, t, tal] = await Promise.all([
-        getUserBaseline(u),
-        getTimeline(u),
-        getTalBenchmark(),
-      ]);
-      const momentRes = await listStyleMoments(u).catch(() => ({ moments: [] }));
-      setBaseline(b);
-      setTimeline(t.points);
-      setTalBenchmark(tal);
-      setMoments(momentRes.moments);
-      return b;
-    } catch {
-      return null;
-    }
-  }, [username]);
-
-  const pollUntilComplete = useCallback(
-    async (chessUsername: string) => {
-      setPolling(true);
-      for (let i = 0; i < 60; i++) {
-        await new Promise((r) => setTimeout(r, 5000));
-        const gamesRes = await listGames(chessUsername).catch(() => null);
-        const pending = gamesRes?.games?.some(
-          (g) =>
-            g.analysisStatus === "pending" || g.analysisStatus === "processing",
-        );
-        await refreshData(chessUsername);
-        if (!pending) break;
+  const refreshData = useCallback(
+    async (chessUsername?: string) => {
+      const u = chessUsername ?? username ?? undefined;
+      try {
+        const [b, t, tal] = await Promise.all([
+          getUserBaseline(u),
+          getTimeline(u),
+          getTalBenchmark(),
+        ]);
+        const momentRes = await listStyleMoments(u).catch(() => ({
+          moments: [],
+        }));
+        setBaseline(b);
+        setTimeline(t.points);
+        setTalBenchmark(tal);
+        setMoments(momentRes.moments);
+        return b;
+      } catch {
+        return null;
       }
-      setPolling(false);
     },
-    [refreshData],
+    [username],
   );
 
   useEffect(() => {
@@ -100,13 +85,13 @@ export function Dashboard() {
       const result = await importChessComGames(chessUsername);
       setImportStatus(result.message);
       if (result.imported > 0) {
-        pollUntilComplete(chessUsername);
+        await refreshData(chessUsername);
       }
     } catch (err) {
       setImportStatus(
         err instanceof Error
           ? err.message
-          : "Import failed — is the API running on :8000?",
+          : "Import failed - is the API running on :8000?",
       );
     } finally {
       setLoading(false);
@@ -117,11 +102,10 @@ export function Dashboard() {
     <div className="mx-auto max-w-6xl space-y-8 px-6 py-8">
       <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
-          <ImportGamesForm onImport={handleImport} loading={loading || polling} />
+          <ImportGamesForm onImport={handleImport} loading={loading} />
           {importStatus && (
             <p className="rounded-lg border border-white/10 bg-surface px-4 py-3 text-sm text-foreground/80">
               {importStatus}
-              {polling && " Analyzing with Stockfish…"}
             </p>
           )}
           <StyleSummary baseline={baseline} />
@@ -154,7 +138,7 @@ export function Dashboard() {
       <section className="rounded-xl border border-white/10 bg-surface p-6">
         <h2 className="mb-2 text-lg font-medium">Brilliant % over time</h2>
         <p className="mb-4 text-sm text-foreground/50">
-          Target band: {baseline.targetBrilliantMin}–{baseline.targetBrilliantMax}%
+          Target band: {baseline.targetBrilliantMin}-{baseline.targetBrilliantMax}%
         </p>
         <BrilliantTimeline
           points={timeline}
