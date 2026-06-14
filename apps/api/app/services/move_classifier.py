@@ -118,21 +118,24 @@ class MoveClassifier:
 
                 best_before, eval_before = engine.analyze_position(temp)
                 eval_after, _ = engine.eval_after_move(temp, move)
+                best_eval_after = eval_before
+                if best_before:
+                    best_eval_after, _ = engine.eval_after_move(temp, best_before)
 
                 cp_loss = 0.0
-                if eval_before is not None and eval_after is not None:
-                    cp_loss = max(0.0, (eval_before - eval_after) * 100)
+                if best_eval_after is not None and eval_after is not None:
+                    cp_loss = max(0.0, (best_eval_after - eval_after) * 100)
 
                 quality = classify_move_quality(cp_loss, eval_before, eval_after)
                 brilliant = False
 
-                if quality != MoveQuality.BEST and best_before and move != best_before:
+                if best_before:
                     brilliant = is_brilliant_move(
                         board=temp,
                         move=move,
                         eval_before=eval_before,
                         eval_after=eval_after,
-                        best_eval=eval_before,
+                        best_eval=best_eval_after,
                     )
                     if brilliant:
                         quality = MoveQuality.BRILLIANT

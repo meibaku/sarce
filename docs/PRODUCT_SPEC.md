@@ -106,6 +106,8 @@ A move is **Brilliant** when **ALL** hold:
 |--------|------|-------------|
 | POST | `/games/import` | Import + analyze |
 | GET | `/games` | List games |
+| GET | `/games/moments` | Recent Brilliant/miss/blunder style moments |
+| GET | `/games/{id}` | Game detail with classified moves |
 | POST | `/games/analyze` | Analyze pending |
 | GET | `/analysis/baseline/{id}` | Rolling baseline |
 | GET | `/analysis/timeline/{id}` | Brilliant % over time |

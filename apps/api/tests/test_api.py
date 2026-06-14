@@ -34,3 +34,23 @@ class TestReferenceTal:
         res = client.get("/reference/tal")
         assert res.status_code == 200
         assert res.json()["playerName"] == "Mikhail Tal"
+
+
+class TestGamesRoutes:
+    def test_style_moments_route_exists(self):
+        routes = {
+            route.path
+            for route in app.routes
+            if "GET" in getattr(route, "methods", set())
+        }
+
+        assert "/games/moments" in routes
+
+    def test_game_detail_route_exists(self):
+        routes = {
+            route.path
+            for route in app.routes
+            if "GET" in getattr(route, "methods", set())
+        }
+
+        assert "/games/{game_id}" in routes

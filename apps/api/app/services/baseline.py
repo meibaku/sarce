@@ -1,7 +1,7 @@
 """
 User baseline aggregation — rolling Brilliant % and move-quality distribution.
 
-Recomputed after each game analysis. See docs/PHASES.md Stage 1.7.
+Recomputed after each game analysis. See docs/PHASES.md for phase status.
 """
 
 from __future__ import annotations

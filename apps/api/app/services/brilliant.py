@@ -20,6 +20,13 @@ PIECE_VALUES = {
 }
 
 
+def piece_value(piece: chess.Piece | None) -> int:
+    """Return simple material value for a piece."""
+    if piece is None:
+        return 0
+    return PIECE_VALUES.get(piece.piece_type, 0)
+
+
 def material_for_side(board: chess.Board, color: chess.Color) -> int:
     """Total material value for one side."""
     return sum(
@@ -29,16 +36,37 @@ def material_for_side(board: chess.Board, color: chess.Color) -> int:
 
 def material_sacrifice(board: chess.Board, move: chess.Move) -> int:
     """
-    Positive value = moving side loses material on this move (sacrifice).
+    Positive value = material the moving side gives up or offers.
 
-    Compares moving side's material before and after the move.
+    Sacrifices are often offered before they are accepted, so this combines
+    immediate material loss with the value of the moved piece if it can be
+    captured on the opponent's next legal move.
     """
     color = board.turn
+    moving_piece = board.piece_at(move.from_square)
+    captured_piece = board.piece_at(move.to_square)
+    captured_value = piece_value(captured_piece)
+
     before = material_for_side(board, color)
     board.push(move)
     after = material_for_side(board, color)
+    immediate_loss = max(0, before - after)
+
+    offered_loss = 0
+    moved_piece_after = board.piece_at(move.to_square)
+    if moved_piece_after and moved_piece_after.color == color:
+        moved_value = piece_value(moved_piece_after)
+        for reply in board.legal_moves:
+            if reply.to_square == move.to_square:
+                offered_loss = max(offered_loss, moved_value - captured_value)
+
     board.pop()
-    return before - after
+
+    # Promotion changes the moved piece value; do not count that as a sacrifice.
+    if moving_piece and move.promotion:
+        offered_loss = min(offered_loss, piece_value(moving_piece) - captured_value)
+
+    return max(immediate_loss, offered_loss)
 
 
 def has_reasonable_alternatives(board: chess.Board, move: chess.Move) -> bool:

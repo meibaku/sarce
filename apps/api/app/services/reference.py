@@ -26,6 +26,18 @@ TAL_PGN_URL = "https://www.pgnmentor.com/players/Tal.zip"
 TAL_PLAYER_NAME = "Mikhail Tal"
 
 
+def infer_player_color(game: chess.pgn.Game, player_name: str) -> str:
+    """Infer whether the reference player had white or black in a PGN."""
+    needle = player_name.lower()
+    white = game.headers.get("White", "").lower()
+    black = game.headers.get("Black", "").lower()
+    if needle in black:
+        return "black"
+    if needle in white:
+        return "white"
+    return "white"
+
+
 class ReferenceService:
     """Fetch, analyze, and cache reference player benchmarks."""
 
@@ -101,8 +113,11 @@ class ReferenceService:
                 continue
             board = game.board()
             moves = list(game.mainline_moves())
-            # Tal played both colors in corpus — classify white moves as proxy
-            classified = classifier.classify_game(board, moves, "white")
+            classified = classifier.classify_game(
+                board,
+                moves,
+                infer_player_color(game, TAL_PLAYER_NAME),
+            )
             dist = BaselineService.compute_distribution([m["quality"] for m in classified])
             for k in merged:
                 merged[k] += dist.get(k, 0)

@@ -61,6 +61,20 @@ export interface TimelinePoint {
   opponent: string | null;
 }
 
+export interface StyleMoment {
+  gameId: string;
+  playedAt: string | null;
+  opponent: string | null;
+  result: "win" | "loss" | "draw" | null;
+  ply: number;
+  uci: string;
+  quality: MoveQuality;
+  cpLoss: number | null;
+  evalBefore: number | null;
+  evalAfter: number | null;
+  isBrilliant: boolean;
+}
+
 export const EMPTY_DISTRIBUTION: MoveQualityDistribution = {
   best: 0,
   excellent: 0,

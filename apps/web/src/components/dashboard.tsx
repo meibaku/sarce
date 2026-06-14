@@ -7,14 +7,17 @@ import {
   getUserBaseline,
   importChessComGames,
   listGames,
+  listStyleMoments,
 } from "@/lib/api";
 import { BrilliantGauge } from "./brilliant-gauge";
 import { BrilliantTimeline } from "./brilliant-timeline";
 import { DistributionChart } from "./distribution-chart";
 import { ImportGamesForm } from "./import-games-form";
+import { StyleMoments } from "./style-moments";
 import { StyleSummary } from "./style-summary";
 import type {
   ReferenceBenchmark,
+  StyleMoment,
   TimelinePoint,
   UserBaseline,
 } from "@/types/chess";
@@ -42,6 +45,7 @@ export function Dashboard() {
     null,
   );
   const [timeline, setTimeline] = useState<TimelinePoint[]>([]);
+  const [moments, setMoments] = useState<StyleMoment[]>([]);
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -55,9 +59,11 @@ export function Dashboard() {
         getTimeline(u),
         getTalBenchmark(),
       ]);
+      const momentRes = await listStyleMoments(u).catch(() => ({ moments: [] }));
       setBaseline(b);
       setTimeline(t.points);
       setTalBenchmark(tal);
+      setMoments(momentRes.moments);
       return b;
     } catch {
       return null;
@@ -156,6 +162,8 @@ export function Dashboard() {
           targetMax={baseline.targetBrilliantMax}
         />
       </section>
+
+      <StyleMoments moments={moments} />
     </div>
   );
 }

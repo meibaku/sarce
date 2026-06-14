@@ -97,8 +97,8 @@ npm run test:golden     # Stockfish regression (local)
 | Phase | Status |
 |-------|--------|
 | **1** — Import, classify, Brilliant %, Tal benchmark | ✅ Complete |
-| **2** — Reference player comparison | 🔲 Planned |
-| **3** — Per-move highlights, style goals | 🔲 Planned |
+| **2** — Video position capture + transcript context | 🔲 Planned |
+| **3** — Move intent journal + style goals | 🔲 Planned |
 
 ## Contributing
 

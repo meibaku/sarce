@@ -34,6 +34,9 @@ class AnalyzeRequest(BaseModel):
     limit: int = Field(default=5, ge=1, le=10)
 
 
+STYLE_MOMENT_QUALITIES = ("brilliant", "miss", "blunder")
+
+
 @router.post("/import", response_model=ImportResponse)
 async def import_games(body: ImportRequest, background_tasks: BackgroundTasks):
     """
@@ -121,6 +124,122 @@ async def list_games(
             }
         )
     return {"games": games}
+
+
+@router.get("/moments")
+async def list_style_moments(
+    username: str | None = Query(None),
+    user_id: str | None = Query(None),
+    limit: int = Query(8, ge=1, le=50),
+):
+    """Recent notable moves for the dashboard companion view."""
+    from app.db.supabase import get_supabase
+
+    sb = get_supabase()
+    games_query = (
+        sb.table("games")
+        .select("id, played_at, opponent, result")
+        .eq("analysis_status", "complete")
+        .order("played_at", desc=True)
+        .limit(50)
+    )
+    uid = resolve_user_id(user_id) if user_id or not username else None
+    if uid:
+        games_query = games_query.eq("user_id", uid)
+    if username:
+        games_query = games_query.eq("chess_com_username", username)
+
+    games_res = games_query.execute()
+    games = games_res.data or []
+    game_ids = [g["id"] for g in games]
+    if not game_ids:
+        return {"moments": []}
+
+    moves_res = (
+        sb.table("game_moves")
+        .select("game_id, ply, uci, quality, cp_loss, eval_before, eval_after, is_brilliant")
+        .in_("game_id", game_ids)
+        .in_("quality", list(STYLE_MOMENT_QUALITIES))
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+
+    games_by_id = {g["id"]: g for g in games}
+    moments = []
+    for move in moves_res.data or []:
+        game = games_by_id.get(move["game_id"], {})
+        moments.append(
+            {
+                "gameId": move["game_id"],
+                "playedAt": game.get("played_at"),
+                "opponent": game.get("opponent"),
+                "result": game.get("result"),
+                "ply": move.get("ply"),
+                "uci": move.get("uci"),
+                "quality": move.get("quality"),
+                "cpLoss": float(move["cp_loss"]) if move.get("cp_loss") is not None else None,
+                "evalBefore": float(move["eval_before"]) if move.get("eval_before") is not None else None,
+                "evalAfter": float(move["eval_after"]) if move.get("eval_after") is not None else None,
+                "isBrilliant": move.get("is_brilliant"),
+            }
+        )
+
+    return {"moments": moments}
+
+
+@router.get("/{game_id}")
+async def get_game_detail(game_id: str):
+    """Game metadata plus classified user moves."""
+    from app.db.supabase import get_supabase
+
+    sb = get_supabase()
+    game_res = (
+        sb.table("games")
+        .select("id, played_at, opponent, opponent_rating, result, user_color, time_control, analysis_status, game_analyses(brilliant_pct, distribution, total_moves)")
+        .eq("id", game_id)
+        .maybe_single()
+        .execute()
+    )
+    if not game_res.data:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+    moves_res = (
+        sb.table("game_moves")
+        .select("ply, uci, quality, cp_loss, eval_before, eval_after, is_brilliant")
+        .eq("game_id", game_id)
+        .order("ply")
+        .execute()
+    )
+
+    game = game_res.data
+    analyses = game.pop("game_analyses", None)
+    analysis = analyses[0] if isinstance(analyses, list) and analyses else analyses
+    return {
+        "id": game["id"],
+        "playedAt": game.get("played_at"),
+        "opponent": game.get("opponent"),
+        "opponentRating": game.get("opponent_rating"),
+        "result": game.get("result"),
+        "userColor": game.get("user_color"),
+        "timeControl": game.get("time_control"),
+        "analysisStatus": game.get("analysis_status"),
+        "brilliantPct": float(analysis.get("brilliant_pct", 0)) if analysis else None,
+        "distribution": analysis.get("distribution") if analysis else None,
+        "totalMoves": analysis.get("total_moves") if analysis else None,
+        "moves": [
+            {
+                "ply": move.get("ply"),
+                "uci": move.get("uci"),
+                "quality": move.get("quality"),
+                "cpLoss": float(move["cp_loss"]) if move.get("cp_loss") is not None else None,
+                "evalBefore": float(move["eval_before"]) if move.get("eval_before") is not None else None,
+                "evalAfter": float(move["eval_after"]) if move.get("eval_after") is not None else None,
+                "isBrilliant": move.get("is_brilliant"),
+            }
+            for move in moves_res.data or []
+        ],
+    }
 
 
 @router.post("/analyze")
