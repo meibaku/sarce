@@ -73,3 +73,39 @@ class TestMoveSignals:
 
         assert "missed_tactic" in signals
         assert highlight == "A tactical chance slipped away."
+
+    def test_free_rook_capture_is_not_exchange_sacrifice(self):
+        board = chess.Board("4k3/8/8/8/4b3/8/4R3/4K3 w - - 0 1")
+        move = chess.Move.from_uci("e2e4")
+
+        signals, _ = build_move_signals(
+            board=board,
+            move=move,
+            quality=MoveQuality.BEST,
+            cp_loss=0,
+            eval_before=0.0,
+            eval_after=1.0,
+            best_move=move,
+            pv=[{"move": move, "eval": 1.0}],
+            previous_user_eval_after=None,
+        )
+
+        assert "exchange_sacrifice" not in signals
+
+    def test_rook_capture_minor_under_attack_is_exchange_sacrifice(self):
+        board = chess.Board("4k3/8/5n2/8/4b3/8/4R3/4K3 w - - 0 1")
+        move = chess.Move.from_uci("e2e4")
+
+        signals, _ = build_move_signals(
+            board=board,
+            move=move,
+            quality=MoveQuality.BEST,
+            cp_loss=0,
+            eval_before=0.0,
+            eval_after=0.2,
+            best_move=move,
+            pv=[{"move": move, "eval": 0.2}],
+            previous_user_eval_after=None,
+        )
+
+        assert "exchange_sacrifice" in signals

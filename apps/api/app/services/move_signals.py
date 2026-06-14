@@ -43,10 +43,6 @@ def move_san(board: chess.Board, move: chess.Move | None) -> str | None:
     return board.san(move)
 
 
-def signed_eval_for_mover(eval_value: float | None) -> float | None:
-    return eval_value
-
-
 def eval_swing(eval_before: float | None, eval_after: float | None) -> float | None:
     if eval_before is None or eval_after is None:
         return None
@@ -63,13 +59,17 @@ def is_clearly_best(
     return best_eval - second_eval >= CLEARLY_BEST_MARGIN
 
 
-def is_exchange_sacrifice(board: chess.Board, move: chess.Move) -> bool:
+def is_exchange_sacrifice(
+    board: chess.Board,
+    move: chess.Move,
+    sacrifice: int = 0,
+) -> bool:
     moving_piece = board.piece_at(move.from_square)
     captured_piece = board.piece_at(move.to_square)
     if moving_piece is None or moving_piece.piece_type != chess.ROOK:
         return False
     captured_value = piece_value(captured_piece)
-    return captured_value == 3
+    return captured_value == 3 and sacrifice > 0
 
 
 def is_tactical_move(board: chess.Board, move: chess.Move) -> bool:
@@ -117,7 +117,7 @@ def build_move_signals(
 
     if sacrifice > 0:
         signals.append("sacrifice")
-    if is_exchange_sacrifice(board, move):
+    if is_exchange_sacrifice(board, move, sacrifice):
         signals.append("exchange_sacrifice")
         highlight = "Exchange sacrifice with compensation to inspect."
 

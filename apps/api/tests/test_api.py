@@ -144,6 +144,7 @@ class TestGamesRoutes:
                             "user_color": "white",
                             "time_control": "600",
                             "analysis_status": "complete",
+                            "pgn": None,
                             "game_analyses": [
                                 {
                                     "brilliant_pct": 8,
@@ -181,6 +182,7 @@ class TestGamesRoutes:
 
         assert res.status_code == 200
         assert res.json()["moves"][0]["quality"] == "brilliant"
+        assert res.json()["mainline"] == []
         assert ("games", "chess_com_username", "tal") in fake.calls
         assert ("game_moves", "game_id", "game-1") in fake.calls
         assert ("game_moves", "games.chess_com_username", "tal") in fake.calls

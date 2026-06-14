@@ -243,7 +243,7 @@ async def get_game_detail(
 
     analyses = game.pop("game_analyses", None)
     analysis = analyses[0] if isinstance(analyses, list) and analyses else analyses
-    pgn_text = game.pop("pgn", "")
+    pgn_text = game.pop("pgn", "") or ""
     initial_fen, mainline = mainline_positions(pgn_text)
     return {
         "id": game["id"],
