@@ -2,24 +2,54 @@
 
 ## Supported versions
 
-| Version | Supported |
-|---------|-----------|
+| Version | Supported          |
+| ------- | ------------------ |
 | main    | ✅ Active development |
+| < 0.1   | ❌ No longer supported |
 
 ## Reporting a vulnerability
 
-This is a private personal project. If you discover a security issue:
+**Please do not open a public GitHub issue for security vulnerabilities.**
 
-1. **Do not** open a public issue
-2. Contact the maintainer via GitHub private security advisory:
-   https://github.com/meibaku/sarce/security/advisories/new
+1. Go to [GitHub Security Advisories](https://github.com/meibaku/sarce/security/advisories/new)
+2. Submit a **private** security advisory with:
+   - Description of the vulnerability
+   - Steps to reproduce
+   - Impact assessment
+   - Suggested fix (if any)
 
-## Scope
+We aim to acknowledge reports within **7 days** and provide a status update within **30 days**.
 
-Areas we care about:
+## In scope
 
-- Exposed `SUPABASE_SERVICE_ROLE_KEY` or secrets in client code
-- RLS bypass on user game data
-- Stockfish path injection via API input
+| Area | Concern |
+|------|---------|
+| **Secrets exposure** | `SUPABASE_SERVICE_ROLE_KEY`, API keys in `NEXT_PUBLIC_*` vars, `.env` committed |
+| **Auth & RLS** | Bypassing Row Level Security on `games`, `game_moves`, `profiles` |
+| **API input** | Stockfish path injection, SQL injection via unsanitized inputs |
+| **Supabase** | `user_metadata` used for authorization (forbidden — see Supabase skill) |
+| **Client exposure** | Service role key reachable from browser bundle |
 
-Out of scope for now: denial-of-service via expensive Stockfish analysis (rate limiting planned).
+## Out of scope (for now)
+
+- Denial of service via expensive Stockfish analysis (rate limiting planned)
+- Chess.com API availability or rate limits
+- Social engineering
+- Issues in third-party dependencies without a direct Sarce exploit path
+
+## Security practices for contributors
+
+- Never commit `.env` — use `.env.example` for templates
+- Never put `service_role` key in `NEXT_PUBLIC_` variables
+- Enable RLS on every new table in exposed schemas
+- Run `npm run ci` before PR — includes architecture and philosophy contract tests
+
+## Disclosure policy
+
+- Valid reports are fixed before public disclosure when possible
+- Credit given to reporters in the advisory (unless you prefer anonymity)
+- Coordinated disclosure preferred
+
+## Contact
+
+Maintainer: [@meibaku](https://github.com/meibaku) via GitHub Security Advisories only.

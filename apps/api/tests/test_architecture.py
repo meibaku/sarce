@@ -44,10 +44,19 @@ class TestRepoDocs:
             "ARCHITECTURE.md",
             "PHASES.md",
             "QUALITY_GATES.md",
+            "PRODUCT_SPEC.md",
+            "README.md",
         ],
     )
     def test_required_docs_exist(self, doc: str):
-        assert (DOCS / doc).is_file(), f"Missing {doc} — product constitution"
+        assert (DOCS / doc).is_file(), f"Missing docs/{doc}"
+
+    @pytest.mark.parametrize(
+        "filename",
+        ["LICENSE", "README.md", "CONTRIBUTING.md", "SECURITY.md", "CHANGELOG.md", "CODE_OF_CONDUCT.md"],
+    )
+    def test_root_docs_exist(self, filename: str):
+        assert (REPO_ROOT / filename).is_file(), f"Missing {filename}"
 
     def test_adr_directory_exists(self):
         assert (DOCS / "adr").is_dir()
