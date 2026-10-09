@@ -4,6 +4,8 @@
 
 > **Philosophy:** [PHILOSOPHY.md](./PHILOSOPHY.md) — product constitution (CI-enforced).
 
+> **Chaos Lens gameplan:** [CHAOS_PLAN.md](./CHAOS_PLAN.md) — milestone-by-milestone plan for the chaos/survival style lenses (post-Phase-1 work, run in parallel with the phases below).
+
 This file tracks **what's built vs planned**. The phase definitions below match PRODUCT_SPEC.md.
 
 ---
