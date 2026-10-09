@@ -9,6 +9,13 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Phase 2 redefined: video position capture + transcript context
 - Phase 3 redefined: move intent narratives + personal chess journal
 
+### Fixed
+- Supabase migration granting `service_role` select/insert/update/delete on all
+  Phase 1 tables (`profiles`, `games`, `game_moves`, `game_analyses`,
+  `user_baselines`, `reference_players`, `reference_benchmarks`,
+  `style_vectors`) — the API's service-role client had no explicit grants and
+  was relying on RLS bypass alone.
+
 ## [0.1.0] - 2026-06-13
 
 ### Added
