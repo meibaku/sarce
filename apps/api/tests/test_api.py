@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.services.game_store import ImportBatchResult
 
 client = TestClient(app)
 
@@ -95,7 +96,7 @@ class TestGamesRoutes:
             "https://api.chess.com/pub/player/hikaru/games/2026/06"
         ]
         mock_fetch_games.return_value = [{"url": "game-1", "pgn": "1. e4 *"}]
-        mock_store_games.return_value = 1
+        mock_store_games.return_value = ImportBatchResult(new=1, skipped=0)
 
         res = client.post(
             "/games/import",
@@ -104,9 +105,46 @@ class TestGamesRoutes:
 
         assert res.status_code == 200
         assert res.json()["username"] == "hikaru"
-        mock_fetch_archives.assert_awaited_once_with("hikaru", limit=None)
+        assert res.json()["new"] == 1
+        mock_fetch_archives.assert_awaited_once_with("hikaru", limit=2)
         assert mock_store_games.await_args.kwargs["username"] == "hikaru"
         assert mock_analyze_pending.await_args.kwargs["chess_com_username"] == "hikaru"
+
+    @patch("app.routers.games.import_job_service.run_job", new_callable=AsyncMock)
+    @patch(
+        "app.routers.games.import_job_service.create_job",
+        new_callable=AsyncMock,
+    )
+    @patch(
+        "app.routers.games.import_job_service.get_active_job",
+        new_callable=AsyncMock,
+    )
+    def test_start_import_returns_job_immediately(
+        self,
+        mock_get_active,
+        mock_create_job,
+        mock_run_job,
+    ):
+        mock_get_active.return_value = None
+        mock_create_job.return_value = {
+            "jobId": "job-1",
+            "username": "dratius",
+            "status": "queued",
+            "progressPct": 0,
+            "message": "Preparing import...",
+            "gamesNew": 0,
+            "gamesSkipped": 0,
+        }
+
+        res = client.post(
+            "/games/import/start",
+            json={"username": "dratius", "analyze": True},
+        )
+
+        assert res.status_code == 200
+        assert res.json()["jobId"] == "job-1"
+        assert res.json()["status"] == "queued"
+        mock_create_job.assert_awaited_once()
 
     @patch("app.db.supabase.get_supabase")
     def test_game_detail_scopes_game_and_moves(self, mock_get_supabase):

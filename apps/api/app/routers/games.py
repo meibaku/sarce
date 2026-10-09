@@ -6,12 +6,14 @@ from app.deps import resolve_user_id
 from app.services.analysis import AnalysisService
 from app.services.chess_com import ChessComClient, normalize_chess_com_username
 from app.services.game_store import GameStore
+from app.services.import_job import ImportJobService
 from app.services.pgn_parser import mainline_positions
 
 router = APIRouter()
 chess_com = ChessComClient()
 game_store = GameStore()
 analysis_service = AnalysisService()
+import_job_service = ImportJobService()
 
 
 class ImportRequest(BaseModel):
@@ -19,14 +21,26 @@ class ImportRequest(BaseModel):
 
     username: str = Field(min_length=1, max_length=64)
     user_id: str | None = None
-    max_games: int | None = Field(default=None, ge=1, le=1000)
+    max_games: int = Field(default=3, ge=1, le=1000)
     analyze: bool = Field(default=True, description="Queue Stockfish analysis after import")
 
 
 class ImportResponse(BaseModel):
     imported: int
+    new: int
+    skipped: int
+    updated: int
     message: str
     username: str
+
+
+class ImportStartRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=64)
+    user_id: str | None = None
+    analyze: bool = Field(
+        default=True,
+        description="Run Stockfish on newly imported games after import completes",
+    )
 
 
 class AnalyzeRequest(BaseModel):
@@ -48,7 +62,7 @@ async def import_games(body: ImportRequest, background_tasks: BackgroundTasks):
     user_id = resolve_user_id(body.user_id)
     username = normalize_chess_com_username(body.username)
     try:
-        archives = await chess_com.fetch_recent_archives(username, limit=None)
+        archives = await chess_com.fetch_recent_archives(username, limit=2)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Chess.com API error: {exc}") from exc
 
@@ -64,30 +78,94 @@ async def import_games(body: ImportRequest, background_tasks: BackgroundTasks):
         for archive_url in archives:
             batch = await chess_com.fetch_games_from_archive(archive_url)
             games.extend(batch)
-            if body.max_games is not None and len(games) >= body.max_games:
+            if len(games) >= body.max_games:
                 break
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Chess.com API error: {exc}") from exc
 
-    if body.max_games is not None:
-        games = games[: body.max_games]
-    stored = await game_store.store_imported_games(
-        username=username,
-        user_id=user_id,
-        games=games,
-    )
+    games = games[: body.max_games]
+    try:
+        batch = await game_store.store_imported_games(
+            username=username,
+            user_id=user_id,
+            games=games,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to store imported games: {exc}",
+        ) from exc
 
-    msg = f"Imported {stored} games for '{username}'."
-    if body.analyze and stored > 0:
+    msg = (
+        f"Imported {batch.stored} games for '{username}' "
+        f"({batch.new} new, {batch.skipped} cached)."
+    )
+    if body.analyze and batch.new > 0:
         background_tasks.add_task(
             analysis_service.analyze_pending,
             user_id=user_id,
             chess_com_username=username,
-            limit=stored,
+            limit=batch.new,
         )
         msg += " Analysis started in background."
 
-    return ImportResponse(imported=stored, message=msg, username=username)
+    return ImportResponse(
+        imported=batch.stored,
+        new=batch.new,
+        skipped=batch.skipped,
+        updated=batch.updated,
+        message=msg,
+        username=username,
+    )
+
+
+@router.post("/import/start")
+async def start_import_job(
+    body: ImportStartRequest,
+    background_tasks: BackgroundTasks,
+):
+    """Queue a background import of all Chess.com archives (cached games are skipped)."""
+    user_id = resolve_user_id(body.user_id)
+    username = normalize_chess_com_username(body.username)
+
+    active = await import_job_service.get_active_job(user_id, username)
+    if active:
+        return active
+
+    try:
+        job = await import_job_service.create_job(
+            username=username,
+            user_id=user_id,
+            analyze=body.analyze,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to start import job: {exc}",
+        ) from exc
+
+    background_tasks.add_task(import_job_service.run_job, job["jobId"])
+    return job
+
+
+@router.get("/import/status/{job_id}")
+async def get_import_job_status(job_id: str):
+    job = await import_job_service.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Import job not found")
+    return job
+
+
+@router.get("/import/active")
+async def get_active_import_job(
+    username: str | None = Query(None),
+    user_id: str | None = Query(None),
+):
+    uid = resolve_user_id(user_id)
+    job = await import_job_service.get_active_job(uid, username)
+    if not job:
+        return {"job": None}
+    return {"job": job}
 
 
 @router.get("")

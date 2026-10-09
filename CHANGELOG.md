@@ -8,6 +8,12 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - `docs/PRODUCT_SPEC.md` — master product specification (Phases 1–4+)
 - Phase 2 redefined: video position capture + transcript context
 - Phase 3 redefined: move intent narratives + personal chess journal
+- Background Chess.com import jobs: `POST /games/import/start` queues a full
+  archive sync with live progress (`GET /games/import/status/{id}`,
+  `GET /games/import/active`); dashboard shows a progress bar, persists the
+  username across reloads, and resumes polling an in-flight job.
+  `GameStore.upsert_imported_game` now reports new/skipped/updated per game
+  instead of a bare count.
 
 ## [0.1.0] - 2026-06-13
 
