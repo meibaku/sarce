@@ -1,30 +1,36 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  getActiveImportJob,
+  getImportJobStatus,
   getStyleProfile,
   getTalBenchmark,
   getTimeline,
   getUserBaseline,
-  importChessComGames,
   listGames,
   listStyleMoments,
+  startBackgroundImport,
 } from "@/lib/api";
 import { AnalysisWorkspace } from "./analysis-workspace";
 import { BrilliantGauge } from "./brilliant-gauge";
 import { BrilliantTimeline } from "./brilliant-timeline";
 import { DistributionChart } from "./distribution-chart";
 import { ImportGamesForm } from "./import-games-form";
+import { ImportProgress } from "./import-progress";
 import { StyleMoments } from "./style-moments";
 import { StyleProfilePanel } from "./style-profile-panel";
 import { StyleSummary } from "./style-summary";
 import type {
+  ImportJobStatus,
   ReferenceBenchmark,
   StyleMoment,
   StyleProfile,
   TimelinePoint,
   UserBaseline,
 } from "@/types/chess";
+
+const USERNAME_STORAGE_KEY = "sarce.chessComUsername";
 
 const EMPTY_BASELINE: UserBaseline = {
   brilliantPct: 0,
@@ -51,11 +57,13 @@ export function Dashboard() {
   const [timeline, setTimeline] = useState<TimelinePoint[]>([]);
   const [moments, setMoments] = useState<StyleMoment[]>([]);
   const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
-  const [importStatus, setImportStatus] = useState<string | null>(null);
+  const [importJob, setImportJob] = useState<ImportJobStatus | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [polling, setPolling] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [analysisRefreshToken, setAnalysisRefreshToken] = useState(0);
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refreshData = useCallback(
     async (chessUsername?: string) => {
@@ -83,10 +91,10 @@ export function Dashboard() {
     [username],
   );
 
-  const pollUntilComplete = useCallback(
+  const pollUntilAnalysisComplete = useCallback(
     async (chessUsername: string) => {
-      setPolling(true);
-      for (let i = 0; i < 60; i++) {
+      setAnalyzing(true);
+      for (let i = 0; i < 120; i++) {
         await new Promise((r) => setTimeout(r, 5000));
         const gamesRes = await listGames(chessUsername).catch(() => null);
         const pending = gamesRes?.games?.some(
@@ -97,50 +105,118 @@ export function Dashboard() {
         setAnalysisRefreshToken((current) => current + 1);
         if (!pending) break;
       }
-      setPolling(false);
+      setAnalyzing(false);
     },
     [refreshData],
+  );
+
+  const pollImportJob = useCallback(
+    (jobId: string, chessUsername: string) => {
+      if (pollTimerRef.current) {
+        clearTimeout(pollTimerRef.current);
+      }
+
+      const tick = async () => {
+        try {
+          const status = await getImportJobStatus(jobId);
+          setImportJob(status);
+          await refreshData(chessUsername);
+          setAnalysisRefreshToken((current) => current + 1);
+
+          if (status.status === "queued" || status.status === "running") {
+            pollTimerRef.current = setTimeout(tick, 2000);
+            return;
+          }
+
+          if (status.status === "complete") {
+            if (status.analyzeAfterImport && status.gamesNew > 0) {
+              pollUntilAnalysisComplete(chessUsername);
+            }
+            return;
+          }
+
+          if (status.status === "failed") {
+            setImportError(status.errorMessage ?? "Import failed.");
+          }
+        } catch (err) {
+          setImportError(
+            err instanceof Error ? err.message : "Import status check failed.",
+          );
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      void tick();
+    },
+    [pollUntilAnalysisComplete, refreshData],
   );
 
   useEffect(() => {
     refreshData();
   }, [refreshData]);
 
+  useEffect(() => {
+    const savedUsername = sessionStorage.getItem(USERNAME_STORAGE_KEY);
+    if (!savedUsername) return;
+
+    setUsername(savedUsername);
+    getActiveImportJob(savedUsername)
+      .then(({ job }) => {
+        if (!job) return;
+        setImportJob(job);
+        setLoading(job.status === "queued" || job.status === "running");
+        pollImportJob(job.jobId, savedUsername);
+      })
+      .catch(() => null);
+  }, [pollImportJob]);
+
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) {
+        clearTimeout(pollTimerRef.current);
+      }
+    };
+  }, []);
+
   async function handleImport(chessUsername: string) {
     setLoading(true);
-    setImportStatus(null);
+    setImportError(null);
+    setImportJob(null);
     setUsername(chessUsername);
+    sessionStorage.setItem(USERNAME_STORAGE_KEY, chessUsername);
+
     try {
-      const result = await importChessComGames(chessUsername);
-      setImportStatus(result.message);
-      if (result.imported > 0) {
-        await refreshData(chessUsername);
-        setAnalysisRefreshToken((current) => current + 1);
-        pollUntilComplete(chessUsername);
-      }
+      const job = await startBackgroundImport(chessUsername, true);
+      setImportJob(job);
+      pollImportJob(job.jobId, chessUsername);
     } catch (err) {
-      setImportStatus(
+      setImportError(
         err instanceof Error
           ? err.message
           : "Import failed - is the API running on :8000?",
       );
-    } finally {
       setLoading(false);
     }
   }
+
+  const importBusy =
+    loading ||
+    analyzing ||
+    importJob?.status === "queued" ||
+    importJob?.status === "running";
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-6 py-8">
       <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
-          <ImportGamesForm
-            onImport={handleImport}
-            loading={loading || polling}
-          />
-          {importStatus && (
-            <p className="rounded-lg border border-white/10 bg-surface px-4 py-3 text-sm text-foreground/80">
-              {importStatus}
-              {polling && " Analyzing with Stockfish..."}
+          <ImportGamesForm onImport={handleImport} loading={importBusy} />
+          {importJob && (importBusy || importJob.status === "failed") && (
+            <ImportProgress job={importJob} analyzing={analyzing} />
+          )}
+          {importError && (
+            <p className="rounded-lg border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              {importError}
             </p>
           )}
           <StyleSummary baseline={baseline} />

@@ -18,7 +18,8 @@ export function ImportGamesForm({ onImport, loading }: ImportGamesFormProps) {
     >
       <h2 className="text-lg font-medium">Import from Chess.com</h2>
       <p className="mt-1 text-sm text-foreground/60">
-        Fetch all public archived games for the username.
+        Sync all Chess.com archives in the background. Cached games are skipped;
+        saved games load automatically on your next visit.
       </p>
       <div className="mt-4 flex gap-3">
         <input

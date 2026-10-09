@@ -23,12 +23,38 @@ export async function fetchApi<T>(
   return res.json() as Promise<T>;
 }
 
+export async function startBackgroundImport(username: string, analyze = true) {
+  return fetchApi<import("@/types/chess").ImportJobStatus>(
+    "/games/import/start",
+    {
+      method: "POST",
+      body: JSON.stringify({ username, analyze }),
+    },
+  );
+}
+
+export async function getImportJobStatus(jobId: string) {
+  return fetchApi<import("@/types/chess").ImportJobStatus>(
+    `/games/import/status/${jobId}`,
+  );
+}
+
+export async function getActiveImportJob(username?: string) {
+  const params = username
+    ? `?username=${encodeURIComponent(username)}`
+    : "";
+  return fetchApi<{ job: import("@/types/chess").ImportJobStatus | null }>(
+    `/games/import/active${params}`,
+  );
+}
+
+/** @deprecated Use startBackgroundImport for full archive imports. */
 export async function importChessComGames(username: string) {
   return fetchApi<{ imported: number; message: string; username: string }>(
     "/games/import",
     {
       method: "POST",
-      body: JSON.stringify({ username, analyze: false }),
+      body: JSON.stringify({ username, max_games: 3, analyze: false }),
     },
   );
 }
@@ -84,15 +110,6 @@ export async function getGameDetail(gameId: string, username?: string) {
   return fetchApi<import("@/types/chess").GameDetail>(
     `/games/${gameId}${params}`,
   );
-}
-
-export async function listStyleMoments(username?: string) {
-  const params = username
-    ? `?username=${encodeURIComponent(username)}`
-    : "";
-  return fetchApi<{
-    moments: import("@/types/chess").StyleMoment[];
-  }>(`/games/moments${params}`);
 }
 
 export async function listStyleMoments(username?: string) {

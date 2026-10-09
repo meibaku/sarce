@@ -120,6 +120,26 @@ export interface TimelinePoint {
   opponent: string | null;
 }
 
+export type ImportJobState = "queued" | "running" | "complete" | "failed";
+
+export interface ImportJobStatus {
+  jobId: string;
+  username: string;
+  status: ImportJobState;
+  analyzeAfterImport: boolean;
+  archivesTotal: number;
+  archivesDone: number;
+  gamesFetched: number;
+  gamesNew: number;
+  gamesSkipped: number;
+  gamesUpdated: number;
+  progressPct: number;
+  message: string;
+  errorMessage: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+
 export interface StyleOpening {
   eco: string | null;
   name: string;
