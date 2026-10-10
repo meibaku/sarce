@@ -8,17 +8,31 @@
 | Milestone | Code | Still to do |
 |---|---|---|
 | M0 Housekeeping | Merged | Major-version Dependabot PRs, one at a time |
-| M1 WDL + EP | Merged, off by default | Run `npm run test:golden` with Stockfish; apply migration |
+| M1 WDL + EP | Merged, off by default; verified on Stockfish 18 | Apply the migration to your own database |
 | M2 Human model | Interface, cache and interim heuristic merged | **Maia spike and model choice** (ADR 0002) |
 | M3 Lenses | Merged | Thresholds are provisional until M4 |
-| M4 Validation | Tooling merged | **The run itself** — go / no-go is still open |
-| M5 Review UI | First version merged | Check against real games; Tal in chaos terms |
+| M4 Validation | Tooling merged; sampler executes end to end | **The run on real Lichess data** — go / no-go is still open |
+| M5 Review UI | Merged; checked against one analysed game | Check against your own games; Tal in chaos terms |
 | M6 Trap atlas | Merged, atlas empty | Run the sampler and `build_trap_atlas` on real data |
 | M7 Intention tagger | v1 merged, off by default | Tune thresholds; "sharpness" part of squeeze |
 | M8 Sharing + scouting | Not started | Needs the multi-user decision first |
 
-Nothing engine- or database-backed has been run end to end yet: the development machine had no
-Stockfish binary and no migrated database, so everything above is covered by unit tests only.
+**What has actually been run** (10 Oct 2026, Stockfish 18, a throwaway Supabase Postgres + PostgREST stack):
+
+- Node-limited `analyse`: identical lines on repeat, WDL present, about 4 s per position at 1.5M nodes.
+- Phase 1 golden checks pass (after fixing a fixture that used an illegal move).
+- All seven migrations apply in order; every public table has RLS enabled.
+- One game analysed end to end through the real service code: 30 position evals, 180 probability rows,
+  40 lens rows, 25 tags, 2 ideas; every new endpoint answered; a re-run reproduced identical evaluations.
+- The review UI was opened against that data, which led to three fixes.
+- `validate_chaos.py` and `build_trap_atlas.py` execute, on a synthetic PGN only.
+
+**What that showed:** with the interim heuristic model the lenses over-trigger badly (an ordinary
+`2. Nf3` was labelled real chaos; 8 of 17 moves counted as problems survived). The numbers are not
+usable until a trained model is chosen and M4 passes on real data.
+
+**Not run:** pytest on the development machine (blocked by device policy — CI runs it), anything against
+the real local database (its container could not bind port 54322), and validation on real Lichess games.
 
 ### Turning it on
 
