@@ -4,7 +4,7 @@
 
 Accepted for Maia-2 as an **optional** model — adapter merged, off by default, not in the base
 requirements. Adopted under the maintainer's instruction to implement the recommendations; revert by
-removing `maia_model.py` and `requirements-maia.txt`. Making it the default is still open.
+removing `maia_model.py` and `requirements-maia.txt`. The default is `HUMAN_MODEL=auto`: Maia-2 wherever the optional package is installed, the heuristic elsewhere.
 
 ## Context
 
@@ -92,7 +92,9 @@ gives a probability for every legal move.
 - `tests/test_architecture.py` bans direct ML imports in `app/`; the adapter imports only `maia2`, so
   that gate is unchanged. Move classification is still rule-based.
 - Cache rows are versioned `maia2-0.11-blitz`, separate from `heuristic-1`.
-- Still open: making Maia-2 the default, and dropping the redundant 2400 rung of the ladder.
+- Default `HUMAN_MODEL=auto` (added after the M4 validation passed): Maia-2 if installed, otherwise the
+  heuristic, so no installation is forced to carry PyTorch.
+- Still open: dropping the redundant 2400 rung of the ladder.
 
 ## Consequences
 

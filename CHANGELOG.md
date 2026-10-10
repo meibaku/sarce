@@ -5,6 +5,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- `HUMAN_MODEL=auto` is the new default: the validated Maia-2 model where its optional package is installed,
+  the heuristic elsewhere
 - Chaos Lens M4: four-month validation with widened safe sets (4,820 positions) — GO; clock multipliers for
   Maia-2 are now in `lenses/config.py` and applied to `P_fail` by the lenses
 - Chaos Lens M8 (part): optional sign-in — the API verifies Supabase access tokens and scopes every

@@ -198,7 +198,8 @@ class LensService:
 
         keys = keys_after_each_ply(game.data["pgn"])
         evals = self._fetch_by_keys("position_evals", keys, "nodes", settings.analysis_nodes)
-        model_version = get_human_model(settings.human_model).model_version
+        model = get_human_model(settings.human_model)
+        model_version = model.model_version
         probs = self._fetch_by_keys("human_probs", keys, "model_version", model_version)
 
         probs_by_key: dict[str, dict[int, dict[str, float]]] = {}
@@ -213,7 +214,7 @@ class LensService:
             game.data.get("opponent_rating"),
             clocks_ms=game.data.get("clocks_ms"),
             initial_clock_ms=initial_clock_ms(game.data.get("time_control")),
-            model_name=settings.human_model,
+            model_name=model.name,
         )
         rows = score_contexts(game_id, contexts)
         # Replace, so a lens that no longer fires does not leave a stale row behind.

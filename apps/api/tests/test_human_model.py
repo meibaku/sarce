@@ -109,6 +109,19 @@ class TestRegistry:
     def test_default_model(self):
         assert get_human_model("heuristic").model_version == "heuristic-1"
 
+    def test_auto_falls_back_to_the_heuristic_without_maia2(self, monkeypatch):
+        monkeypatch.setattr("app.services.human_model.maia2_installed", lambda: False)
+        assert get_human_model("auto").name == "heuristic"
+
+    def test_auto_picks_maia2_when_it_is_installed(self, monkeypatch):
+        monkeypatch.setattr("app.services.human_model.maia2_installed", lambda: True)
+        assert get_human_model("auto").name == "maia2"
+
+    def test_auto_is_the_configured_default(self):
+        from app.config import Settings
+
+        assert Settings.model_fields["human_model"].default == "auto"
+
     def test_unknown_model(self):
         with pytest.raises(ValueError):
             get_human_model("maia-9000")
