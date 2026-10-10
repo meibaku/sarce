@@ -2,7 +2,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.config import settings
-from app.deps import resolve_user_id
+from app.deps import current_user_id, require_game_access, resolve_user_id, scoped_user_id
 from app.services.analysis import AnalysisService
 from app.services.chess_com import ChessComClient, normalize_chess_com_username
 from app.services.game_store import GameStore
@@ -135,7 +135,7 @@ async def list_games(
         .order("played_at", desc=True)
         .limit(limit)
     )
-    uid = resolve_user_id(user_id) if user_id or not username else None
+    uid = scoped_user_id(user_id, username)
     if uid:
         query = query.eq("user_id", uid)
     if username:
@@ -190,7 +190,7 @@ async def list_style_moments(
         .order("played_at", desc=True)
         .limit(50)
     )
-    uid = resolve_user_id(user_id) if user_id or not username else None
+    uid = scoped_user_id(user_id, username)
     if uid:
         games_query = games_query.eq("user_id", uid)
     if username:
@@ -257,7 +257,7 @@ async def get_game_detail(
         .select("id, pgn, played_at, opponent, opponent_rating, result, user_color, time_control, analysis_status, game_analyses(brilliant_pct, distribution, total_moves)")
         .eq("id", game_id)
     )
-    uid = resolve_user_id(user_id) if user_id or not username else None
+    uid = scoped_user_id(user_id, username)
     if uid:
         game_res = game_res.eq("user_id", uid)
     if username:
@@ -327,6 +327,7 @@ async def get_game_lenses(
     refresh: bool = Query(False, description="Re-score from stored raw data (no engine run)"),
 ):
     """Per-move lens results (soundness, chaos, survival) for a game."""
+    require_game_access(game_id)
     try:
         if refresh and lens_service.score_game(game_id) is None:
             raise HTTPException(status_code=404, detail="Game not found")
@@ -347,6 +348,7 @@ async def get_game_ideas(
     refresh: bool = Query(False, description="Re-tag from the PGN and stored evals (no engine run)"),
 ):
     """Motif tags per ply and the user's idea windows for a game."""
+    require_game_access(game_id)
     try:
         if refresh and tagger_service.tag_game(game_id) is None:
             raise HTTPException(status_code=404, detail="Game not found")
@@ -360,7 +362,7 @@ async def get_game_ideas(
 @router.post("/analyze")
 async def analyze_pending(body: AnalyzeRequest, background_tasks: BackgroundTasks):
     """Trigger analysis for pending games (manual or after import)."""
-    user_id = resolve_user_id(body.user_id) if body.user_id else None
+    user_id = current_user_id() or (resolve_user_id(body.user_id) if body.user_id else None)
     username = normalize_chess_com_username(body.username) if body.username else None
 
     queue_analysis(

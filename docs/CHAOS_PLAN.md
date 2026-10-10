@@ -311,7 +311,7 @@ Tasks in `apps/web`:
 ### M8 — Sharing + opponent scouting (later)
 
 > **Status:** Lichess import, opponent scouting and a style focus picker (ADR 0003) are implemented. A durable per-user analysis
-> job queue is implemented without a new dependency (`JOB_QUEUE_ENABLED`). Optional sign-in is in an open PR.
+> job queue (`JOB_QUEUE_ENABLED`) and optional sign-in (`AUTH_REQUIRED`) are implemented too; sign-in is untested against a live Supabase Auth.
 
 - Multi-user: auth flows, per-user queues, replace `BackgroundTasks` with a real job queue.
 - Style picker: users choose their lens; dashboard mirrors that identity.

@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
+from app.deps import current_user_id
+
 from app.services.chess_com import normalize_chess_com_username
 from app.services.lens_service import LensService
 
@@ -11,6 +13,8 @@ lens_service = LensService()
 async def get_chaos_summary(username: str):
     """Counts of real / cheap / calculated chaos and the survival rate for a player."""
     try:
-        return lens_service.chaos_summary(normalize_chess_com_username(username))
+        return lens_service.chaos_summary(
+            normalize_chess_com_username(username), user_id=current_user_id()
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
