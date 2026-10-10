@@ -70,10 +70,10 @@ def safe_set_complete(lines: list[dict], tol: float) -> bool:
     True when the stored lines provably contain every reply within `tol` EP of the best.
 
     Lines are ordered best first, so the set is complete once the last line falls outside
-    the tolerance. A missing EP cannot prove anything, so it counts as incomplete.
+    the tolerance. No lines, or a missing EP, cannot prove anything and count as incomplete.
     """
     if not lines:
-        return True
+        return False
     best, last = lines[0].get("ep"), lines[-1].get("ep")
     if best is None or last is None:
         return False
@@ -91,11 +91,13 @@ def evaluate_position(
     safe_tol: float | None = None,
 ) -> dict | None:
     """
-    Return the stored evaluation row for `board`, searching only on a cache miss.
+    Return the stored evaluation row for `board`, searching only when the cache cannot answer.
 
     MultiPV widens (doubling, up to `multipv_cap`) while the last line is still inside the
-    safe tolerance, so the safe set of replies is complete whenever the cap allows.
-    Returns None for positions with no legal moves.
+    safe tolerance, so the safe set of replies is complete whenever the cap allows. A cached
+    row is reused only if it still satisfies the current settings; otherwise it is widened
+    and replaced. Returns None for positions with no legal moves or when the engine gave
+    no usable line (nothing is cached in that case).
     """
     nodes = nodes or settings.analysis_nodes
     multipv = multipv or settings.analysis_multipv
@@ -107,16 +109,27 @@ def evaluate_position(
         return None
 
     key = fen_key(board)
-    cached = store.get(key, nodes)
-    if cached is not None:
-        return cached
-
     cap = min(max(multipv, multipv_cap), legal_count)
-    width = min(multipv, cap)
-    lines = engine.analyse(board, nodes=nodes, multipv=width)
+    target = min(multipv, cap)
+
+    cached = store.get(key, nodes)
+    lines = cached["lines"] if cached else []
+    width = cached["multipv"] if cached else 0
+    searched = False
+    if width < target:
+        width = target
+        lines = engine.analyse(board, nodes=nodes, multipv=width)
+        searched = True
     while width < cap and not safe_set_complete(lines, safe_tol):
         width = min(width * 2, cap)
         lines = engine.analyse(board, nodes=nodes, multipv=width)
+        searched = True
+
+    if not searched:
+        return cached
+    if not lines:
+        logger.warning("Engine returned no usable line for %s; not cached", key)
+        return None
 
     row = {
         "fen_key": key,
@@ -160,7 +173,7 @@ def evaluate_game_positions(
     after opponent moves. Plies made from an already decided position are skipped.
     """
     phase1_by_ply = {m["ply"]: m for m in classified}
-    stats = {"evaluated": 0, "skipped_decided": 0, "terminal": 0}
+    stats = {"evaluated": 0, "skipped_decided": 0, "terminal": 0, "failed": 0}
     temp = board.copy()
     for ply, move in enumerate(moves):
         before = mover_ep_before(ply, user_color, phase1_by_ply)
@@ -168,6 +181,9 @@ def evaluate_game_positions(
         if is_decided(before, settings.ep_decided_low, settings.ep_decided_high):
             stats["skipped_decided"] += 1
             continue
+        if temp.legal_moves.count() == 0:
+            stats["terminal"] += 1
+            continue
         row = evaluate_position(temp, engine, store)
-        stats["terminal" if row is None else "evaluated"] += 1
+        stats["failed" if row is None else "evaluated"] += 1
     return stats

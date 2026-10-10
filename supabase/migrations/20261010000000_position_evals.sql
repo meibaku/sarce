@@ -1,6 +1,7 @@
 -- Chaos Lens M1 — raw engine data (docs/CHAOS_PLAN.md).
 -- position_evals: node-limited MultiPV evaluations cached by position, written by the API.
 -- games.clocks_ms: remaining clock per ply for both players, parsed from PGN %clk comments.
+-- games.chaos_data_status: outcome of the raw-data pass, so failed games can be backfilled.
 
 create table public.position_evals (
   -- FEN without the fullmove number; the halfmove clock is kept (fifty-move rule).
@@ -28,4 +29,7 @@ grant select, insert, update, delete on public.position_evals to service_role;
 
 -- Index = ply; each value is the mover's remaining milliseconds after that move, or null.
 alter table public.games
-  add column if not exists clocks_ms jsonb;
+  add column if not exists clocks_ms jsonb,
+  -- null = never attempted (feature off, or analysed before this migration).
+  add column if not exists chaos_data_status text
+    check (chaos_data_status in ('complete', 'failed'));

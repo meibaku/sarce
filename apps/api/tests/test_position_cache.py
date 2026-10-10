@@ -74,6 +74,32 @@ class TestEvaluatePosition:
         assert second_engine.calls == []
         assert second == first
 
+    def test_cached_row_is_widened_when_tolerance_grows(self):
+        store, board = FakeStore(), chess.Board()
+        eps = [0.60, 0.58, 0.57, 0.50, 0.49, 0.30, 0.2, 0.1]
+        narrow = evaluate(board, FakeEngine(eps), store, safe_tol=0.05)
+        assert narrow["multipv"] == 4
+
+        # 0.60 - 0.50 is inside a 0.15 tolerance, so four lines no longer prove the set.
+        engine = FakeEngine(eps)
+        wide = evaluate(board, engine, store, safe_tol=0.15)
+        assert engine.calls == [8]
+        assert wide["multipv"] == 8 and wide["safe_set_complete"] is True
+        assert store.get(fen_key(board), 1000) == wide
+
+    def test_cached_row_is_widened_when_more_lines_are_requested(self):
+        store, board = FakeStore(), chess.Board()
+        eps = [0.60, 0.40, 0.3, 0.2, 0.1, 0.1]
+        evaluate(board, FakeEngine(eps), store, multipv=2)
+        engine = FakeEngine(eps)
+        row = evaluate(board, engine, store, multipv=4)
+        assert engine.calls == [4] and row["multipv"] == 4
+
+    def test_empty_engine_result_is_not_cached(self):
+        engine, store = FakeEngine([]), FakeStore()
+        assert evaluate(chess.Board(), engine, store) is None
+        assert store.rows == {}
+
     def test_stops_when_last_line_is_outside_tolerance(self):
         engine = FakeEngine([0.60, 0.58, 0.57, 0.40])
         row = evaluate(chess.Board(), engine, FakeStore())
@@ -112,6 +138,9 @@ class TestEvaluatePosition:
 
 
 class TestSafeSetComplete:
+    def test_no_lines_is_incomplete(self):
+        assert not safe_set_complete([], 0.05)
+
     def test_missing_ep_is_incomplete(self):
         assert not safe_set_complete([{"ep": 0.6}, {"ep": None}], 0.05)
 
@@ -138,7 +167,7 @@ class TestGamePositions:
         stats = evaluate_game_positions(
             chess.Board(), self.MOVES, "white", classified, engine, store
         )
-        assert stats == {"evaluated": 4, "skipped_decided": 0, "terminal": 0}
+        assert stats == {"evaluated": 4, "skipped_decided": 0, "terminal": 0, "failed": 0}
         assert len(store.rows) == 4
 
     def test_skips_plies_from_decided_positions(self):
@@ -151,7 +180,7 @@ class TestGamePositions:
         stats = evaluate_game_positions(
             chess.Board(), self.MOVES, "white", classified, engine, store
         )
-        assert stats == {"evaluated": 2, "skipped_decided": 2, "terminal": 0}
+        assert stats == {"evaluated": 2, "skipped_decided": 2, "terminal": 0, "failed": 0}
 
     def test_second_run_is_served_from_cache(self):
         classified = [{"ply": 0, "eval_before": 0.2, "eval_after": 0.2}]
@@ -190,3 +219,4 @@ class TestMigration:
         assert "alter table public.position_evals enable row level security" in sql
         assert "create policy" in sql
         assert "clocks_ms" in sql
+        assert "chaos_data_status" in sql
