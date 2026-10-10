@@ -1,6 +1,7 @@
 # Chaos Lens validation (M4)
 
-**Status: pilot run done (2,002 positions) — GO.** A full-size run is still to do; see *Results*.
+**Status: GO on 4,820 positions from four months** (and on the earlier 2,002-position pilot). The plan's
+50,000-position run is still to do; see *Results*.
 
 ## What is being checked
 
@@ -120,9 +121,65 @@ Both rest on three to five games, so they are illustrations, not findings. They 
 to `trap_atlas`: no database was reachable from the development machine. A useful atlas needs far
 more games per band — hundreds of thousands, not 1,343.
 
+### Four-month run with widened safe sets — 10 Oct 2026
+
+The pilot's main caveat was the fixed MultiPV 4. The sampler now widens the search the way the app
+does, and this run draws from four monthly files instead of one.
+
+| | |
+| --- | --- |
+| Data | The first 1,500–4,000 one-minute games of the March, May, July and August 2026 Lichess files |
+| Sample | 4,820 positions from 411 games; 3,312 tuning, 1,508 held-out |
+| Engine | Stockfish 18, 100,000 nodes, MultiPV 4 widened to 8 when the safe set was not closed |
+| Human model | `maia2-0.11-blitz` |
+| Runtime | About 65 minutes per month, run four at a time |
+
+**Brier score on held-out games (lower is better):**
+
+| Predictor | Brier |
+| --- | --- |
+| `p_fail_adjusted` (Maia-2 + clock multiplier) | **0.169** |
+| `p_fail` (Maia-2, unadjusted) | 0.170 |
+| `baseline_heuristic_adjusted` | 0.220 |
+| `baseline_cliff` | 0.340 |
+| `baseline_heuristic` (unadjusted) | 0.401 |
+
+**Verdict: GO**, combined and in each of the four months separately (0.156–0.200 against 0.215–0.231
+for the adjusted heuristic).
+
+**Calibration on held-out games** (`p_fail_adjusted`):
+
+| Predicted | 0.03 | 0.15 | 0.25 | 0.35 | 0.45 | 0.54 | 0.65 | 0.75 | 0.85 | 0.96 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Observed | 0.08 | 0.24 | 0.25 | 0.31 | 0.42 | 0.50 | 0.71 | 0.67 | 0.82 | 0.90 |
+| Positions | 376 | 151 | 161 | 126 | 138 | 136 | 104 | 109 | 121 | 86 |
+
+**Clock, all 4,820 positions:**
+
+| Replier's clock | Positions | Observed failure | Maia-2 predicted | Multiplier (tuning set) |
+| --- | --- | --- | --- | --- |
+| under 5 s | 384 | 0.365 | 0.297 | 1.28 |
+| 5–15 s | 1,122 | 0.406 | 0.384 | 1.03 |
+| 15 s or more | 3,314 | 0.377 | 0.415 | 0.91 |
+
+What changed from the pilot:
+
+- **The uniform over-prediction is gone.** Overall predicted failure is 0.399 against 0.383 observed,
+  so the pilot's flat 0.78 was the truncation artefact it looked like.
+- **A clock effect appears, in the expected direction:** with under 5 seconds players fail about a
+  quarter more often than Maia-2 predicts; with plenty of time, slightly less. The under-5-second
+  figure rests on 384 positions and ranged from 0.80 to 1.47 across the four months, so it is
+  provisional.
+- These multipliers are now in `apps/api/app/lenses/config.py` (`CLOCK_MULTIPLIERS["maia2"]`) and
+  applied to `P_fail` by the lenses when the model is Maia-2 and the game has clocks.
+
+Still short of the plan's target: 4,820 positions, not 50,000; each month is represented by its first
+hours only; the search is 15 times shallower than the app default; verdict thresholds are untuned.
+
 ### Before treating chaos numbers as calibrated
 
-1. Rerun with the safe set widened as the app does (`evaluate_position`), and with more nodes.
-2. Use a larger sample spread across the month — the plan suggests about 50,000 positions.
-3. Decide whether to apply a single calibration factor instead of per-clock multipliers.
-4. Only then copy values into `apps/api/app/lenses/config.py` and make Maia-2 the default model.
+1. Scale the sample toward the plan's 50,000 positions, drawn from across each month rather than its
+   first hours, and at more nodes. At about 3 s per position this is roughly 40 hours of compute here.
+2. Re-fit the clock multipliers on that sample, the under-5-second bucket above all.
+3. Tune `CHAOS_THRESHOLD` and `SAFE_TOL` against how flagged moves read in real reviews.
+4. Then decide whether to make Maia-2 the default model.

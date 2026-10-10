@@ -1,6 +1,7 @@
 """Chaos, survival and soundness lenses — Chaos Lens M3. Hand-built fixtures, no engine."""
 
 import ast
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -8,12 +9,14 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.lenses import LensResult, PlyContext, PositionData, register, score_ply
+from app.lenses import config as lens_config
 from app.lenses.chaos import ChaosLens, position_chaos, split_safe
 from app.lenses.registry import unregister
 from app.lenses.survival import SurvivalLens
 from app.main import app
 from app.services.lens_service import (
     build_ply_contexts,
+    initial_clock_ms,
     keys_after_each_ply,
     objective_cost,
     per_game_chaos,
@@ -94,6 +97,15 @@ class TestPositionChaos:
         assert data["p_fail"][1600] == pytest.approx(0.5)
         assert data["unstored_mass"][1600] == pytest.approx(0.3)
 
+    def test_clock_multiplier_scales_p_fail_and_is_capped(self):
+        base = position_chaos(HIDDEN_ONLY_MOVE)
+        fast = position_chaos(replace(HIDDEN_ONLY_MOVE, clock_bucket="<5s", p_fail_multiplier=1.1))
+        capped = position_chaos(replace(HIDDEN_ONLY_MOVE, p_fail_multiplier=5.0))
+        assert base["p_fail_multiplier"] == 1.0 and base["clock_bucket"] is None
+        assert fast["p_fail"][1600] == pytest.approx(0.935) and fast["clock_bucket"] == "<5s"
+        assert fast["chaos"][1600] > base["chaos"][1600]
+        assert capped["p_fail"][1600] == 1.0
+
     def test_nothing_to_compute_without_probabilities(self):
         assert position_chaos(PositionData(lines=[{"move_uci": "a2a3", "ep": 0.5}], safe_set_complete=True)) is None
 
@@ -169,6 +181,30 @@ class TestContextBuilding:
         assert second.faced is not None and second.left.probs_by_elo == {1600: {"x": 1.0}}
         assert second.opponent_elo == 1500
         assert second.objective_cost > 0
+
+    def test_positions_get_the_repliers_clock_bucket_and_model_multiplier(self):
+        keys = keys_after_each_ply(self.PGN)
+        evals = {key: {"fen_key": key, "lines": [{"move_uci": "x", "ep": 0.5}], "safe_set_complete": True} for key in keys}
+        moves = [{"id": "m2", "ply": 2, "uci": "g1f3", "quality": "good", "cp_loss": 0, "eval_before": 0.3, "eval_after": 0.3}]
+        # After ply 2 Black replies; Black's last annotation is ply 1 (4 s left).
+        clocks = [58_000, 4_000, 57_000]
+        ((_, with_model),) = build_ply_contexts(
+            self.PGN, moves, evals, {}, clocks_ms=clocks, initial_clock_ms=60_000, model_name="maia2"
+        )
+        assert with_model.left.clock_bucket == "<5s"
+        assert with_model.left.p_fail_multiplier == lens_config.CLOCK_MULTIPLIERS["maia2"]["<5s"]
+        # The position the user faced was White's own decision: White had 58 s.
+        assert with_model.faced.clock_bucket == "15s+"
+        ((_, heuristic),) = build_ply_contexts(
+            self.PGN, moves, evals, {}, clocks_ms=clocks, initial_clock_ms=60_000, model_name="heuristic"
+        )
+        assert heuristic.left.clock_bucket == "<5s" and heuristic.left.p_fail_multiplier == 1.0
+        ((_, no_clock),) = build_ply_contexts(self.PGN, moves, evals, {})
+        assert no_clock.left.clock_bucket is None and no_clock.left.p_fail_multiplier == 1.0
+
+    def test_initial_clock_from_time_control(self):
+        assert initial_clock_ms("60") == 60_000 and initial_clock_ms("180+2") == 180_000
+        assert initial_clock_ms(None) is None and initial_clock_ms("1/86400") is None
 
     def test_objective_cost(self):
         assert objective_cost({"eval_after": 0.0, "cp_loss": 0}) == 0.0

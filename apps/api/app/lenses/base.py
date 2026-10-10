@@ -16,6 +16,9 @@ class PositionData:
     safe_set_complete: bool
     # human_probs by Elo: {elo: {uci: probability}}
     probs_by_elo: dict[int, dict[str, float]] = field(default_factory=dict)
+    # Clock of the player to move, as a bucket, and the P_fail multiplier that goes with it.
+    clock_bucket: str | None = None
+    p_fail_multiplier: float = 1.0
 
 
 @dataclass(frozen=True)

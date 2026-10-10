@@ -5,6 +5,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- Chaos Lens M4: four-month validation with widened safe sets (4,820 positions) — GO; clock multipliers for
+  Maia-2 are now in `lenses/config.py` and applied to `P_fail` by the lenses
 - Chaos Lens M8 (part): optional sign-in — the API verifies Supabase access tokens and scopes every
   request to the signed-in user; `AUTH_REQUIRED=true` makes it mandatory. Web: `/login` (email link)
   and a sign-in status in the header. Local-first behaviour is unchanged when nobody is signed in
