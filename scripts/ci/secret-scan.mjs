@@ -1,34 +1,28 @@
 #!/usr/bin/env node
 /**
  * Lightweight repository secret scanner for CI.
- * Dependency-free; scans tracked text files. A finding is skipped only when the
- * matched value itself is a placeholder, or its line carries `secret-scan:ignore`.
+ * Dependency-free; scans every tracked file that is not binary. A finding is
+ * skipped only when the secret value itself is a placeholder, or its line
+ * carries `secret-scan:ignore`.
  * Run via `npm run scan:secrets` (CI job: security-gates).
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
-const MAX_FILE_BYTES = 1024 * 1024;
-const TEXT_EXTENSIONS = new Set([
-  ".env",
-  ".example",
-  ".json",
-  ".key",
-  ".js",
-  ".jsx",
-  ".mjs",
-  ".md",
-  ".pem",
-  ".ps1",
-  ".py",
-  ".sh",
-  ".sql",
-  ".toml",
-  ".ts",
-  ".tsx",
-  ".txt",
-  ".yaml",
-  ".yml",
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
+
+// Everything else is scanned, including extensionless files (id_rsa, .npmrc).
+const BINARY_EXTENSIONS = new Set([
+  ".gif",
+  ".ico",
+  ".jpeg",
+  ".jpg",
+  ".pdf",
+  ".png",
+  ".webp",
+  ".woff",
+  ".woff2",
+  ".zip",
 ]);
 
 const SKIP_PATHS = [
@@ -46,11 +40,17 @@ const SKIP_PATHS = [
   /(^|\/)\.venv\//,
 ];
 
-// Tested against the matched text only — a nearby word like "test" must not hide a real secret.
+// Anchored and tested against the secret value only — a real secret that merely
+// contains "sample", or sits next to the word "test", must still be reported.
 const PLACEHOLDER_VALUE =
-  /example|placeholder|dummy|sample|fake|mock|redacted|changeme|your[_-]|xxx|<[^>]+>|\$\{[^}]+\}/i;
+  /^(?:(?:example|placeholder|dummy|sample|fake|mock|redacted|changeme|ci-placeholder|x{3,})(?![a-z0-9])|your[_-]|<[^>]+>$|\$\{[^}]+\}$)/i;
 const IGNORE_MARKER = "secret-scan:ignore";
 
+const CREDENTIAL_NAME =
+  "[A-Za-z0-9_-]*(?:password|passwd|secret|api[_-]?key|token|service[_-]?role[_-]?key)[A-Za-z0-9_-]*";
+
+// A pattern with a `value` group has its placeholder check applied to that group;
+// one with `files` only runs on matching paths.
 const SECRET_PATTERNS = [
   {
     name: "Private key material",
@@ -73,14 +73,30 @@ const SECRET_PATTERNS = [
     pattern: /\bxox[baprs]-[A-Za-z0-9-]{20,}\b/,
   },
   {
+    name: "Supabase secret key",
+    pattern: /\bsb_secret_[A-Za-z0-9_-]{20,}\b/,
+  },
+  {
     name: "JWT",
     pattern:
       /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/,
   },
   {
+    // Quoted assignment in code or config; the name may carry a prefix (AUTH_TOKEN).
     name: "Hard-coded credential assignment",
-    pattern:
-      /\b(?:password|passwd|secret|api[_-]?key|token|client[_-]?secret)\b\s*[:=]\s*["'][^"']{12,}["']/i,
+    pattern: new RegExp(
+      `(?<![A-Za-z0-9_-])${CREDENTIAL_NAME}["']?\\s*[:=]\\s*["'](?<value>[^"'\\s]{12,})["']`,
+      "i",
+    ),
+  },
+  {
+    // Unquoted KEY=value line; limited to env-style files, where it is not ordinary code.
+    name: "Credential in env-style assignment",
+    files: /(^|\/)(\.env[^/]*|\.npmrc|\.pypirc|[^/]*\.(ini|cfg|conf|properties|toml))$/i,
+    pattern: new RegExp(
+      `^[ \\t]*(?:export[ \\t]+)?(?:[^\\s=]*:)?${CREDENTIAL_NAME}[ \\t]*=[ \\t]*(?<value>[^\\s"'#]{12,})[ \\t]*$`,
+      "im",
+    ),
   },
 ];
 
@@ -88,12 +104,10 @@ function normalizeGitPath(file) {
   return file.replaceAll("\\", "/");
 }
 
-function isTextCandidate(file) {
+function isBinaryExtension(file) {
   const base = file.split("/").pop() ?? file;
-  if (base === ".env" || base.startsWith(".env.")) return true;
   const dot = base.lastIndexOf(".");
-  if (dot < 0) return false;
-  return TEXT_EXTENSIONS.has(base.slice(dot).toLowerCase());
+  return dot > 0 && BINARY_EXTENSIONS.has(base.slice(dot).toLowerCase());
 }
 
 function shouldSkip(file) {
@@ -109,22 +123,27 @@ function listTrackedFiles() {
     .map(normalizeGitPath);
 }
 
+/** Returns { findings } for a scanned file, or { skipped: reason } when it was not scanned. */
 function scanFile(file) {
-  const findings = [];
-  let content;
+  let buf;
   try {
-    const buf = readFileSync(file);
-    if (buf.length > MAX_FILE_BYTES) return findings;
-    content = buf.toString("utf8");
-  } catch {
-    return findings;
+    buf = readFileSync(file);
+  } catch (err) {
+    // Tracked but deleted in the working tree is normal; anything else is worth a warning.
+    return err.code === "ENOENT" ? { findings: [] } : { skipped: `unreadable (${err.code})` };
   }
+  if (buf.length > MAX_FILE_BYTES) return { skipped: "larger than 5 MB" };
+  if (buf.includes(0)) return { findings: [] }; // binary content
+  const content = buf.toString("utf8");
 
-  for (const { name, pattern } of SECRET_PATTERNS) {
-    const re = new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`);
+  const findings = [];
+  for (const { name, pattern, files: onlyFiles } of SECRET_PATTERNS) {
+    if (onlyFiles && !onlyFiles.test(file)) continue;
+    const re = new RegExp(pattern.source, `${pattern.flags.replace("g", "")}g`);
     let match;
     while ((match = re.exec(content)) !== null) {
-      if (PLACEHOLDER_VALUE.test(match[0])) continue;
+      const value = match.groups?.value ?? match[0];
+      if (PLACEHOLDER_VALUE.test(value)) continue;
       const lineStart = content.lastIndexOf("\n", match.index) + 1;
       const lineEnd = content.indexOf("\n", match.index);
       const lineText = content.slice(lineStart, lineEnd < 0 ? content.length : lineEnd);
@@ -133,13 +152,21 @@ function scanFile(file) {
       findings.push({ file, line, name });
     }
   }
-  return findings;
+  return { findings };
 }
 
 const files = listTrackedFiles().filter(
-  (f) => !shouldSkip(f) && isTextCandidate(f),
+  (f) => !shouldSkip(f) && !isBinaryExtension(f),
 );
-const all = files.flatMap(scanFile);
+const all = [];
+const skipped = [];
+for (const file of files) {
+  const result = scanFile(file);
+  if (result.skipped) skipped.push(`${file} — ${result.skipped}`);
+  else all.push(...result.findings);
+}
+
+for (const s of skipped) console.warn(`Secret scan: NOT scanned: ${s}`);
 
 if (all.length) {
   console.error("Secret scan failed:");
@@ -149,4 +176,6 @@ if (all.length) {
   process.exit(1);
 }
 
-console.log(`Secret scan passed (${files.length} files).`);
+console.log(
+  `Secret scan passed (${files.length - skipped.length} files scanned, ${skipped.length} skipped).`,
+);

@@ -102,10 +102,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: "20"
-          cache: npm
 
-      - name: Install dependencies
-        run: npm ci
-
+      # No install: the scanner has no dependencies and npm audit reads the lockfile.
       - name: Secret scan + critical npm advisories
         run: npm run ci:security

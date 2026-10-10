@@ -4,7 +4,7 @@
 
 ## Base branch
 
-**Target: `staging`** — feature/fix/chore PRs merge here first. Use the [promotion template](PULL_REQUEST_TEMPLATE/promotion.md) for `staging` → `main`.
+**Target: `staging`** — feature/fix/chore PRs merge here first. Use the [promotion template](https://github.com/meibaku/sarce/blob/staging/.github/PULL_REQUEST_TEMPLATE/promotion.md) for `staging` → `main`.
 
 ## Philosophy check
 

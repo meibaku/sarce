@@ -165,6 +165,10 @@ The repo files are the source of truth; applying them is a manual, admin-only st
 
 # staging — create once
 gh api -X POST repos/meibaku/sarce/rulesets --input .github/rulesets/staging.json
+
+# staging — update after editing staging.json (POST fails once the ruleset exists)
+$id = gh api repos/meibaku/sarce/rulesets --jq '.[] | select(.name=="Protect staging") | .id'
+gh api -X PUT "repos/meibaku/sarce/rulesets/$id" --input .github/rulesets/staging.json
 ```
 
 Apply only after the CI workflow that reports `security-gates` is on the target branch — a required
