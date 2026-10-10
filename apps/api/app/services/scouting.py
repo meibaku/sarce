@@ -158,10 +158,15 @@ class ScoutingService:
         )
         return bool(res.data)
 
-    def delete_target(self, source: str, username: str) -> int:
-        """Deletion on request: remove every report about a player, whoever created it."""
+    def delete_target(self, source: str, username: str, owner_user_id: str | None = None) -> int:
+        """
+        Deletion on request: remove reports about a player.
+
+        With `owner_user_id` only that owner's reports go; without it (operator use, or
+        local-first single-user mode) every report about the player is removed.
+        """
         normalize = normalize_lichess_username if source == "lichess" else normalize_chess_com_username
-        res = (
-            get_supabase().table(TABLE).delete().eq("source", source).eq("target_username", normalize(username)).execute()
-        )
-        return len(res.data or [])
+        query = get_supabase().table(TABLE).delete().eq("source", source).eq("target_username", normalize(username))
+        if owner_user_id:
+            query = query.eq("owner_user_id", owner_user_id)
+        return len(query.execute().data or [])

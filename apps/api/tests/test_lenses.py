@@ -229,7 +229,7 @@ class TestRoutes:
         mock_summary.return_value = {"username": "dratius", "realChaos": 1}
         res = client.get("/users/%20DRATIUS%20/chaos-summary")
         assert res.status_code == 200
-        mock_summary.assert_called_once_with("dratius")
+        mock_summary.assert_called_once_with("dratius", user_id=None)
 
     def test_migration_enables_rls(self):
         sql = (API_ROOT.parents[1] / "supabase" / "migrations" / "20261010002000_move_lens_scores.sql").read_text(encoding="utf-8")

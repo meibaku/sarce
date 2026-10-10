@@ -1,3 +1,5 @@
+import { getAccessToken } from "@/lib/auth";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api/backend";
 const LOCAL_USER_ID =
   process.env.NEXT_PUBLIC_LOCAL_USER_ID ??
@@ -7,10 +9,13 @@ export async function fetchApi<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {
+  const token = await getAccessToken();
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      // Signed in: the API uses this verified identity and ignores any user id we send.
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options?.headers,
     },
   });

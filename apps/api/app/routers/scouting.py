@@ -3,7 +3,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from app.deps import resolve_user_id
+from app.deps import current_user_id, resolve_user_id
 from app.services.scouting import ScoutingService
 
 router = APIRouter()
@@ -53,5 +53,9 @@ async def delete_report(report_id: str, user_id: str | None = Query(None)):
 
 @router.delete("/targets/{source}/{username}")
 async def delete_target(source: Source, username: str):
-    """Deletion on request: remove every stored report about this player."""
-    return {"deleted": scouting_service.delete_target(source, username)}
+    """
+    Deletion on request. Signed in: removes the caller's reports about this player.
+    Single-user mode: removes every stored report about them.
+    """
+    deleted = scouting_service.delete_target(source, username, owner_user_id=current_user_id())
+    return {"deleted": deleted}

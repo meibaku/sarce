@@ -225,14 +225,17 @@ class LensService:
             return None
         return res.data[0].get("clocks_ms") if res.data else None
 
-    def chaos_summary(self, username: str) -> dict:
-        res = (
+    def chaos_summary(self, username: str, user_id: str | None = None) -> dict:
+        """Chaos counts for a username; `user_id` (the signed-in caller) narrows it to their games."""
+        query = (
             get_supabase()
             .table(TABLE)
-            .select("game_id, lens, verdict, games!inner(chess_com_username, played_at)")
+            .select("game_id, lens, verdict, games!inner(chess_com_username, played_at, user_id)")
             .eq("games.chess_com_username", username)
             .in_("lens", ["chaos", "survival"])
-            .execute()
         )
+        if user_id:
+            query = query.eq("games.user_id", user_id)
+        res = query.execute()
         rows = res.data or []
         return {"username": username, **summarize(rows), "perGame": per_game_chaos(rows)}

@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
+from app.deps import authenticate
 from app.routers import analysis, games, health, reference, scouting, traps, users
 
 app = FastAPI(
@@ -18,10 +19,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Every data router verifies the caller; /health stays open.
+AUTH = [Depends(authenticate)]
+
 app.include_router(health.router)
-app.include_router(games.router, prefix="/games", tags=["games"])
-app.include_router(analysis.router, prefix="/analysis", tags=["analysis"])
-app.include_router(reference.router, prefix="/reference", tags=["reference"])
-app.include_router(users.router, prefix="/users", tags=["users"])
-app.include_router(traps.router, prefix="/traps", tags=["traps"])
-app.include_router(scouting.router, prefix="/scouting", tags=["scouting"])
+app.include_router(games.router, prefix="/games", tags=["games"], dependencies=AUTH)
+app.include_router(analysis.router, prefix="/analysis", tags=["analysis"], dependencies=AUTH)
+app.include_router(reference.router, prefix="/reference", tags=["reference"], dependencies=AUTH)
+app.include_router(users.router, prefix="/users", tags=["users"], dependencies=AUTH)
+app.include_router(traps.router, prefix="/traps", tags=["traps"], dependencies=AUTH)
+app.include_router(scouting.router, prefix="/scouting", tags=["scouting"], dependencies=AUTH)

@@ -82,7 +82,7 @@ class TestRoutes:
     @patch("app.routers.scouting.scouting_service.delete_target", return_value=2)
     def test_deletion_on_request(self, mock_delete):
         assert client.delete("/scouting/targets/lichess/Tal_Fan").json() == {"deleted": 2}
-        mock_delete.assert_called_once_with("lichess", "Tal_Fan")
+        mock_delete.assert_called_once_with("lichess", "Tal_Fan", owner_user_id=None)
 
 
 class TestMigration:

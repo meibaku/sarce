@@ -1,3 +1,4 @@
+import { AuthStatus } from "@/components/auth-status";
 import { Dashboard } from "@/components/dashboard";
 
 export default function Home() {
@@ -11,7 +12,10 @@ export default function Home() {
             </p>
             <h1 className="text-2xl font-semibold tracking-tight">Sarce</h1>
           </div>
-          <p className="text-sm text-foreground/60">Tal-style target: 6–10% Brilliant</p>
+          <div className="flex items-center gap-4">
+            <p className="text-sm text-foreground/60">Tal-style target: 6–10% Brilliant</p>
+            <AuthStatus />
+          </div>
         </div>
       </header>
       <Dashboard />
