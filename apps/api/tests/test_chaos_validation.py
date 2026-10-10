@@ -101,5 +101,14 @@ class TestSummary:
         rows = [sample(0.5, 1), sample(0.5, 0)]
         assert cv.summarize_validation(rows, rows)["beats_baselines"] is False
 
+    def test_clock_adjustment_alone_cannot_beat_the_same_predictor(self):
+        # Model and heuristic are identical and badly scaled; the multiplier helps both equally.
+        tuning = [sample(0.8, 0, heuristic=0.8), sample(0.8, 1, heuristic=0.8)]
+        held_out = [sample(0.8, 0, heuristic=0.8), sample(0.8, 1, heuristic=0.8), sample(0.8, 0, heuristic=0.8)]
+        summary = cv.summarize_validation(tuning, held_out)
+        assert summary["clock_multipliers"]["15s+"] != 1.0
+        assert summary["brier"]["p_fail_adjusted"] == summary["brier"]["baseline_heuristic_adjusted"]
+        assert summary["beats_baselines"] is False
+
     def test_no_go_without_held_out_data(self):
         assert cv.summarize_validation([sample(0.9, 1)], [])["beats_baselines"] is False

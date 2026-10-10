@@ -125,20 +125,32 @@ def summarize_validation(tuning: list[dict], held_out: list[dict]) -> dict:
     """
     Fit the clock multiplier on `tuning`, then score every predictor on `held_out`.
 
-    `beats_baselines` is the M4 go / no-go signal: the adjusted model must have a lower
-    Brier score than both baselines on games it was not tuned on.
+    `beats_baselines` is the M4 go / no-go signal: the adjusted model must have a strictly
+    lower Brier score than the raw cliff and the equally adjusted heuristic baseline, on
+    games it was not tuned on.
     """
     multipliers = clock_multipliers(tuning)
+    # The heuristic baseline gets its own clock multiplier, fit the same way, so the
+    # comparison is like for like: otherwise the adjustment alone could "beat" it.
+    heuristic_multipliers = clock_multipliers(tuning, "baseline_heuristic")
     scored = [
-        {**s, "p_fail_adjusted": apply_multiplier(s.get("p_fail"), s["clock"], multipliers)}
+        {
+            **s,
+            "p_fail_adjusted": apply_multiplier(s.get("p_fail"), s["clock"], multipliers),
+            "baseline_heuristic_adjusted": apply_multiplier(
+                s.get("baseline_heuristic"), s["clock"], heuristic_multipliers
+            ),
+        }
         for s in held_out
     ]
     scores = {
         name: brier(scored, name)
-        for name in ("p_fail", "p_fail_adjusted", "baseline_cliff", "baseline_heuristic")
+        for name in (
+            "p_fail", "p_fail_adjusted", "baseline_cliff", "baseline_heuristic", "baseline_heuristic_adjusted",
+        )
     }
     model = scores["p_fail_adjusted"]
-    baselines = [scores["baseline_cliff"], scores["baseline_heuristic"]]
+    baselines = [scores["baseline_cliff"], scores["baseline_heuristic_adjusted"]]
     beats = model is not None and all(b is not None and model < b for b in baselines)
     return {
         "tuning_samples": len(tuning),
