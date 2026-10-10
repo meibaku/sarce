@@ -2,6 +2,10 @@
 
 <!-- What changed and why — tie back to docs/PHILOSOPHY.md if relevant -->
 
+## Base branch
+
+**Target: `staging`** — feature/fix/chore PRs merge here first. Use the [promotion template](PULL_REQUEST_TEMPLATE/promotion.md) for `staging` → `main`.
+
 ## Philosophy check
 
 _Sarce tracks style identity, not engine accuracy. Brilliant % is the headline metric._
@@ -16,7 +20,13 @@ _Sarce tracks style identity, not engine accuracy. Brilliant % is the headline m
 ## Test plan
 
 - [ ] `npm run ci` passes locally
+- [ ] `npm run ci:security` passes locally
 - [ ] `npm run test:golden` (if classification thresholds changed + Stockfish available)
+
+## Safety
+
+- [ ] No secrets, service-role keys, or `.env` files in the diff
+- [ ] New tables enable RLS; schema changes are a new migration (old ones untouched)
 
 ## Greptile / AI review
 

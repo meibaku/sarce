@@ -5,9 +5,21 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- Chaos Lens M0 housekeeping: `AGENTS.md`, `security-gates` CI job (secret scan + critical `npm audit`),
+  `staging` ruleset config, promotion PR template, `pr:create` / `pr:promote` helpers
+  (adapted from MeibakuHQ/ai-ci-repo-template)
+- `docs/CHAOS_PLAN.md` — milestone plan for the chaos/survival style lenses
 - `docs/PRODUCT_SPEC.md` — master product specification (Phases 1–4+)
 - Phase 2 redefined: video position capture + transcript context
 - Phase 3 redefined: move intent narratives + personal chess journal
+
+### Changed
+- CI and the philosophy check now run on pushes and PRs for `staging` as well as `main`
+- `main` ruleset config targets `refs/heads/main` instead of the default branch
+- `next` 15.5.19 → 15.5.27 and other in-range updates via `npm audit fix` (clears a critical advisory)
+
+### Fixed
+- Duplicate `listStyleMoments` export in `apps/web/src/lib/api.ts` that broke the web build
 
 ## [0.1.0] - 2026-06-13
 
