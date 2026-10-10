@@ -3,6 +3,35 @@
 > Drop this file at `docs/CHAOS_PLAN.md`. Point Claude Code at it at the start of every session:
 > *"Read docs/CHAOS_PLAN.md and docs/ARCHITECTURE.md. We're on Milestone N."*
 
+## Status at a glance
+
+| Milestone | Code | Still to do |
+|---|---|---|
+| M0 Housekeeping | Merged | Major-version Dependabot PRs, one at a time |
+| M1 WDL + EP | Merged, off by default | Run `npm run test:golden` with Stockfish; apply migration |
+| M2 Human model | Interface, cache and interim heuristic merged | **Maia spike and model choice** (ADR 0002) |
+| M3 Lenses | Merged | Thresholds are provisional until M4 |
+| M4 Validation | Tooling merged | **The run itself** — go / no-go is still open |
+| M5 Review UI | First version merged | Check against real games; Tal in chaos terms |
+| M6 Trap atlas | Merged, atlas empty | Run the sampler and `build_trap_atlas` on real data |
+| M7 Intention tagger | v1 merged, off by default | Tune thresholds; "sharpness" part of squeeze |
+| M8 Sharing + scouting | Not started | Needs the multi-user decision first |
+
+Nothing engine- or database-backed has been run end to end yet: the development machine had no
+Stockfish binary and no migrated database, so everything above is covered by unit tests only.
+
+### Turning it on
+
+1. Apply the migrations in `supabase/migrations/` dated `20261010…` (five files, in order).
+2. Set `STOCKFISH_PATH`, then run `npm run test:golden` — includes the determinism check for `analyse`.
+3. Set `IDEA_TAGGER_ENABLED=true` (fast, no engine) and `POSITION_EVALS_ENABLED=true` (much slower per game).
+4. Analyse new games as usual. For games already analysed: `python -m scripts.backfill_chaos`, and
+   `GET /games/{id}/ideas?refresh=true` to tag one.
+5. Decide the human model (ADR 0002), then run `python -m scripts.validate_chaos` and record the result
+   in `docs/VALIDATION.md`. Until that passes, treat every chaos number as uncalibrated.
+
+---
+
 ## Mission
 
 **Recognizing better plays and having better chaos control.** Not elo-climbing.
