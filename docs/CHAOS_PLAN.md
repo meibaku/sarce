@@ -9,7 +9,7 @@
 |---|---|---|
 | M0 Housekeeping | Merged | Major-version Dependabot PRs, one at a time |
 | M1 WDL + EP | Merged, off by default; verified on Stockfish 18 | Apply the migration to your own database |
-| M2 Human model | Interface, cache and interim heuristic merged | **Maia spike and model choice** (ADR 0002) |
+| M2 Human model | Interface, cache and interim heuristic merged; spike done, recommends Maia-2 | **Your decision** to adopt it (ADR 0002), then the adapter |
 | M3 Lenses | Merged | Thresholds are provisional until M4 |
 | M4 Validation | Tooling merged; sampler executes end to end | **The run on real Lichess data** — go / no-go is still open |
 | M5 Review UI | Merged; checked against one analysed game | Check against your own games; Tal in chaos terms |

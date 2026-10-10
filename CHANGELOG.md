@@ -5,6 +5,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- ADR 0002: Maia spike findings — Maia-2 measured (MIT, 27.8 ms/position on CPU, full move distribution);
+  Maia-3 is AGPL-3.0 and was not measured. Recommends Maia-2; integration awaits a decision
 - Chaos Lens M8 (part): style focus picker (Brilliance / Chaos control) that changes dashboard emphasis only;
   Brilliant % stays the headline — see `docs/adr/0003-style-focus.md`
 - Chaos Lens M8 (part): opponent scouting — private, aggregate-only preparation reports from a named
