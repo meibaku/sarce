@@ -22,6 +22,7 @@ from app.services.human_model import (
     elo_ladder,
     get_human_model,
 )
+from app.services.lens_service import LensService
 from app.services.move_classifier import MoveClassifier
 from app.services.move_signals import signal_distribution
 from app.services.pgn_parser import extract_clocks_ms
@@ -235,6 +236,8 @@ class AnalysisService:
             for _ply, position in iter_live_positions(board, moves, user_color, classified):
                 for elo in elos:
                     cached_move_probs(position, elo, model, prob_store)
+            # Lenses read only what was just stored; no further engine work.
+            LensService().score_game(game_id)
             logger.info("Position evals for game %s: %s", game_id, stats)
             status = "failed" if stats["failed"] else "complete"
         except Exception:
