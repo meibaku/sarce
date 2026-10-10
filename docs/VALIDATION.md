@@ -99,6 +99,27 @@ The plan's first step: about 2,000 positions to check the pipeline before decidi
   641 held-out positions, and a search 15 times shallower than the app default.
 - Verdict thresholds (`CHAOS_THRESHOLD`, `SAFE_TOL`) were not tuned.
 
+### Openings pass and trap atlas — 10 Oct 2026
+
+A second pass over the same 4,000 games, plies 2–13 only, to give the trap atlas repeated positions
+(`--min-ply 2 --max-ply 13`, 50,000 nodes, `maia2-0.11-blitz`): 14,002 positions from 1,343 games in
+48 minutes.
+
+- **Validation, again GO:** held-out Brier 0.170 for the adjusted model, 0.198 for the adjusted
+  heuristic, 0.258 for the raw cliff. Opening positions only, so this is not an independent check
+  of the middlegame.
+- **Trap atlas (dry run):** 12,505 distinct position × rating-band pairs, 281 seen at least 3 times,
+  **2 traps** where the most-played reply loses at least 0.20 EP:
+
+| Band | Position | Most-played reply | Costs | Seen |
+| --- | --- | --- | --- | --- |
+| 800–999 | 1. e4 e5 2. Bc4 | 2... f6 | 0.44 EP | 3 |
+| 1000–1199 | 1. e4 e5 2. Nf3 Nc6 3. Bc4 | 3... d5 | 0.34 EP | 5 |
+
+Both rest on three to five games, so they are illustrations, not findings. They were **not** written
+to `trap_atlas`: no database was reachable from the development machine. A useful atlas needs far
+more games per band — hundreds of thousands, not 1,343.
+
 ### Before treating chaos numbers as calibrated
 
 1. Rerun with the safe set widened as the app does (`evaluate_position`), and with more nodes.
