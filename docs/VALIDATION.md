@@ -24,7 +24,8 @@ EP — the same event `P_fail` predicts.
 - Samples are stratified by 200-point rating band and the replier's clock (`<5s`, `5–15s`, `15s+`).
 - Games are split **by game** into a tuning set (70%) and a held-out set (30%).
 - The clock multiplier is fit on the tuning set only; every score below is from the held-out set.
-- **Go / no-go:** `p_fail_adjusted` must have a lower Brier score than both baselines.
+- **Go / no-go:** `p_fail_adjusted` must have a lower Brier score than `baseline_cliff` and than the
+  heuristic baseline with its own clock multiplier applied (`baseline_heuristic_adjusted`).
 
 ## How to run
 
