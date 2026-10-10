@@ -310,8 +310,8 @@ Tasks in `apps/web`:
 
 ### M8 — Sharing + opponent scouting (later)
 
-> **Status:** Lichess import, opponent scouting and a style focus picker (ADR 0003) are implemented. Multi-user auth flows, per-user queues and a job queue are
-> not started — they need the multi-user decision and a queue choice (rule 8).
+> **Status:** Lichess import, opponent scouting and a style focus picker (ADR 0003) are implemented. A durable per-user analysis
+> job queue is implemented without a new dependency (`JOB_QUEUE_ENABLED`). Optional sign-in is in an open PR.
 
 - Multi-user: auth flows, per-user queues, replace `BackgroundTasks` with a real job queue.
 - Style picker: users choose their lens; dashboard mirrors that identity.
