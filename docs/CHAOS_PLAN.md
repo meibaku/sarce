@@ -184,6 +184,10 @@ Tasks:
 
 ### M4 — Validation on real bullet data (3–5 days, mostly compute)
 
+> **Status:** the script and its maths are implemented and unit-tested; **the run has not happened**.
+> It needs a local Stockfish, a Lichess database file and a trained human model (ADR 0002).
+> The go / no-go checkpoint is therefore still open — see `docs/VALIDATION.md`.
+
 **Goal:** prove the score means something; tune thresholds from data.
 
 Tasks:

@@ -248,6 +248,44 @@ class AnalysisService:
         except Exception:
             logger.exception("Could not record chaos data status for game %s", game_id)
 
+    async def backfill_chaos_data(self, limit: int = 20, username: str | None = None) -> dict:
+        """
+        Run the raw-data pass for analysed games that have no chaos data yet (or failed).
+
+        For games analysed before the Chaos Lens existed, or while it was switched off.
+        Phase 1 results are read back from `game_moves`; nothing in Phase 1 is recomputed.
+        """
+        sb = get_supabase()
+        query = (
+            sb.table("games")
+            .select("id, pgn, user_color, opponent_rating, chaos_data_status")
+            .eq("analysis_status", "complete")
+            .or_("chaos_data_status.is.null,chaos_data_status.eq.failed")
+            .limit(limit)
+        )
+        if username:
+            query = query.eq("chess_com_username", username)
+        done = {"attempted": 0, "skipped": 0}
+        for game in query.execute().data or []:
+            parsed = self._parse_game(game["pgn"])
+            moves_res = (
+                sb.table("game_moves")
+                .select("ply, eval_before, eval_after")
+                .eq("game_id", game["id"])
+                .execute()
+            )
+            if not parsed or not moves_res.data:
+                done["skipped"] += 1
+                continue
+            board, moves = parsed
+            await asyncio.to_thread(
+                self._store_chaos_raw_data,
+                game["id"], game["pgn"], board, moves,
+                game.get("user_color") or "white", moves_res.data, game.get("opponent_rating"),
+            )
+            done["attempted"] += 1
+        return done
+
     async def analyze_pending(
         self,
         user_id: str | None = None,
