@@ -5,6 +5,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- Chaos Lens M1 (WDL + EP foundation): `services/ep.py`, node-limited MultiPV `StockfishEngine.analyse`,
+  `position_evals` cache with adaptive MultiPV widening, per-ply clock parsing, and migration
+  `20261010000000_position_evals.sql`. Off by default — set `POSITION_EVALS_ENABLED=true` after migrating
 - Chaos Lens M0 housekeeping: `AGENTS.md`, `security-gates` CI job (secret scan + critical `npm audit`),
   `staging` ruleset config, promotion PR template, `pr:create` / `pr:promote` helpers
   (adapted from MeibakuHQ/ai-ci-repo-template)

@@ -58,3 +58,16 @@ class TestGoldenAnalysis:
         classifier = MoveClassifier()
         results = classifier.classify_game(board, moves, user_color="white")
         assert results[0]["quality"] != MoveQuality.BRILLIANT.value
+
+    def test_node_limited_search_is_deterministic(self):
+        """Chaos Lens M1: the same position searched twice must give identical lines."""
+        from app.services.stockfish import StockfishEngine
+
+        board = chess.Board("r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3")
+        with StockfishEngine() as engine:
+            first = engine.analyse(board, nodes=200_000, multipv=4)
+            engine.analyse(chess.Board(), nodes=50_000, multipv=2)  # disturb the hash
+            second = engine.analyse(board, nodes=200_000, multipv=4)
+        assert len(first) == 4
+        assert all(0.0 <= line["ep"] <= 1.0 for line in first)
+        assert first == second

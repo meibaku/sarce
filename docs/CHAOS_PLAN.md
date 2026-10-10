@@ -90,6 +90,12 @@ Each milestone has: goal, tasks, files, acceptance criteria, and a prompt to pas
 
 ### M1 — WDL + EP foundation (2–3 days)
 
+> **Status:** implemented on `feat/m1-wdl-ep`, gated by `POSITION_EVALS_ENABLED` (default off).
+> Differences from the task list below: the cache key is `(fen_key, nodes)`; clocks live in
+> `games.clocks_ms` (one array per game, every ply) rather than `game_moves.clock_ms`, because
+> `game_moves` only has the user's moves; the decided-position skip uses stored Phase 1 evals
+> converted to EP. Still to verify on a machine with Stockfish: `npm run test:golden`.
+
 **Goal:** engine layer produces EP and MultiPV data, cached by position.
 
 Tasks:

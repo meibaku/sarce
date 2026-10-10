@@ -6,16 +6,21 @@ Phase 1 pipeline: pending game → Stockfish → game_moves + game_analyses → 
 
 from __future__ import annotations
 
+import asyncio
 import io
 import logging
 
 import chess
 import chess.pgn
 
+from app.config import settings
 from app.db.supabase import get_supabase
 from app.services.baseline import BaselineService, EMPTY_DISTRIBUTION
 from app.services.move_classifier import MoveClassifier
 from app.services.move_signals import signal_distribution
+from app.services.pgn_parser import extract_clocks_ms
+from app.services.position_evals import SupabaseEvalStore, evaluate_game_positions
+from app.services.stockfish import StockfishEngine
 
 logger = logging.getLogger(__name__)
 
@@ -173,12 +178,54 @@ class AnalysisService:
             chess_com_username=row.get("chess_com_username"),
         )
 
+        # After everything Phase 1 has been saved, so the extra engine time cannot delay it.
+        # In a worker thread: the engine searches would otherwise block the API event loop.
+        if settings.position_evals_enabled:
+            await asyncio.to_thread(
+                self._store_chaos_raw_data,
+                game_id, row["pgn"], board, moves, user_color, classified,
+            )
+
         return {
             "gameId": game_id,
             "brilliantPct": brilliant_pct,
             "totalMoves": len(classified),
             "distribution": distribution,
         }
+
+    def _store_chaos_raw_data(
+        self,
+        game_id: str,
+        pgn_text: str,
+        board: chess.Board,
+        moves: list[chess.Move],
+        user_color: str,
+        classified: list[dict],
+    ) -> None:
+        """
+        Chaos Lens raw data: per-ply clocks and cached position evaluations.
+
+        Runs after Phase 1 results are saved and never fails the analysis — a problem
+        here is logged and the game stays `complete` (docs/CHAOS_PLAN.md, rule 1).
+        The outcome is recorded in `games.chaos_data_status` so failed games can be
+        found and backfilled instead of silently missing lens data.
+        """
+        games = get_supabase().table("games")
+        try:
+            games.update({"clocks_ms": extract_clocks_ms(pgn_text)}).eq("id", game_id).execute()
+            with StockfishEngine() as engine:
+                stats = evaluate_game_positions(
+                    board, moves, user_color, classified, engine, SupabaseEvalStore()
+                )
+            logger.info("Position evals for game %s: %s", game_id, stats)
+            status = "failed" if stats["failed"] else "complete"
+        except Exception:
+            logger.exception("Chaos raw-data pass failed for game %s", game_id)
+            status = "failed"
+        try:
+            games.update({"chaos_data_status": status}).eq("id", game_id).execute()
+        except Exception:
+            logger.exception("Could not record chaos data status for game %s", game_id)
 
     async def analyze_pending(
         self,
