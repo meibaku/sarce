@@ -16,6 +16,7 @@ from app.services.lens_service import (
     build_ply_contexts,
     keys_after_each_ply,
     objective_cost,
+    per_game_chaos,
     score_contexts,
     summarize,
 )
@@ -191,16 +192,33 @@ class TestSummary:
             "problemsFaced": 2, "survived": 1, "survivalRate": 0.5,
         }
 
+    def test_per_game_chaos_is_ordered_by_date(self):
+        rows = [
+            {"game_id": "g2", "lens": "chaos", "verdict": "cheap_chaos", "games": {"played_at": "2026-02-01"}},
+            {"game_id": "g1", "lens": "chaos", "verdict": "real_chaos", "games": {"played_at": "2026-01-01"}},
+            {"game_id": "g1", "lens": "chaos", "verdict": "real_chaos", "games": {"played_at": "2026-01-01"}},
+            {"game_id": "g1", "lens": "survival", "verdict": "missed", "games": {"played_at": "2026-01-01"}},
+        ]
+        assert per_game_chaos(rows) == [
+            {"gameId": "g1", "playedAt": "2026-01-01", "realChaos": 2, "cheapChaos": 0},
+            {"gameId": "g2", "playedAt": "2026-02-01", "realChaos": 0, "cheapChaos": 1},
+        ]
+
     def test_no_problems_faced(self):
         assert summarize([])["survivalRate"] is None
 
 
 class TestRoutes:
+    @patch("app.routers.games.lens_service.get_game_clocks", return_value=[59900, None])
     @patch("app.routers.games.lens_service.get_game_lenses", return_value=[{"ply": 2, "lenses": {}}])
-    def test_game_lenses(self, _mock):
+    def test_game_lenses(self, _lenses, _clocks):
         res = client.get("/games/abc/lenses")
         assert res.status_code == 200
-        assert res.json() == {"gameId": "abc", "moves": [{"ply": 2, "lenses": {}}]}
+        assert res.json() == {
+            "gameId": "abc",
+            "moves": [{"ply": 2, "lenses": {}}],
+            "clocksMs": [59900, None],
+        }
 
     @patch("app.routers.games.lens_service.score_game", return_value=None)
     def test_refresh_unknown_game_is_404(self, _mock):

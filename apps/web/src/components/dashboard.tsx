@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  getChaosSummary,
   getStyleProfile,
   getTalBenchmark,
   getTimeline,
@@ -13,12 +14,14 @@ import {
 import { AnalysisWorkspace } from "./analysis-workspace";
 import { BrilliantGauge } from "./brilliant-gauge";
 import { BrilliantTimeline } from "./brilliant-timeline";
+import { ChaosSummaryPanel } from "./chaos-summary-panel";
 import { DistributionChart } from "./distribution-chart";
 import { ImportGamesForm } from "./import-games-form";
 import { StyleMoments } from "./style-moments";
 import { StyleProfilePanel } from "./style-profile-panel";
 import { StyleSummary } from "./style-summary";
 import type {
+  ChaosSummary,
   ReferenceBenchmark,
   StyleMoment,
   StyleProfile,
@@ -50,6 +53,7 @@ export function Dashboard() {
   );
   const [timeline, setTimeline] = useState<TimelinePoint[]>([]);
   const [moments, setMoments] = useState<StyleMoment[]>([]);
+  const [chaosSummary, setChaosSummary] = useState<ChaosSummary | null>(null);
   const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
@@ -75,6 +79,7 @@ export function Dashboard() {
         setTalBenchmark(tal);
         setStyleProfile(profile);
         setMoments(momentRes.moments);
+        setChaosSummary(u ? await getChaosSummary(u).catch(() => null) : null);
         return b;
       } catch {
         return null;
@@ -183,6 +188,8 @@ export function Dashboard() {
           targetMax={baseline.targetBrilliantMax}
         />
       </section>
+
+      <ChaosSummaryPanel summary={chaosSummary} />
 
       <StyleMoments moments={moments} />
 
