@@ -47,14 +47,13 @@ class TestGoldenAnalysis:
             MoveQuality.BRILLIANT.value,
         }
 
-    def test_obvious_hanging_queen_is_bad(self):
-        """Dropping queen without compensation should not be best/brilliant."""
-        # White queen can be captured on d1 after nonsense moves — use simple blunder
-        board = chess.Board("rnbqkb1r/pppp1ppp/5n2/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")
-        # Hang queen: Qd1 without development in a tactically sharp line
-        # Simpler: move queen to a square where it's immediately taken
-        board = chess.Board("rnbqkb1r/pppp1ppp/5n2/8/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 0 2")
-        moves = [chess.Move.from_uci("d1h5")]  # early queen sortie — often inaccuracy+
+    def test_early_queen_sortie_is_not_brilliant(self):
+        """An early queen sortie should never be classified as brilliant."""
+        # After 1. e4 e5, the early queen sortie 2. Qh5 is legal and never a sacrifice.
+        # (The previous fixture had a pawn on e2, so d1h5 was illegal and crashed the engine.)
+        board = chess.Board("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")
+        moves = [chess.Move.from_uci("d1h5")]
+        assert moves[0] in board.legal_moves
         classifier = MoveClassifier()
         results = classifier.classify_game(board, moves, user_color="white")
         assert results[0]["quality"] != MoveQuality.BRILLIANT.value

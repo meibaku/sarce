@@ -5,6 +5,7 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- `scripts/chaos_smoke.py` — runs the whole Chaos Lens pipeline on one PGN with a real engine and no database
 - Chaos Lens M7 (UI): Ideas card in the game review — idea windows, what became of them, pivots, and
   motif chips for the selected move
 - Chaos Lens M6 (trap atlas): `trap_atlas` table, `services/trap_atlas.py`, `scripts/build_trap_atlas.py`,
@@ -42,6 +43,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - `next` 15.5.19 → 15.5.27 and other in-range updates via `npm audit fix` (clears a critical advisory)
 
 ### Fixed
+- Golden test fixture used an illegal move (`d1h5` with a pawn on e2), which crashed the engine instead of
+  testing anything; replaced with a legal position
 - Duplicate `listStyleMoments` export in `apps/web/src/lib/api.ts` that broke the web build
 
 ## [0.1.0] - 2026-06-13
