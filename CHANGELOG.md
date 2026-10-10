@@ -43,6 +43,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - `next` 15.5.19 → 15.5.27 and other in-range updates via `npm audit fix` (clears a critical advisory)
 
 ### Fixed
+- Chaos review: the who-falls-for-it bars had no height; the dashboard chaos panel no longer disappears
+  when an unrelated request fails; the uncalibrated "N in 10 players" sentence is removed (ADR 0002)
 - Golden test fixture used an illegal move (`d1h5` with a pawn on e2), which crashed the engine instead of
   testing anything; replaced with a legal position
 - Duplicate `listStyleMoments` export in `apps/web/src/lib/api.ts` that broke the web build

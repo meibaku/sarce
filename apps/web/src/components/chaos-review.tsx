@@ -7,7 +7,6 @@ import type {
   ChaosVerdict,
   GameDetail,
   GameLenses,
-  LensEntry,
   SurvivalVerdict,
 } from "@/types/chess";
 
@@ -56,16 +55,6 @@ function curve(values: Record<string, number> | undefined) {
   return Object.entries(values ?? {})
     .map(([elo, value]) => ({ elo: Number(elo), value }))
     .sort((a, b) => a.elo - b.elo);
-}
-
-function chaosSentence(entry: LensEntry) {
-  const elo = entry.details.elo;
-  const pFail = elo == null ? undefined : entry.details.p_fail?.[String(elo)];
-  if (elo == null || pFail == null) return null;
-  const outOfTen = Math.round(pFail * 10);
-  const safe = entry.details.safe_set?.length ?? 0;
-  const target = safe === 1 ? "the only safe reply" : `one of the ${safe} safe replies`;
-  return `Model estimate at ${elo}: about ${outOfTen} in 10 players miss ${target} here.`;
 }
 
 export function ChaosReview({
@@ -202,10 +191,13 @@ export function ChaosReview({
                     </p>
                     <div className="flex h-20 items-end gap-2">
                       {pFailCurve.map(({ elo, value }) => (
-                        <div key={elo} className="flex flex-1 flex-col items-center gap-1">
+                        <div
+                          key={elo}
+                          className="flex h-full flex-1 flex-col items-center justify-end gap-1"
+                        >
                           <div
                             className="w-full rounded-t bg-brilliant/60"
-                            style={{ height: `${Math.max(2, value * 100)}%` }}
+                            style={{ height: `${Math.max(2, value * 80)}%` }}
                             title={`${Math.round(value * 100)}%`}
                           />
                           <span className="font-mono text-[10px] text-foreground/45">{elo}</span>
@@ -215,9 +207,6 @@ export function ChaosReview({
                   </div>
                 )}
 
-                {chaosSentence(chaos) && (
-                  <p className="text-foreground/75">{chaosSentence(chaos)}</p>
-                )}
                 {chaos.details.safe_set_complete === false && (
                   <p className="text-xs text-foreground/45">
                     Many replies were close in value here, so the safe set may be incomplete.
@@ -243,7 +232,8 @@ export function ChaosReview({
             )}
 
             <p className="text-xs text-foreground/40">
-              Estimates use an interim human model and are not yet calibrated.
+              Estimates use an interim human model and are not yet calibrated, so no
+              &quot;N in 10 players&quot; claim is shown.
             </p>
           </div>
         </>

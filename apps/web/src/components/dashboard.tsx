@@ -65,6 +65,8 @@ export function Dashboard() {
   const refreshData = useCallback(
     async (chessUsername?: string) => {
       const u = chessUsername ?? username ?? undefined;
+      // Independent of the Phase 1 requests below: one failing must not hide the other.
+      setChaosSummary(u ? await getChaosSummary(u).catch(() => null) : null);
       try {
         const [b, t, tal, profile] = await Promise.all([
           getUserBaseline(u),
@@ -80,7 +82,6 @@ export function Dashboard() {
         setTalBenchmark(tal);
         setStyleProfile(profile);
         setMoments(momentRes.moments);
-        setChaosSummary(u ? await getChaosSummary(u).catch(() => null) : null);
         return b;
       } catch {
         return null;
