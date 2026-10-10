@@ -62,23 +62,21 @@ class TestAnalysisRoutes:
 
 
 class TestGamesRoutes:
-    def test_style_moments_route_exists(self):
-        routes = {
-            route.path
-            for route in app.routes
-            if "GET" in getattr(route, "methods", set())
+    @staticmethod
+    def _get_paths() -> set[str]:
+        # Read the OpenAPI schema rather than app.routes: newer FastAPI no
+        # longer flattens included-router routes onto app.routes.
+        return {
+            path
+            for path, operations in app.openapi()["paths"].items()
+            if "get" in operations
         }
 
-        assert "/games/moments" in routes
+    def test_style_moments_route_exists(self):
+        assert "/games/moments" in self._get_paths()
 
     def test_game_detail_route_exists(self):
-        routes = {
-            route.path
-            for route in app.routes
-            if "GET" in getattr(route, "methods", set())
-        }
-
-        assert "/games/{game_id}" in routes
+        assert "/games/{game_id}" in self._get_paths()
 
     @patch("app.routers.games.analysis_service.analyze_pending", new_callable=AsyncMock)
     @patch("app.routers.games.game_store.store_imported_games", new_callable=AsyncMock)

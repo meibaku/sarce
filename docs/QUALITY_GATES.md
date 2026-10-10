@@ -33,8 +33,9 @@ How Sarce stays true to [PHILOSOPHY.md](./PHILOSOPHY.md) as the codebase grows.
 | **web-lint** | `npm run lint:web` | ESLint errors |
 | **web-build** | `npm run build:web` | TypeScript/build failure |
 | **migration-check** | SQL files exist + parse | Broken migration syntax |
+| **security-gates** | `npm run ci:security` | Committed secret, or a critical npm advisory |
 
-GitHub Actions: `.github/workflows/ci.yml`
+GitHub Actions: `.github/workflows/ci.yml` — runs on pushes and PRs for both `staging` and `main`.
 
 Local equivalent:
 
@@ -131,53 +132,47 @@ Sarce uses **two mechanisms** — you should prefer **Rulesets** (modern) over c
 
 ### Current state
 
-| Mechanism | Status | Where to view |
-|-----------|--------|---------------|
-| **Classic branch protection** | ✅ Active on `main` | Settings → Branches |
-| **Repository ruleset** | ⏳ Config ready, apply below | Settings → Rules |
+| Branch | Ruleset config | Notes |
+|--------|----------------|-------|
+| `staging` (default branch, default PR target) | `.github/rulesets/staging.json` | Conversation resolution not required |
+| `main` (releases) | `.github/rulesets/main.json` | Conversation resolution required |
 
-Classic protection was applied first via `.github/branch-protection.json`.
-The ruleset in `.github/rulesets/main.json` is the **canonical config** going forward.
+`main.json` targets `refs/heads/main` explicitly. It used to target `~DEFAULT_BRANCH`, which silently
+moved the protection to `staging` when the default branch changed and left `main` unprotected.
 
-### Classic vs Rulesets
+`.github/branch-protection.json` (classic protection) is kept only as a fallback with the same required
+checks; rulesets are canonical.
 
-| | Classic protection | Rulesets (recommended) |
-|--|-------------------|------------------------|
-| Location | Settings → Branches | Settings → Rules → Rulesets |
-| Scope | Per-branch | Flexible (default branch, patterns, tags) |
-| Features | PR + status checks | Same + deletion block, non-fast-forward, bypass lists |
-| Config in repo | `branch-protection.json` | `rulesets/main.json` |
-| GitHub direction | Legacy | Current standard |
-
-**Recommendation:** Apply the ruleset, then remove classic protection to avoid duplicate rules:
-
-```powershell
-.\.github\scripts\apply-ruleset.ps1 -Replace
-```
-
-### Rules enforced (both configs)
+### Rules enforced (both rulesets)
 
 | Rule | Setting |
 |------|---------|
 | Require PR before merge | ✅ |
-| Required status checks | `api-test`, `web-lint`, `web-build`, `migration-check`, `philosophy-check` |
+| Required status checks | `api-test`, `web-lint`, `web-build`, `migration-check`, `philosophy-check`, `security-gates` |
 | Branches must be up to date | ✅ (strict) |
-| Require conversation resolution | ✅ |
+| Require conversation resolution | ✅ (`main` only) |
 | Block branch deletion | ✅ (ruleset only) |
 | Block force push / non-fast-forward | ✅ |
 | Enforce for admins | ✅ |
 
-### Apply ruleset
+### Apply rulesets
+
+The repo files are the source of truth; applying them is a manual, admin-only step.
 
 ```powershell
-# Create or update ruleset
+# main — creates or updates the "Protect main" ruleset
 .\.github\scripts\apply-ruleset.ps1
 
-# Migrate from classic → rulesets only
-.\.github\scripts\apply-ruleset.ps1 -Replace
+# staging — create once
+gh api -X POST repos/meibaku/sarce/rulesets --input .github/rulesets/staging.json
+
+# staging — update after editing staging.json (POST fails once the ruleset exists)
+$id = gh api repos/meibaku/sarce/rulesets --jq '.[] | select(.name=="Protect staging") | .id'
+gh api -X PUT "repos/meibaku/sarce/rulesets/$id" --input .github/rulesets/staging.json
 ```
 
-Or manually: **Settings → Rules → Rulesets → New** → paste `.github/rulesets/main.json`
+Apply only after the CI workflow that reports `security-gates` is on the target branch — a required
+check that never reports blocks every merge.
 
 Verify: https://github.com/meibaku/sarce/settings/rules
 
@@ -201,6 +196,7 @@ Verify: https://github.com/meibaku/sarce/settings/rules
 
 ```powershell
 npm run ci              # full local gate
+npm run ci:security     # secret scan + critical npm advisories
 npm run test:api        # unit + arch + philosophy
 npm run test:golden     # Stockfish regression (local only)
 npm run lint:web        # Next.js ESLint

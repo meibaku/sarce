@@ -55,7 +55,7 @@ sarce/
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+ (the version CI runs)
 - Python 3.11+
 - [Supabase CLI](https://supabase.com/docs/guides/cli) + Docker Desktop
 - Stockfish binary in `STOCKFISH_PATH` (see `.env.example`)
