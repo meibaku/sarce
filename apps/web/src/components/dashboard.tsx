@@ -20,6 +20,7 @@ import { ImportGamesForm } from "./import-games-form";
 import { StyleMoments } from "./style-moments";
 import { StyleProfilePanel } from "./style-profile-panel";
 import { StyleSummary } from "./style-summary";
+import { TrapAtlas } from "./trap-atlas";
 import type {
   ChaosSummary,
   ReferenceBenchmark,
@@ -190,6 +191,8 @@ export function Dashboard() {
       </section>
 
       <ChaosSummaryPanel summary={chaosSummary} />
+
+      <TrapAtlas />
 
       <StyleMoments moments={moments} />
 

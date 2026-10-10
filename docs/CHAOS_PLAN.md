@@ -234,6 +234,10 @@ Tasks in `apps/web`:
 
 ### M6 — Rating-band trap atlas (3–4 days)
 
+> **Status:** table, builder, endpoint and UI (browse + drill) are implemented. **The atlas is empty**
+> until `scripts/validate_chaos.py` has been run on real games and `scripts/build_trap_atlas.py` has
+> loaded the result. Browsing by the user's own openings is not done — only a rating-band filter.
+
 **Goal:** "ideas that work at your level."
 
 - From the M4 pipeline, collect positions where the most-played reply at a band loses ≥ 0.2 EP.

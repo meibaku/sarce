@@ -37,29 +37,30 @@ from app.lenses import config as lens_config
 from app.lenses.chaos import position_chaos, split_safe
 from app.services import chaos_validation as cv
 from app.services.human_model import HeuristicHumanModel, get_human_model
+from app.services.position_evals import fen_key
 from app.services.stockfish import StockfishEngine
 
 OUT_DIR = Path(__file__).resolve().parent / "out"
 
 
-def reply_left_safe_set(engine, board, reply, lines, nodes) -> int | None:
-    """1 when the reply actually played lost more than SAFE_TOL EP, else 0."""
+def reply_ep_loss(engine, board, reply, lines, nodes) -> float | None:
+    """Expected points the reply actually played gave up versus the best reply."""
     best = lines[0]["ep"]
     for line in lines:
         if line["move_uci"] == reply.uci():
-            return int(best - line["ep"] > lens_config.SAFE_TOL)
+            return max(0.0, best - line["ep"])
     # Not among the stored lines: evaluate the position it leads to.
     after = board.copy()
     after.push(reply)
     if after.is_game_over():
-        return int(not after.is_checkmate())
+        return max(0.0, best - (1.0 if after.is_checkmate() else 0.5))
     reply_lines = engine.analyse(after, nodes=nodes, multipv=1)
     if not reply_lines or reply_lines[0]["ep"] is None:
         return None
-    return int(best - (1.0 - reply_lines[0]["ep"]) > lens_config.SAFE_TOL)
+    return max(0.0, best - (1.0 - reply_lines[0]["ep"]))
 
 
-def sample_game(game, engine, model, heuristic, nodes, quota, per_cell) -> list[dict]:
+def sample_game(game, engine, model, heuristic, nodes, quota, per_cell, min_ply=8) -> list[dict]:
     """Samples from one game; `quota` counts samples per (band, clock) cell."""
     headers = game.headers
     game_id = headers.get("Site", "") or headers.get("GameId", "")
@@ -81,16 +82,17 @@ def sample_game(game, engine, model, heuristic, nodes, quota, per_cell) -> list[
         replier = board.turn
         clock = cv.clock_bucket(cv.decider_clock_ms(clocks, ply, 60_000))
         band = cv.rating_band(ratings[replier])
-        if ply < 8 or clock is None or quota[(band, clock)] >= per_cell:
+        if ply < min_ply or clock is None or quota[(band, clock)] >= per_cell:
             continue
         lines = engine.analyse(board, nodes=nodes, multipv=settings.analysis_multipv)
         if len(lines) < 2 or lines[0]["ep"] is None:
             continue
         if not lens_config.DECIDED_LOW <= 1.0 - lines[0]["ep"] <= lens_config.DECIDED_HIGH:
             continue  # the mover's game was already decided
-        failed = reply_left_safe_set(engine, board, moves[ply + 1], lines, nodes)
-        if failed is None:
+        loss = reply_ep_loss(engine, board, moves[ply + 1], lines, nodes)
+        if loss is None:
             continue
+        failed = int(loss > lens_config.SAFE_TOL)
 
         elo = int(round(ratings[replier] / 100.0)) * 100
         safe, _ = split_safe(lines, lens_config.SAFE_TOL)
@@ -115,6 +117,15 @@ def sample_game(game, engine, model, heuristic, nodes, quota, per_cell) -> list[
                 "chaos": data["chaos"][elo] if data else None,
                 "baseline_cliff": cv.raw_cliff(lines),
                 "baseline_heuristic": p_fail(heuristic),
+                # Trap atlas inputs (scripts/build_trap_atlas.py); no player identity is kept.
+                "fen_key": fen_key(board),
+                "fen": board.fen(),
+                "speed": "bullet",
+                "reply_uci": moves[ply + 1].uci(),
+                "reply_ep_loss": round(loss, 4),
+                "best_reply_uci": lines[0]["move_uci"],
+                "stake": data["stake"][elo] if data else None,
+                "eco": headers.get("ECO"),
             }
         )
     return samples
@@ -142,6 +153,7 @@ def main() -> None:
     parser.add_argument("--positions", type=int, default=2000, help="Target sample size")
     parser.add_argument("--per-cell", type=int, default=200, help="Max samples per rating band x clock bucket")
     parser.add_argument("--nodes", type=int, default=settings.analysis_nodes)
+    parser.add_argument("--min-ply", type=int, default=8, help="Skip earlier plies (lower it for the trap atlas)")
     args = parser.parse_args()
 
     model, heuristic = get_human_model(settings.human_model), HeuristicHumanModel()
@@ -158,7 +170,7 @@ def main() -> None:
             if not cv.is_bullet_1_0(game.headers.get("TimeControl")):
                 continue
             games += 1
-            samples.extend(sample_game(game, engine, model, heuristic, args.nodes, quota, args.per_cell))
+            samples.extend(sample_game(game, engine, model, heuristic, args.nodes, quota, args.per_cell, args.min_ply))
             if games % 50 == 0:
                 print(f"{games} games, {len(samples)} samples, {time.time() - started:.0f}s")
 

@@ -105,4 +105,9 @@ export async function getChaosSummary(username: string) {
   );
 }
 
+export async function listTraps(band?: number) {
+  const params = band == null ? "" : `?band=${band}`;
+  return fetchApi<{ traps: import("@/types/chess").Trap[] }>(`/traps${params}`);
+}
+
 export { LOCAL_USER_ID };
