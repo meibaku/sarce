@@ -10,7 +10,7 @@ interface ChessReplayProps {
   userColor: "white" | "black" | null;
 }
 
-const PIECES: Record<string, string> = {
+export const PIECES: Record<string, string> = {
   K: "♔",
   Q: "♕",
   R: "♖",
@@ -27,7 +27,7 @@ const PIECES: Record<string, string> = {
 
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-function boardFromFen(fen: string) {
+export function boardFromFen(fen: string) {
   const placement = fen.split(" ")[0] ?? "";
   return placement.split("/").map((rank) => {
     const squares: string[] = [];

@@ -5,6 +5,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- Chaos Lens M6 (trap atlas): `trap_atlas` table, `services/trap_atlas.py`, `scripts/build_trap_atlas.py`,
+  `GET /traps`, and a Trap atlas panel with a drill mode. The atlas is empty until the validation
+  sampler has been run on real games
 - Chaos Lens M7 (intention tagger v1): engine-free motif detectors (`services/motifs.py`), idea windows
   with worked / refuted / fizzled verdicts and pivots (`services/ideas.py`), `move_tags` and `game_ideas`
   tables, `GET /games/{id}/ideas`. Off by default — set `IDEA_TAGGER_ENABLED=true` after migrating

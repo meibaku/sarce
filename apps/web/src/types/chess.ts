@@ -230,3 +230,17 @@ export interface ChaosSummary {
   survivalRate: number | null;
   perGame: ChaosGamePoint[];
 }
+
+export interface Trap {
+  fen: string;
+  band: number;
+  speed: string;
+  frequency: number;
+  commonReplyUci: string;
+  commonReplyShare: number;
+  epLoss: number;
+  bestReplyUci: string | null;
+  pFail: number | null;
+  stake: number | null;
+  eco: string | null;
+}

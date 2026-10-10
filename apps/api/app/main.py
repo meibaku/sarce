@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import analysis, games, health, reference, users
+from app.routers import analysis, games, health, reference, traps, users
 
 app = FastAPI(
     title="Sarce API",
@@ -23,3 +23,4 @@ app.include_router(games.router, prefix="/games", tags=["games"])
 app.include_router(analysis.router, prefix="/analysis", tags=["analysis"])
 app.include_router(reference.router, prefix="/reference", tags=["reference"])
 app.include_router(users.router, prefix="/users", tags=["users"])
+app.include_router(traps.router, prefix="/traps", tags=["traps"])
