@@ -5,6 +5,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- Chaos Lens M5 (review UI): chaos heat strip and key-move card in the game review (verdict badges,
+  who-falls-for-it curve, clock), and a Chaos control panel on the dashboard
 - Chaos Lens M3: `app/lenses/` (lens protocol, registry, soundness / chaos / survival lenses as pure
   functions), `move_lens_scores` table, `GET /games/{id}/lenses` and `GET /users/{u}/chaos-summary`
 - Chaos Lens M2 (human model, part 1): `HumanModel` interface, `human_probs` cache table, the Elo ladder,

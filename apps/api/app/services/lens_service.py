@@ -125,6 +125,22 @@ def summarize(rows: list[dict]) -> dict:
     }
 
 
+def per_game_chaos(rows: list[dict]) -> list[dict]:
+    """Real and cheap chaos counts per game, oldest first, for the dashboard trend."""
+    games: dict[str, dict] = {}
+    for row in rows:
+        if row.get("lens") != "chaos" or "game_id" not in row:
+            continue
+        played_at = (row.get("games") or {}).get("played_at")
+        point = games.setdefault(
+            row["game_id"],
+            {"gameId": row["game_id"], "playedAt": played_at, "realChaos": 0, "cheapChaos": 0},
+        )
+        point["realChaos"] += row.get("verdict") == "real_chaos"
+        point["cheapChaos"] += row.get("verdict") == "cheap_chaos"
+    return sorted(games.values(), key=lambda g: g["playedAt"] or "")
+
+
 class LensService:
     """Supabase-backed loading, scoring and reading of lens results."""
 
@@ -199,13 +215,24 @@ class LensService:
             }
         return [by_ply[ply] for ply in sorted(by_ply)]
 
+    def get_game_clocks(self, game_id: str) -> list | None:
+        """Per-ply clocks for a game; None when missing or the column is not migrated yet."""
+        try:
+            res = (
+                get_supabase().table("games").select("clocks_ms").eq("id", game_id).limit(1).execute()
+            )
+        except Exception:
+            return None
+        return res.data[0].get("clocks_ms") if res.data else None
+
     def chaos_summary(self, username: str) -> dict:
         res = (
             get_supabase()
             .table(TABLE)
-            .select("lens, verdict, games!inner(chess_com_username)")
+            .select("game_id, lens, verdict, games!inner(chess_com_username, played_at)")
             .eq("games.chess_com_username", username)
             .in_("lens", ["chaos", "survival"])
             .execute()
         )
-        return {"username": username, **summarize(res.data or [])}
+        rows = res.data or []
+        return {"username": username, **summarize(rows), "perGame": per_game_chaos(rows)}
