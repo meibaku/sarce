@@ -124,4 +124,19 @@ export async function getGameIdeas(gameId: string) {
   return fetchApi<import("@/types/chess").GameIdeas>(`/games/${gameId}/ideas`);
 }
 
+export async function listScoutingReports() {
+  return fetchApi<{ reports: import("@/types/chess").ScoutingReport[] }>("/scouting/reports");
+}
+
+export async function createScoutingReport(username: string, source: "chess_com" | "lichess") {
+  return fetchApi<import("@/types/chess").ScoutingReport>("/scouting/reports", {
+    method: "POST",
+    body: JSON.stringify({ username, source }),
+  });
+}
+
+export async function deleteScoutingReport(id: string) {
+  return fetchApi<{ deleted: number }>(`/scouting/reports/${id}`, { method: "DELETE" });
+}
+
 export { LOCAL_USER_ID };

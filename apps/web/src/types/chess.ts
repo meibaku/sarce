@@ -266,3 +266,20 @@ export interface GameIdeas {
     isPivot: boolean;
   }[];
 }
+
+export interface ScoutingReport {
+  id: string;
+  username: string;
+  source: "chess_com" | "lichess";
+  gamesSampled: number;
+  createdAt: string | null;
+  report: {
+    gamesSampled: number;
+    results: Record<string, number>;
+    timeControls: { name: string; games: number }[];
+    openingsAsWhite: { name: string; games: number }[];
+    openingsAsBlack: { name: string; games: number }[];
+    motifsPer100Moves: Record<string, number>;
+    ideasPerGame: Record<string, number>;
+  };
+}
