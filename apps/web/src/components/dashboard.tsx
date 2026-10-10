@@ -21,6 +21,7 @@ import { ImportGamesForm, type GameSource } from "./import-games-form";
 import { ScoutingPanel } from "./scouting-panel";
 import { StyleMoments } from "./style-moments";
 import { StyleProfilePanel } from "./style-profile-panel";
+import { StyleFocusPicker, useStyleFocus } from "./style-focus";
 import { StyleSummary } from "./style-summary";
 import { TrapAtlas } from "./trap-atlas";
 import type {
@@ -57,6 +58,7 @@ export function Dashboard() {
   const [timeline, setTimeline] = useState<TimelinePoint[]>([]);
   const [moments, setMoments] = useState<StyleMoment[]>([]);
   const [chaosSummary, setChaosSummary] = useState<ChaosSummary | null>(null);
+  const [styleFocus, setStyleFocus] = useStyleFocus();
   const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
@@ -155,6 +157,7 @@ export function Dashboard() {
               {polling && " Analyzing with Stockfish..."}
             </p>
           )}
+          <StyleFocusPicker focus={styleFocus} onChange={setStyleFocus} />
           <StyleSummary baseline={baseline} />
         </div>
         <BrilliantGauge
@@ -163,6 +166,8 @@ export function Dashboard() {
           targetMax={baseline.targetBrilliantMax}
         />
       </section>
+
+      {styleFocus === "chaos" && <ChaosSummaryPanel summary={chaosSummary} />}
 
       <section className="grid gap-6 lg:grid-cols-2">
         <DistributionChart
@@ -196,7 +201,7 @@ export function Dashboard() {
         />
       </section>
 
-      <ChaosSummaryPanel summary={chaosSummary} />
+      {styleFocus !== "chaos" && <ChaosSummaryPanel summary={chaosSummary} />}
 
       <TrapAtlas />
 
