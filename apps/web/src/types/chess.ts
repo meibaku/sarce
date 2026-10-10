@@ -177,3 +177,56 @@ export const TAL_BENCHMARK: ReferenceBenchmark = {
   gamesSampled: 0,
   status: "pending",
 };
+
+export type ChaosVerdict = "real_chaos" | "calculated_risk" | "cheap_chaos";
+export type SurvivalVerdict = "survived" | "missed";
+
+/** Lens details are stored as JSON, so per-Elo maps are keyed by strings. */
+export interface LensDetails {
+  decided?: boolean;
+  elo?: number | null;
+  p_fail?: Record<string, number>;
+  stake?: Record<string, number>;
+  chaos?: Record<string, number>;
+  safe_set?: string[];
+  safe_set_complete?: boolean;
+  objective_cost?: number | null;
+  faced_chaos?: number;
+}
+
+export interface LensEntry {
+  version: string;
+  score: number | null;
+  verdict: string | null;
+  details: LensDetails;
+}
+
+export interface MoveLenses {
+  ply: number;
+  lenses: { soundness?: LensEntry; chaos?: LensEntry; survival?: LensEntry };
+}
+
+export interface GameLenses {
+  gameId: string;
+  moves: MoveLenses[];
+  /** Remaining clock per ply (both players), or null when not stored. */
+  clocksMs: (number | null)[] | null;
+}
+
+export interface ChaosGamePoint {
+  gameId: string;
+  playedAt: string | null;
+  realChaos: number;
+  cheapChaos: number;
+}
+
+export interface ChaosSummary {
+  username: string;
+  realChaos: number;
+  cheapChaos: number;
+  calculatedRisk: number;
+  problemsFaced: number;
+  survived: number;
+  survivalRate: number | null;
+  perGame: ChaosGamePoint[];
+}

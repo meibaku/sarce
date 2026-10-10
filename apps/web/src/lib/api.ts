@@ -95,4 +95,14 @@ export async function listStyleMoments(username?: string) {
   }>(`/games/moments${params}`);
 }
 
+export async function getGameLenses(gameId: string) {
+  return fetchApi<import("@/types/chess").GameLenses>(`/games/${gameId}/lenses`);
+}
+
+export async function getChaosSummary(username: string) {
+  return fetchApi<import("@/types/chess").ChaosSummary>(
+    `/users/${encodeURIComponent(username)}/chaos-summary`,
+  );
+}
+
 export { LOCAL_USER_ID };

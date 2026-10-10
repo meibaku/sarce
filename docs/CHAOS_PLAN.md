@@ -212,6 +212,10 @@ Tasks:
 
 ### M5 — Review UI (4–5 days)
 
+> **Status:** first version implemented inside the existing Style lab and dashboard. Not done: the Tal
+> reference in chaos terms (needs the Tal corpus run through the raw-data pass), and the
+> "review your last 20 bullet games" acceptance check, which needs real data.
+
 **Goal:** make it feel like a coach, not a spreadsheet.
 
 Tasks in `apps/web`:

@@ -292,7 +292,11 @@ async def get_game_lenses(
     try:
         if refresh and lens_service.score_game(game_id) is None:
             raise HTTPException(status_code=404, detail="Game not found")
-        return {"gameId": game_id, "moves": lens_service.get_game_lenses(game_id)}
+        return {
+            "gameId": game_id,
+            "moves": lens_service.get_game_lenses(game_id),
+            "clocksMs": lens_service.get_game_clocks(game_id),
+        }
     except HTTPException:
         raise
     except Exception as exc:

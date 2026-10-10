@@ -6,6 +6,7 @@ import {
   getGameDetail,
   listGames,
 } from "@/lib/api";
+import { ChaosReview } from "./chaos-review";
 import { ChessReplay } from "./chess-replay";
 import type {
   AnalyzedMove,
@@ -428,6 +429,13 @@ export function AnalysisWorkspace({
               replayIndex={replayIndex}
               onReplayIndexChange={setReplayIndex}
               userColor={selectedGame?.userColor ?? null}
+            />
+
+            <ChaosReview
+              game={selectedGame}
+              selectedPly={selectedPly}
+              onSelectPly={setSelectedPly}
+              refreshToken={refreshToken}
             />
 
             <div className="rounded-lg border border-white/10 bg-surface p-4">
