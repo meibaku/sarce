@@ -5,6 +5,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- Chaos Lens M2 (human model, part 1): `HumanModel` interface, `human_probs` cache table, the Elo ladder,
+  and an interim engine-free heuristic model. The Maia-2 vs Maia-3 choice is still open — see
+  `docs/adr/0002-human-model.md`
 - Chaos Lens M1 (WDL + EP foundation): `services/ep.py`, node-limited MultiPV `StockfishEngine.analyse`,
   `position_evals` cache with adaptive MultiPV widening, per-ply clock parsing, and migration
   `20261010000000_position_evals.sql`. Off by default — set `POSITION_EVALS_ENABLED=true` after migrating
