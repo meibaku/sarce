@@ -5,6 +5,7 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- `validate_chaos.py` saves samples as it goes (`chaos_samples.partial.csv`), so a long run can be interrupted
 - `HUMAN_MODEL=auto` is the new default: the validated Maia-2 model where its optional package is installed,
   the heuristic elsewhere
 - Chaos Lens M4: four-month validation with widened safe sets (4,820 positions) — GO; clock multipliers for
