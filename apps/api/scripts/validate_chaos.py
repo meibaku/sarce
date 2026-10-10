@@ -43,6 +43,26 @@ from app.services.stockfish import StockfishEngine
 OUT_DIR = Path(__file__).resolve().parent / "out"
 
 
+class Cached:
+    """Memoise engine searches and model calls by position, so repeated openings cost nothing."""
+
+    def __init__(self, engine=None, model=None):
+        self.engine, self.model, self.memo = engine, model, {}
+        self.model_version = getattr(model, "model_version", None)
+
+    def analyse(self, board, nodes, multipv):
+        key = (fen_key(board), nodes, multipv)
+        if key not in self.memo:
+            self.memo[key] = self.engine.analyse(board, nodes=nodes, multipv=multipv)
+        return self.memo[key]
+
+    def move_probs(self, board, elo):
+        key = (fen_key(board), elo)
+        if key not in self.memo:
+            self.memo[key] = self.model.move_probs(board, elo)
+        return self.memo[key]
+
+
 def reply_ep_loss(engine, board, reply, lines, nodes) -> float | None:
     """Expected points the reply actually played gave up versus the best reply."""
     best = lines[0]["ep"]
@@ -60,7 +80,7 @@ def reply_ep_loss(engine, board, reply, lines, nodes) -> float | None:
     return max(0.0, best - (1.0 - reply_lines[0]["ep"]))
 
 
-def sample_game(game, engine, model, heuristic, nodes, quota, per_cell, min_ply=8) -> list[dict]:
+def sample_game(game, engine, model, heuristic, nodes, quota, per_cell, min_ply=8, max_ply=None) -> list[dict]:
     """Samples from one game; `quota` counts samples per (band, clock) cell."""
     headers = game.headers
     game_id = headers.get("Site", "") or headers.get("GameId", "")
@@ -82,6 +102,8 @@ def sample_game(game, engine, model, heuristic, nodes, quota, per_cell, min_ply=
         replier = board.turn
         clock = cv.clock_bucket(cv.decider_clock_ms(clocks, ply, 60_000))
         band = cv.rating_band(ratings[replier])
+        if max_ply is not None and ply > max_ply:
+            break
         if ply < min_ply or clock is None or quota[(band, clock)] >= per_cell:
             continue
         lines = engine.analyse(board, nodes=nodes, multipv=settings.analysis_multipv)
@@ -154,15 +176,17 @@ def main() -> None:
     parser.add_argument("--per-cell", type=int, default=200, help="Max samples per rating band x clock bucket")
     parser.add_argument("--nodes", type=int, default=settings.analysis_nodes)
     parser.add_argument("--min-ply", type=int, default=8, help="Skip earlier plies (lower it for the trap atlas)")
+    parser.add_argument("--max-ply", type=int, default=None, help="Stop after this ply (openings only, for the trap atlas)")
     args = parser.parse_args()
 
-    model, heuristic = get_human_model(settings.human_model), HeuristicHumanModel()
+    model, heuristic = Cached(model=get_human_model(settings.human_model)), Cached(model=HeuristicHumanModel())
     if model.model_version == heuristic.model_version:
         print("NOTE: the configured human model is the heuristic baseline, so the model cannot beat it.")
 
     stream = sys.stdin if args.pgn == "-" else open(args.pgn, encoding="utf-8", errors="replace")
     samples, quota, started, games = [], Counter(), time.time(), 0
-    with StockfishEngine() as engine:
+    with StockfishEngine() as raw_engine:
+        engine = Cached(engine=raw_engine)
         while len(samples) < args.positions:
             game = chess.pgn.read_game(stream)
             if game is None:
@@ -170,7 +194,7 @@ def main() -> None:
             if not cv.is_bullet_1_0(game.headers.get("TimeControl")):
                 continue
             games += 1
-            samples.extend(sample_game(game, engine, model, heuristic, args.nodes, quota, args.per_cell, args.min_ply))
+            samples.extend(sample_game(game, engine, model, heuristic, args.nodes, quota, args.per_cell, args.min_ply, args.max_ply))
             if games % 50 == 0:
                 print(f"{games} games, {len(samples)} samples, {time.time() - started:.0f}s")
 
