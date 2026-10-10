@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     # Multi-user: when true every request needs a Supabase access token. When false
     # (local-first default) a token is still honoured if one is sent.
     auth_required: bool = False
+    # Durable per-user analysis queue (needs the analysis_jobs migration). Off: BackgroundTasks.
+    job_queue_enabled: bool = False
+    job_poll_seconds: float = 2.0
+    job_stale_minutes: int = 60
 
     # Local-first dev: fixed user UUID from supabase/seed.sql
     local_user_id: str = "00000000-0000-4000-8000-000000000001"

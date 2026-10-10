@@ -8,6 +8,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Chaos Lens M8 (part): optional sign-in — the API verifies Supabase access tokens and scopes every
   request to the signed-in user; `AUTH_REQUIRED=true` makes it mandatory. Web: `/login` (email link)
   and a sign-in status in the header. Local-first behaviour is unchanged when nobody is signed in
+- Chaos Lens M8 (part): durable per-user analysis job queue — `analysis_jobs` table with an atomic claim
+  function, an in-process worker, `GET /games/jobs`. No new dependency; off by default
+  (`JOB_QUEUE_ENABLED`), in which case BackgroundTasks is used as before
 - Chaos Lens M4 pilot on real Lichess games (2,002 positions, Maia-2): GO — results in `docs/VALIDATION.md`.
   The sampler now caches repeated positions and takes `--max-ply`
 - Chaos Lens M2: optional Maia-2 human model — `services/maia_model.py`, `HUMAN_MODEL=maia2`,

@@ -6,6 +6,7 @@ from app.deps import current_user_id, require_game_access, resolve_user_id, scop
 from app.services.analysis import AnalysisService
 from app.services.chess_com import ChessComClient, normalize_chess_com_username
 from app.services.game_store import GameStore
+from app.services.job_queue import JobQueue, queue_analysis
 from app.services.lens_service import LensService
 from app.services.lichess import LichessClient, normalize_lichess_username, parse_lichess_game
 from app.services.pgn_parser import mainline_positions
@@ -85,11 +86,9 @@ async def import_games(body: ImportRequest, background_tasks: BackgroundTasks):
 
     msg = f"Imported {stored} games for '{username}'."
     if body.analyze and stored > 0:
-        background_tasks.add_task(
-            analysis_service.analyze_pending,
-            user_id=user_id,
-            chess_com_username=username,
-            limit=stored,
+        queue_analysis(
+            background_tasks, analysis_service.analyze_pending,
+            user_id=user_id, username=username, limit=stored,
         )
         msg += " Analysis started in background."
 
@@ -112,11 +111,9 @@ async def import_lichess_games(body: ImportRequest, background_tasks: Background
     )
     msg = f"Imported {stored} Lichess games for '{username}'."
     if body.analyze and stored > 0:
-        background_tasks.add_task(
-            analysis_service.analyze_pending,
-            user_id=user_id,
-            chess_com_username=username,
-            limit=stored,
+        queue_analysis(
+            background_tasks, analysis_service.analyze_pending,
+            user_id=user_id, username=username, limit=stored,
         )
         msg += " Analysis started in background."
     return ImportResponse(imported=stored, message=msg, username=username)
@@ -163,6 +160,17 @@ async def list_games(
             }
         )
     return {"games": games}
+
+
+@router.get("/jobs")
+async def list_analysis_jobs(user_id: str | None = Query(None)):
+    """The caller's recent analysis jobs (empty unless the job queue is enabled)."""
+    if not settings.job_queue_enabled:
+        return {"jobs": []}
+    try:
+        return {"jobs": JobQueue().recent(resolve_user_id(user_id))}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/moments")
@@ -357,14 +365,10 @@ async def analyze_pending(body: AnalyzeRequest, background_tasks: BackgroundTask
     user_id = current_user_id() or (resolve_user_id(body.user_id) if body.user_id else None)
     username = normalize_chess_com_username(body.username) if body.username else None
 
-    async def run():
-        await analysis_service.analyze_pending(
-            user_id=user_id,
-            chess_com_username=username,
-            limit=body.limit,
-        )
-
-    background_tasks.add_task(run)
+    queue_analysis(
+        background_tasks, analysis_service.analyze_pending,
+        user_id=user_id, username=username, limit=body.limit,
+    )
     return {
         "message": "Analysis queued for all pending games"
         if body.limit is None
