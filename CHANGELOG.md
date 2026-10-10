@@ -5,6 +5,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- Chaos Lens M8 (part): Lichess import — `services/lichess.py`, `POST /games/import/lichess`, a site
+  picker on the import form, and `games.source`. Finished standard games only
 - `scripts/chaos_smoke.py` — runs the whole Chaos Lens pipeline on one PGN with a real engine and no database
 - Chaos Lens M7 (UI): Ideas card in the game review — idea windows, what became of them, pivots, and
   motif chips for the selected move

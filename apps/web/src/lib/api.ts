@@ -33,6 +33,16 @@ export async function importChessComGames(username: string) {
   );
 }
 
+export async function importLichessGames(username: string) {
+  return fetchApi<{ imported: number; message: string; username: string }>(
+    "/games/import/lichess",
+    {
+      method: "POST",
+      body: JSON.stringify({ username, analyze: false }),
+    },
+  );
+}
+
 export async function analyzePendingGames(username?: string, limit?: number) {
   return fetchApi<{ message: string; username: string | null; userId: string }>(
     "/games/analyze",

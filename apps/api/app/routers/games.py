@@ -7,11 +7,13 @@ from app.services.analysis import AnalysisService
 from app.services.chess_com import ChessComClient, normalize_chess_com_username
 from app.services.game_store import GameStore
 from app.services.lens_service import LensService
+from app.services.lichess import LichessClient, normalize_lichess_username, parse_lichess_game
 from app.services.pgn_parser import mainline_positions
 from app.services.tagger import TaggerService
 
 router = APIRouter()
 chess_com = ChessComClient()
+lichess = LichessClient()
 game_store = GameStore()
 analysis_service = AnalysisService()
 lens_service = LensService()
@@ -91,6 +93,32 @@ async def import_games(body: ImportRequest, background_tasks: BackgroundTasks):
         )
         msg += " Analysis started in background."
 
+    return ImportResponse(imported=stored, message=msg, username=username)
+
+
+@router.post("/import/lichess", response_model=ImportResponse)
+async def import_lichess_games(body: ImportRequest, background_tasks: BackgroundTasks):
+    """Fetch a user's recent **finished** Lichess games, store them, optionally analyze."""
+    user_id = resolve_user_id(body.user_id)
+    username = normalize_lichess_username(body.username)
+    try:
+        raw_games = await lichess.fetch_games(username, max_games=body.max_games or 200)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Lichess API error: {exc}") from exc
+
+    parsed = [game for raw in raw_games if (game := parse_lichess_game(raw, username))]
+    stored = await game_store.store_parsed_games(
+        username=username, parsed_games=parsed, source="lichess", user_id=user_id
+    )
+    msg = f"Imported {stored} Lichess games for '{username}'."
+    if body.analyze and stored > 0:
+        background_tasks.add_task(
+            analysis_service.analyze_pending,
+            user_id=user_id,
+            chess_com_username=username,
+            limit=stored,
+        )
+        msg += " Analysis started in background."
     return ImportResponse(imported=stored, message=msg, username=username)
 
 
