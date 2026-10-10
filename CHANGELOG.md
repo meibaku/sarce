@@ -5,6 +5,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- Chaos Lens M8 (part): style focus picker (Brilliance / Chaos control) that changes dashboard emphasis only;
+  Brilliant % stays the headline — see `docs/adr/0003-style-focus.md`
 - Chaos Lens M8 (part): opponent scouting — private, aggregate-only preparation reports from a named
   player's finished games (`services/scouting.py`, `/scouting/*`, `scouting_reports`, Opponent prep panel),
   with deletion on request
