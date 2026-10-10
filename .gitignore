@@ -54,3 +54,6 @@ stockfish/
 .greploop-comments.json
 .greploop-q.graphql
 .greploop-resolve.graphql
+
+# Chaos validation outputs (docs/CHAOS_PLAN.md, M4)
+apps/api/scripts/out/
