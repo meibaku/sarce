@@ -244,6 +244,10 @@ Tasks in `apps/web`:
 
 ### M7 — Intention tagger v1 (1–2 weeks)
 
+> **Status:** v1 implemented, engine-free. Motif detectors were written from scratch (no `cook.py`
+> code). Squeeze uses the opponent's mobility and the user's EP only — the "sharpness falling" part
+> needs stored engine lines and is not included. Thresholds in `services/ideas.py` are untuned.
+
 **Goal:** "Did I have an idea, did it land, did I pivot?"
 
 - Re-implement motif detectors, using Lichess's `lichess-puzzler` `cook.py` only as a reference for *which*

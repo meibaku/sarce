@@ -8,12 +8,14 @@ from app.services.chess_com import ChessComClient, normalize_chess_com_username
 from app.services.game_store import GameStore
 from app.services.lens_service import LensService
 from app.services.pgn_parser import mainline_positions
+from app.services.tagger import TaggerService
 
 router = APIRouter()
 chess_com = ChessComClient()
 game_store = GameStore()
 analysis_service = AnalysisService()
 lens_service = LensService()
+tagger_service = TaggerService()
 
 
 class ImportRequest(BaseModel):
@@ -297,6 +299,22 @@ async def get_game_lenses(
             "moves": lens_service.get_game_lenses(game_id),
             "clocksMs": lens_service.get_game_clocks(game_id),
         }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get("/{game_id}/ideas")
+async def get_game_ideas(
+    game_id: str,
+    refresh: bool = Query(False, description="Re-tag from the PGN and stored evals (no engine run)"),
+):
+    """Motif tags per ply and the user's idea windows for a game."""
+    try:
+        if refresh and tagger_service.tag_game(game_id) is None:
+            raise HTTPException(status_code=404, detail="Game not found")
+        return tagger_service.get_game_ideas(game_id)
     except HTTPException:
         raise
     except Exception as exc:

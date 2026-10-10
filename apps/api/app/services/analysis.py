@@ -32,6 +32,7 @@ from app.services.position_evals import (
     iter_live_positions,
 )
 from app.services.stockfish import StockfishEngine
+from app.services.tagger import TaggerService
 
 logger = logging.getLogger(__name__)
 
@@ -189,6 +190,9 @@ class AnalysisService:
             chess_com_username=row.get("chess_com_username"),
         )
 
+        if settings.idea_tagger_enabled:
+            await asyncio.to_thread(self._tag_ideas, game_id)
+
         # After everything Phase 1 has been saved, so the extra engine time cannot delay it.
         # In a worker thread: the engine searches would otherwise block the API event loop.
         if settings.position_evals_enabled:
@@ -204,6 +208,13 @@ class AnalysisService:
             "totalMoves": len(classified),
             "distribution": distribution,
         }
+
+    def _tag_ideas(self, game_id: str) -> None:
+        """Intention tagger pass. Never fails the analysis (docs/CHAOS_PLAN.md, rule 1)."""
+        try:
+            TaggerService().tag_game(game_id)
+        except Exception:
+            logger.exception("Intention tagging failed for game %s", game_id)
 
     def _store_chaos_raw_data(
         self,

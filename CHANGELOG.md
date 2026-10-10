@@ -5,6 +5,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- Chaos Lens M7 (intention tagger v1): engine-free motif detectors (`services/motifs.py`), idea windows
+  with worked / refuted / fizzled verdicts and pivots (`services/ideas.py`), `move_tags` and `game_ideas`
+  tables, `GET /games/{id}/ideas`. Off by default — set `IDEA_TAGGER_ENABLED=true` after migrating
 - Chaos Lens M4 (tooling): `scripts/validate_chaos.py` and `services/chaos_validation.py` (stratified
   sampling, held-out split by game, calibration table, clock multiplier, baselines), plus
   `scripts/backfill_chaos.py` for games analysed before chaos data existed. The validation run itself
