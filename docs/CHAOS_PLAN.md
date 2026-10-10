@@ -13,7 +13,7 @@
 | M3 Lenses | Merged | Thresholds are provisional until M4 |
 | M4 Validation | Pilot on real Lichess games: **GO** (2,002 positions, Maia-2) | Full-size run with widened safe sets; tune thresholds |
 | M5 Review UI | Merged; checked against one analysed game | Check against your own games; Tal in chaos terms |
-| M6 Trap atlas | Merged, atlas empty | Run the sampler and `build_trap_atlas` on real data |
+| M6 Trap atlas | Merged; builder run on 1,343 real games found 2 thin traps (not saved) | A much larger sample, then `build_trap_atlas` against your database |
 | M7 Intention tagger | v1 merged, off by default | Tune thresholds; "sharpness" part of squeeze |
 | M8 Sharing + scouting | Not started | Needs the multi-user decision first |
 
