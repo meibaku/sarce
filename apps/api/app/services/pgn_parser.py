@@ -61,3 +61,19 @@ def mainline_positions(pgn_text: str) -> tuple[str, list[dict]]:
             }
         )
     return initial_fen, line
+
+
+def extract_clocks_ms(pgn_text: str) -> list[int | None]:
+    """
+    Remaining clock per ply (both players) from `[%clk ...]` comments, in milliseconds.
+
+    Each value is the mover's time *after* that move; None where the PGN has no clock.
+    """
+    game = chess.pgn.read_game(io.StringIO(pgn_text))
+    if game is None:
+        return []
+    clocks: list[int | None] = []
+    for node in game.mainline():
+        seconds = node.clock()
+        clocks.append(None if seconds is None else round(seconds * 1000))
+    return clocks

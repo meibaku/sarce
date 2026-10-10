@@ -36,6 +36,17 @@ class Settings(BaseSettings):
     # Local-first dev: fixed user UUID from supabase/seed.sql
     local_user_id: str = "00000000-0000-4000-8000-000000000001"
 
+    # Chaos Lens raw data (docs/CHAOS_PLAN.md, M1). Off until the position_evals
+    # migration is applied; when on, every analysed game also gets node-limited
+    # MultiPV evaluations for the position after each ply.
+    position_evals_enabled: bool = False
+    analysis_nodes: int = 1_500_000
+    analysis_multipv: int = 4
+    analysis_multipv_cap: int = 8
+    safe_set_tol: float = 0.05
+    ep_decided_low: float = 0.05
+    ep_decided_high: float = 0.95
+
     # Brilliant detection thresholds (tunable)
     brilliant_eval_margin: float = 0.3
     brilliant_winning_margin: float = 3.0
