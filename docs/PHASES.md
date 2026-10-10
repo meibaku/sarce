@@ -75,6 +75,7 @@ Rule-based from Stockfish (no ML). Details in [PRODUCT_SPEC.md § 1.2](./PRODUCT
 |--------|------|
 | GET | `/games/{id}/lenses` |
 | GET | `/users/{username}/chaos-summary` |
+| GET | `/games/{id}/ideas` |
 
 ---
 

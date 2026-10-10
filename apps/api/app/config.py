@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     ep_decided_high: float = 0.95
     # Human move model behind services/human_model.py (docs/adr/0002-human-model.md).
     human_model: str = "heuristic"
+    # Intention tagger (M7): engine-free motif tags and idea windows. Off until the
+    # intention_tags migration is applied.
+    idea_tagger_enabled: bool = False
 
     # Brilliant detection thresholds (tunable)
     brilliant_eval_margin: float = 0.3
