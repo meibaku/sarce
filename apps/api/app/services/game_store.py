@@ -42,6 +42,26 @@ class GameStore:
 
         return stored
 
+    async def store_parsed_games(
+        self,
+        username: str,
+        parsed_games: list[dict],
+        source: str,
+        user_id: str | None = None,
+    ) -> int:
+        """Store already-parsed games from another site (needs the game_source migration)."""
+        sb = get_supabase()
+        for parsed in parsed_games:
+            row = {
+                **parsed,
+                "user_id": user_id,
+                "chess_com_username": username,
+                "source": source,
+                "analysis_status": "pending",
+            }
+            sb.table("games").upsert(row, on_conflict="external_id").execute()
+        return len(parsed_games)
+
     @staticmethod
     def pgn_to_moves(pgn_text: str) -> list[str]:
         game = chess.pgn.read_game(io.StringIO(pgn_text))

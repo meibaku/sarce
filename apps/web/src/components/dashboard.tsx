@@ -8,6 +8,7 @@ import {
   getTimeline,
   getUserBaseline,
   importChessComGames,
+  importLichessGames,
   listGames,
   listStyleMoments,
 } from "@/lib/api";
@@ -16,7 +17,7 @@ import { BrilliantGauge } from "./brilliant-gauge";
 import { BrilliantTimeline } from "./brilliant-timeline";
 import { ChaosSummaryPanel } from "./chaos-summary-panel";
 import { DistributionChart } from "./distribution-chart";
-import { ImportGamesForm } from "./import-games-form";
+import { ImportGamesForm, type GameSource } from "./import-games-form";
 import { StyleMoments } from "./style-moments";
 import { StyleProfilePanel } from "./style-profile-panel";
 import { StyleSummary } from "./style-summary";
@@ -113,12 +114,15 @@ export function Dashboard() {
     refreshData();
   }, [refreshData]);
 
-  async function handleImport(chessUsername: string) {
+  async function handleImport(chessUsername: string, source: GameSource = "chess_com") {
     setLoading(true);
     setImportStatus(null);
     setUsername(chessUsername);
     try {
-      const result = await importChessComGames(chessUsername);
+      const result =
+        source === "lichess"
+          ? await importLichessGames(chessUsername)
+          : await importChessComGames(chessUsername);
       setImportStatus(result.message);
       if (result.imported > 0) {
         await refreshData(chessUsername);

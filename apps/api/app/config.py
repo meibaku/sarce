@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     supabase_service_role_key: str = ""
     stockfish_path: str = str(DEFAULT_STOCKFISH_DIR)
     chess_com_api_base: str = "https://api.chess.com/pub"
+    lichess_api_base: str = "https://lichess.org/api"
     analysis_depth: int = 18
     cors_origins: list[str] = ["http://localhost:3000"]
 
