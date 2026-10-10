@@ -15,6 +15,8 @@ import chess.pgn
 from app.config import settings
 from app.db.supabase import get_supabase
 from app.lenses import PlyContext, PositionData, score_ply
+from app.lenses import config as lens_config
+from app.services.chaos_validation import clock_bucket, decider_clock_ms
 from app.services.ep import cp_to_ep
 from app.services.human_model import get_human_model
 from app.services.position_evals import fen_key
@@ -46,24 +48,40 @@ def objective_cost(move: dict) -> float | None:
     return round(max(0.0, best - played), 4)
 
 
+def initial_clock_ms(time_control: str | None) -> int | None:
+    """Starting clock in milliseconds from a time control like "60" or "180+2"."""
+    try:
+        return int(str(time_control).split("+")[0]) * 1000
+    except (TypeError, ValueError):
+        return None
+
+
 def build_ply_contexts(
     pgn_text: str,
     move_rows: list[dict],
     evals_by_key: dict[str, dict],
     probs_by_key: dict[str, dict[int, dict[str, float]]],
     opponent_rating: int | None = None,
+    clocks_ms: list[int | None] | None = None,
+    initial_clock_ms: int | None = None,
+    model_name: str | None = None,
 ) -> list[tuple[dict, PlyContext]]:
     """Pair every stored user move with its context. Pure: no I/O."""
     keys = keys_after_each_ply(pgn_text)
+    multipliers = lens_config.CLOCK_MULTIPLIERS.get(model_name or "", {})
 
     def position(ply: int) -> PositionData | None:
         if not 0 <= ply < len(keys) or keys[ply] not in evals_by_key:
             return None
         row = evals_by_key[keys[ply]]
+        # The clock that matters is the replier's, when they start thinking about this position.
+        bucket = clock_bucket(decider_clock_ms(clocks_ms or [], ply, initial_clock_ms))
         return PositionData(
             lines=row.get("lines") or [],
             safe_set_complete=bool(row.get("safe_set_complete")),
             probs_by_elo=probs_by_key.get(keys[ply], {}),
+            clock_bucket=bucket,
+            p_fail_multiplier=multipliers.get(bucket, 1.0),
         )
 
     contexts = []
@@ -164,7 +182,7 @@ class LensService:
         sb = get_supabase()
         game = (
             sb.table("games")
-            .select("id, pgn, opponent_rating")
+            .select("id, pgn, opponent_rating, clocks_ms, time_control")
             .eq("id", game_id)
             .maybe_single()
             .execute()
@@ -193,6 +211,9 @@ class LensService:
             {row["fen_key"]: row for row in evals},
             probs_by_key,
             game.data.get("opponent_rating"),
+            clocks_ms=game.data.get("clocks_ms"),
+            initial_clock_ms=initial_clock_ms(game.data.get("time_control")),
+            model_name=settings.human_model,
         )
         rows = score_contexts(game_id, contexts)
         # Replace, so a lens that no longer fires does not leave a stale row behind.

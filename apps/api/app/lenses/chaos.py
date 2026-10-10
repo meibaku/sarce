@@ -32,6 +32,7 @@ def position_chaos(position: PositionData, safe_tol: float = config.SAFE_TOL) ->
     """
     P_fail per Elo, Stake and Chaos per Elo for the side to move in `position`.
 
+    P_fail is scaled by the position's clock multiplier (1.0 when unknown) and capped at 1.
     Stake is weighted over the non-safe replies that have a stored EP, with probabilities
     renormalized over that subset; `unstored_mass` reports the failure probability that
     had no stored EP. Returns None when there is nothing to compute from.
@@ -45,6 +46,8 @@ def position_chaos(position: PositionData, safe_tol: float = config.SAFE_TOL) ->
     p_fail, stake, chaos, unstored = {}, {}, {}, {}
     for elo, probs in position.probs_by_elo.items():
         fail = max(0.0, 1.0 - sum(probs.get(uci, 0.0) for uci in safe_moves))
+        # Time pressure: scale by the validated multiplier for the replier's clock.
+        fail = min(1.0, fail * position.p_fail_multiplier)
         weights = [(probs.get(line["move_uci"], 0.0), line["ep"]) for line in non_safe]
         stored_mass = sum(w for w, _ in weights)
         if stored_mass > 0:
@@ -66,6 +69,8 @@ def position_chaos(position: PositionData, safe_tol: float = config.SAFE_TOL) ->
         "unstored_mass": unstored,
         "safe_set": sorted(safe_moves),
         "safe_set_complete": position.safe_set_complete,
+        "clock_bucket": position.clock_bucket,
+        "p_fail_multiplier": position.p_fail_multiplier,
         "best_reply_ep": best_ep,
     }
 

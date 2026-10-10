@@ -37,7 +37,7 @@ from app.lenses import config as lens_config
 from app.lenses.chaos import position_chaos, split_safe
 from app.services import chaos_validation as cv
 from app.services.human_model import HeuristicHumanModel, get_human_model
-from app.services.position_evals import fen_key
+from app.services.position_evals import fen_key, safe_set_complete
 from app.services.stockfish import StockfishEngine
 
 OUT_DIR = Path(__file__).resolve().parent / "out"
@@ -106,7 +106,15 @@ def sample_game(game, engine, model, heuristic, nodes, quota, per_cell, min_ply=
             break
         if ply < min_ply or clock is None or quota[(band, clock)] >= per_cell:
             continue
-        lines = engine.analyse(board, nodes=nodes, multipv=settings.analysis_multipv)
+        # Widen like the app does (position_evals.evaluate_position): a safe reply outside
+        # the first few lines must not be counted as a predicted failure.
+        legal = board.legal_moves.count()
+        width = min(settings.analysis_multipv, legal)
+        cap = min(max(settings.analysis_multipv, settings.analysis_multipv_cap), legal)
+        lines = engine.analyse(board, nodes=nodes, multipv=width)
+        while width < cap and not safe_set_complete(lines, lens_config.SAFE_TOL):
+            width = min(width * 2, cap)
+            lines = engine.analyse(board, nodes=nodes, multipv=width)
         if len(lines) < 2 or lines[0]["ep"] is None:
             continue
         if not lens_config.DECIDED_LOW <= 1.0 - lines[0]["ep"] <= lens_config.DECIDED_HIGH:
@@ -153,20 +161,22 @@ def sample_game(game, engine, model, heuristic, nodes, quota, per_cell, min_ply=
     return samples
 
 
-def write_outputs(samples: list[dict], summary: dict, model_version: str, runtime: float) -> None:
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+def write_outputs(
+    samples: list[dict], summary: dict, model_version: str, runtime: float, out_dir: Path = OUT_DIR
+) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
     if samples:
-        with open(OUT_DIR / "chaos_samples.csv", "w", newline="", encoding="utf-8") as handle:
+        with open(out_dir / "chaos_samples.csv", "w", newline="", encoding="utf-8") as handle:
             writer = csv.DictWriter(handle, fieldnames=list(samples[0]))
             writer.writeheader()
             writer.writerows(samples)
-    with open(OUT_DIR / "chaos_calibration.csv", "w", newline="", encoding="utf-8") as handle:
+    with open(out_dir / "chaos_calibration.csv", "w", newline="", encoding="utf-8") as handle:
         fields = ["band", "clock", "bin_low", "n", "predicted", "observed"]
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
         writer.writerows(summary["calibration"])
     report = {**summary, "model_version": model_version, "runtime_seconds": round(runtime, 1)}
-    (OUT_DIR / "chaos_validation.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    (out_dir / "chaos_validation.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
 
 
 def main() -> None:
@@ -177,6 +187,7 @@ def main() -> None:
     parser.add_argument("--nodes", type=int, default=settings.analysis_nodes)
     parser.add_argument("--min-ply", type=int, default=8, help="Skip earlier plies (lower it for the trap atlas)")
     parser.add_argument("--max-ply", type=int, default=None, help="Stop after this ply (openings only, for the trap atlas)")
+    parser.add_argument("--out-dir", type=Path, default=OUT_DIR, help="Where to write the CSV/JSON outputs")
     args = parser.parse_args()
 
     model, heuristic = Cached(model=get_human_model(settings.human_model)), Cached(model=HeuristicHumanModel())
@@ -202,9 +213,9 @@ def main() -> None:
     held_out = [s for s in samples if cv.is_held_out(s["game_id"])]
     summary = cv.summarize_validation(tuning, held_out)
     runtime = time.time() - started
-    write_outputs(samples, summary, model.model_version, runtime)
+    write_outputs(samples, summary, model.model_version, runtime, args.out_dir)
 
-    print(f"\n{len(samples)} samples from {games} games in {runtime:.0f}s -> {OUT_DIR}")
+    print(f"\n{len(samples)} samples from {games} games in {runtime:.0f}s -> {args.out_dir}")
     print(f"Brier (held-out): {summary['brier']}")
     print(f"Clock multipliers (tuning set): {summary['clock_multipliers']}")
     print("GO: chaos beats both baselines" if summary["beats_baselines"] else "NO-GO: chaos does not beat both baselines — rethink before M5+")
