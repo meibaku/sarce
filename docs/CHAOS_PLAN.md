@@ -50,6 +50,8 @@ PGN + clocks ──► │ StockfishEngine: WDL, MultiPV-4, node-limited     │
 
 - **EP (expected points)** for side to move = `W + 0.5·D` from Stockfish `UCI_ShowWDL` (per-mille → 0–1).
 - **Safe set** after the user's move: opponent replies whose EP is within `SAFE_TOL = 0.05` of the best reply.
+  The stored lines must cover the whole safe set — a safe reply missing from storage is counted as a failure
+  and inflates chaos.
 - **P_fail(Elo)** = `1 − Σ P_maia(reply | Elo)` over replies in the safe set.
 - **Stake** = opponent's EP(best reply) − weighted EP of their non-safe replies (how much they lose if they miss).
 - **Chaos(Elo)** = `P_fail(Elo) × Stake`, set to 0 when the mover's EP before the move is > 0.9 or < 0.1 (game already decided).
@@ -91,14 +93,18 @@ Tasks:
 - `StockfishEngine`: enable `UCI_ShowWDL`; add `analyse(fen, nodes, multipv)` returning
   per-line `{move_uci, cp|mate, wdl, ep}`. Use `go nodes` (config `ANALYSIS_NODES`, default 1_500_000).
 - New `services/ep.py`: `wdl_to_ep()`, `cp_to_ep()` fallback, mate handling.
-- New migration: `position_evals` (fen_key PK = normalized FEN without move counters, nodes,
+- New migration: `position_evals` (fen_key PK = FEN without the fullmove number — keep the halfmove clock,
+  it changes fifty-move-rule evals — nodes,
   multipv, lines jsonb, engine_version, created_at). Cache lookup before every search.
 - Clock parsing: extract `%clk` per ply from Chess.com PGN into `game_moves.clock_ms`
   (new nullable column).
 - For each **user move**, run MultiPV-4 on the resulting position (opponent to move) and store it.
+  If the 4th line is still within `SAFE_TOL` of the best, widen MultiPV until the first line outside it
+  (cap in config), so the safe set is complete.
 - Skip plies where the mover's EP before the move is > 0.95 or < 0.05.
 
-Files: `app/services/stockfish_engine.py`, `app/services/ep.py`, `app/services/analysis_service.py`,
+Files: `app/services/stockfish.py` and `app/services/analysis.py` (existing — extend, don't duplicate),
+`app/services/ep.py`,
 `supabase/migrations/<ts>_position_evals.sql`, `tests/test_ep.py`, `tests/test_position_cache.py`.
 
 **Done when:**
@@ -124,7 +130,8 @@ Tasks:
 - Run at `ELO_LADDER = [800, 1200, 1600, 2000, 2400]` + the opponent's actual rating (rounded to 100).
 - Bullet note: models are blitz-trained. Store the raw output; clock adjustment comes in M4.
 
-**Done when:** a sample position returns probabilities summing to ~1 at each Elo, cached on second call,
+**Done when:** a sample position returns a probability for **every legal move**, summing to ~1 at each Elo
+(a distribution over engine candidates only does not count), cached on second call,
 and the ADR exists.
 
 > **Prompt:** *Read docs/CHAOS_PLAN.md. Do the M2 spike only: set up Maia-3 (5M, CPU) and Maia-2 side by side in a scratch script under apps/api/scripts/, time 200 positions each, report install steps, speed and licence. Don't integrate yet — write the findings to docs/adr/0002-human-model.md and stop for my decision.*
@@ -141,7 +148,8 @@ Tasks:
 - `ply_ctx` is built from stored data only (`position_evals`, `human_probs`, clocks, Phase 1 classification).
 - Migration: `move_lens_scores` (game_move_id, lens, lens_version, score numeric, verdict text,
   details jsonb incl. P_fail per Elo, stake, safe set, objective cost).
-- `config/lenses.py`: `SAFE_TOL`, chaos threshold, decided-position cutoffs.
+- `app/lenses/config.py`: `SAFE_TOL`, chaos threshold, decided-position cutoffs. (Not an `app/config/`
+  package — that would shadow the existing `app/config.py`.)
 - API: `GET /games/{id}/lenses` returns per-move lens results; `GET /users/{u}/chaos-summary` returns
   counts of real/cheap/calculated chaos and survival rate.
 
@@ -165,10 +173,12 @@ Tasks:
 - For each sampled user move: compute chaos, then label whether the opponent's *actual* reply lost ≥ 0.10 EP.
 - Output: calibration table + chart (predicted P_fail vs. observed error rate, per band and clock bucket),
   compared against two baselines: raw cliff only, and heuristic findability (capture/check/forward).
-- Fit a simple clock multiplier per clock bucket. Write it to `config/lenses.py`.
+- Fit a simple clock multiplier per clock bucket. Write it to `app/lenses/config.py`.
+- Split the sample by game into a tuning set and a held-out test set. Fit thresholds and the clock
+  multiplier on the tuning set only.
 - Write results to `docs/VALIDATION.md`.
 
-**Done when:** the chart exists and chaos beats both baselines. If it doesn't, stop and rethink before M5.
+**Done when:** the chart exists and chaos beats both baselines **on the held-out set**. If it doesn't, stop and rethink before M5.
 
 > **Prompt:** *Read docs/CHAOS_PLAN.md. Build scripts/validate_chaos.py for M4. Start with 2,000 positions to check the pipeline end to end and report runtime, then I'll decide the full sample size. Save outputs under apps/api/scripts/out/ (gitignored).*
 
@@ -206,7 +216,8 @@ Tasks in `apps/web`:
 
 **Goal:** "Did I have an idea, did it land, did I pivot?"
 
-- Port motif detectors from Lichess's `lichess-puzzler` `cook.py` (MIT): pin, fork, skewer, sacrifice,
+- Re-implement motif detectors, using Lichess's `lichess-puzzler` `cook.py` only as a reference for *which*
+  motifs matter — it is **AGPL-3.0**, so do not copy or port its code into this MIT repo: pin, fork, skewer, sacrifice,
   discovered attack, hanging piece.
 - Idea windows (rules, configurable): **Gambit** (≥1 pawn down for ≥6 plies with EP ≥ 0.4),
   **King attack** (≥3 own units enter enemy king zone within 8 plies), **Squeeze** (opponent mobility and
@@ -267,7 +278,7 @@ developer**, provided three deviations from naive "chaos scoring" are followed �
 3. **The intention layer starts as a small motif-and-phase tagger**, not open-ended plan recognition.
 
 Every core building block (MultiPV Stockfish, WDL→EP conversion, the CC0 Lichess database with
-per-move clocks, Lichess's open-source tactics tagger `cook.py`) already exists and is free; the
+per-move clocks, Lichess's open-source tactics tagger `cook.py` — AGPL, reference only) already exists and is free; the
 hard parts are calibration, validation, and compute budgeting — not invention. This matches the
 precedent of the 2006 "Trappy Minimax" idea (trappiness × profitability), which raised Beowulf's
 rating against humans on ICC from 2262 to 2440.

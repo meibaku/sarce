@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Open promotion PR staging → main. Customize body path as needed. */
+/** Open promotion PR staging → main, pre-filled with the promotion template. */
 import { spawnSync } from "node:child_process";
 
 const result = spawnSync(
@@ -13,6 +13,8 @@ const result = spawnSync(
     "staging",
     "--title",
     "chore(release): promote staging to main",
+    "--body-file",
+    ".github/PULL_REQUEST_TEMPLATE/promotion.md",
   ],
   { stdio: "inherit", shell: process.platform === "win32" },
 );

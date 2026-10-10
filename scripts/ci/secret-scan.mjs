@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Lightweight repository secret scanner for CI.
- * Dependency-free; scans tracked text files; ignores example/placeholder context.
+ * Dependency-free; scans tracked text files. A finding is skipped only when the
+ * matched value itself is a placeholder, or its line carries `secret-scan:ignore`.
  * Run via `npm run scan:secrets` (CI job: security-gates).
  */
 import { execFileSync } from "node:child_process";
@@ -12,10 +13,12 @@ const TEXT_EXTENSIONS = new Set([
   ".env",
   ".example",
   ".json",
+  ".key",
   ".js",
   ".jsx",
   ".mjs",
   ".md",
+  ".pem",
   ".ps1",
   ".py",
   ".sh",
@@ -43,8 +46,10 @@ const SKIP_PATHS = [
   /(^|\/)\.venv\//,
 ];
 
-const ALLOWED_CONTEXT =
-  /\b(example|placeholder|dummy|sample|test|fake|mock|redacted|changeme|your[_-]?|xxx|demo:|<[^>]+>|\$\{[^}]+})\b/i;
+// Tested against the matched text only — a nearby word like "test" must not hide a real secret.
+const PLACEHOLDER_VALUE =
+  /example|placeholder|dummy|sample|fake|mock|redacted|changeme|your[_-]|xxx|<[^>]+>|\$\{[^}]+\}/i;
+const IGNORE_MARKER = "secret-scan:ignore";
 
 const SECRET_PATTERNS = [
   {
@@ -119,10 +124,11 @@ function scanFile(file) {
     const re = new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`);
     let match;
     while ((match = re.exec(content)) !== null) {
-      const start = Math.max(0, match.index - 40);
-      const end = Math.min(content.length, match.index + match[0].length + 40);
-      const ctx = content.slice(start, end);
-      if (ALLOWED_CONTEXT.test(ctx)) continue;
+      if (PLACEHOLDER_VALUE.test(match[0])) continue;
+      const lineStart = content.lastIndexOf("\n", match.index) + 1;
+      const lineEnd = content.indexOf("\n", match.index);
+      const lineText = content.slice(lineStart, lineEnd < 0 ? content.length : lineEnd);
+      if (lineText.includes(IGNORE_MARKER)) continue;
       const line = content.slice(0, match.index).split(/\r?\n/).length;
       findings.push({ file, line, name });
     }

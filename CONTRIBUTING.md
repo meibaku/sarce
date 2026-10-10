@@ -27,7 +27,9 @@ feat/* | fix/* | chore/*  →  staging  →  main
 | `staging` | Integration — **default branch and default PR target** |
 | `main` | Released code only; promoted from `staging` |
 
-Both `staging` and `main` are protected by GitHub **rulesets** — all changes require a PR that passes CI.
+Both `staging` and `main` are meant to be protected by GitHub **rulesets** — all changes require a PR that passes CI.
+The JSON in `.github/rulesets/` only takes effect once an admin applies it; check the live state with
+`gh api repos/meibaku/sarce/rulesets` (see [QUALITY_GATES.md](docs/QUALITY_GATES.md)).
 Promote with the [promotion template](.github/PULL_REQUEST_TEMPLATE/promotion.md) (`npm run pr:promote`).
 Hotfix: branch from `main`, PR to `main`, then back-merge into `staging`.
 

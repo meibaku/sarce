@@ -8,7 +8,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Chaos Lens M0 housekeeping: `AGENTS.md`, `security-gates` CI job (secret scan + critical `npm audit`),
   `staging` ruleset config, promotion PR template, `pr:create` / `pr:promote` helpers
   (adapted from MeibakuHQ/ai-ci-repo-template)
-- `docs/CHAOS_PLAN.md` — milestone plan for the chaos/survival style lenses
+- `docs/CHAOS_PLAN.md` — milestone plan for the chaos/survival style lenses (revised after review:
+  complete safe sets, halfmove clock in cache keys, held-out validation set, `cook.py` is AGPL — reference only)
 - `docs/PRODUCT_SPEC.md` — master product specification (Phases 1–4+)
 - Phase 2 redefined: video position capture + transcript context
 - Phase 3 redefined: move intent narratives + personal chess journal

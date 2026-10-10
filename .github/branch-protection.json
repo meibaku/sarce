@@ -7,7 +7,8 @@
       "web-lint",
       "web-build",
       "migration-check",
-      "philosophy-check"
+      "philosophy-check",
+      "security-gates"
     ]
   },
   "enforce_admins": true,

@@ -140,7 +140,8 @@ Sarce uses **two mechanisms** — you should prefer **Rulesets** (modern) over c
 `main.json` targets `refs/heads/main` explicitly. It used to target `~DEFAULT_BRANCH`, which silently
 moved the protection to `staging` when the default branch changed and left `main` unprotected.
 
-`.github/branch-protection.json` (classic protection) is kept only as a fallback; rulesets are canonical.
+`.github/branch-protection.json` (classic protection) is kept only as a fallback with the same required
+checks; rulesets are canonical.
 
 ### Rules enforced (both rulesets)
 
@@ -160,7 +161,7 @@ The repo files are the source of truth; applying them is a manual, admin-only st
 
 ```powershell
 # main — creates or updates the "Protect main" ruleset
-.\.github\scriptspply-ruleset.ps1
+.\.github\scripts\apply-ruleset.ps1
 
 # staging — create once
 gh api -X POST repos/meibaku/sarce/rulesets --input .github/rulesets/staging.json
