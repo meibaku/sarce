@@ -110,4 +110,8 @@ export async function listTraps(band?: number) {
   return fetchApi<{ traps: import("@/types/chess").Trap[] }>(`/traps${params}`);
 }
 
+export async function getGameIdeas(gameId: string) {
+  return fetchApi<import("@/types/chess").GameIdeas>(`/games/${gameId}/ideas`);
+}
+
 export { LOCAL_USER_ID };

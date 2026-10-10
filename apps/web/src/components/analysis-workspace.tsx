@@ -8,6 +8,7 @@ import {
 } from "@/lib/api";
 import { ChaosReview } from "./chaos-review";
 import { ChessReplay } from "./chess-replay";
+import { IdeasPanel } from "./ideas-panel";
 import type {
   AnalyzedMove,
   GameDetail,
@@ -432,6 +433,13 @@ export function AnalysisWorkspace({
             />
 
             <ChaosReview
+              game={selectedGame}
+              selectedPly={selectedPly}
+              onSelectPly={setSelectedPly}
+              refreshToken={refreshToken}
+            />
+
+            <IdeasPanel
               game={selectedGame}
               selectedPly={selectedPly}
               onSelectPly={setSelectedPly}

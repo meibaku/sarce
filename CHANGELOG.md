@@ -5,6 +5,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- Chaos Lens M7 (UI): Ideas card in the game review — idea windows, what became of them, pivots, and
+  motif chips for the selected move
 - Chaos Lens M6 (trap atlas): `trap_atlas` table, `services/trap_atlas.py`, `scripts/build_trap_atlas.py`,
   `GET /traps`, and a Trap atlas panel with a drill mode. The atlas is empty until the validation
   sampler has been run on real games

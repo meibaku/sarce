@@ -244,3 +244,25 @@ export interface Trap {
   stake: number | null;
   eco: string | null;
 }
+
+export type MotifTag =
+  | "sacrifice"
+  | "fork"
+  | "pin"
+  | "skewer"
+  | "discovered_attack"
+  | "hanging_piece";
+export type IdeaFamily = "gambit" | "king_attack" | "squeeze";
+export type IdeaVerdict = "worked" | "refuted" | "fizzled";
+
+export interface GameIdeas {
+  gameId: string;
+  tags: { ply: number; byUser: boolean; tag: MotifTag }[];
+  ideas: {
+    family: IdeaFamily;
+    startPly: number;
+    endPly: number;
+    verdict: IdeaVerdict;
+    isPivot: boolean;
+  }[];
+}
