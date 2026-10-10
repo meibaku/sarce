@@ -5,6 +5,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- Chaos Lens M8 (part): durable per-user analysis job queue — `analysis_jobs` table with an atomic claim
+  function, an in-process worker, `GET /games/jobs`. No new dependency; off by default
+  (`JOB_QUEUE_ENABLED`), in which case BackgroundTasks is used as before
 - Chaos Lens M4 pilot on real Lichess games (2,002 positions, Maia-2): GO — results in `docs/VALIDATION.md`.
   The sampler now caches repeated positions and takes `--max-ply`
 - Chaos Lens M2: optional Maia-2 human model — `services/maia_model.py`, `HUMAN_MODEL=maia2`,

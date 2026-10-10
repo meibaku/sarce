@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     analysis_depth: int = 18
     cors_origins: list[str] = ["http://localhost:3000"]
 
+    # Durable per-user analysis queue (needs the analysis_jobs migration). Off: BackgroundTasks.
+    job_queue_enabled: bool = False
+    job_poll_seconds: float = 2.0
+    job_stale_minutes: int = 60
+
     # Local-first dev: fixed user UUID from supabase/seed.sql
     local_user_id: str = "00000000-0000-4000-8000-000000000001"
 
