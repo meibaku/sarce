@@ -69,6 +69,15 @@ Rule-based from Stockfish (no ML). Details in [PRODUCT_SPEC.md § 1.2](./PRODUCT
 
 ---
 
+## Chaos Lens endpoints
+
+| Method | Path |
+|--------|------|
+| GET | `/games/{id}/lenses` |
+| GET | `/users/{username}/chaos-summary` |
+
+---
+
 ## API endpoints (Phase 1, live)
 
 | Method | Path |

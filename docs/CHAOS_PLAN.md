@@ -156,6 +156,10 @@ and the ADR exists.
 
 ### M3 — Chaos + survival lenses (3–4 days)
 
+> **Status:** implemented. Lens results attach to the user's moves: chaos scores the position the
+> user left, survival scores the position the user faced. Thresholds in `app/lenses/config.py` are
+> provisional until M4, and scores use the interim heuristic human model until ADR 0002 is decided.
+
 **Goal:** the first real style lens, pure and testable.
 
 Tasks:

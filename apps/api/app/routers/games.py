@@ -6,12 +6,14 @@ from app.deps import resolve_user_id
 from app.services.analysis import AnalysisService
 from app.services.chess_com import ChessComClient, normalize_chess_com_username
 from app.services.game_store import GameStore
+from app.services.lens_service import LensService
 from app.services.pgn_parser import mainline_positions
 
 router = APIRouter()
 chess_com = ChessComClient()
 game_store = GameStore()
 analysis_service = AnalysisService()
+lens_service = LensService()
 
 
 class ImportRequest(BaseModel):
@@ -279,6 +281,22 @@ async def get_game_detail(
             for move in moves_res.data or []
         ],
     }
+
+
+@router.get("/{game_id}/lenses")
+async def get_game_lenses(
+    game_id: str,
+    refresh: bool = Query(False, description="Re-score from stored raw data (no engine run)"),
+):
+    """Per-move lens results (soundness, chaos, survival) for a game."""
+    try:
+        if refresh and lens_service.score_game(game_id) is None:
+            raise HTTPException(status_code=404, detail="Game not found")
+        return {"gameId": game_id, "moves": lens_service.get_game_lenses(game_id)}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/analyze")
