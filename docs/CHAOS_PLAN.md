@@ -23,6 +23,7 @@ the architecture must make later lenses (positional, survival, etc.) cheap to ad
 6. **Post-game only.** Never analyze a game that isn't finished. No live/in-game features, ever
    (Chess.com and Lichess fair-play rules).
 7. **Schema changes = new Supabase migration** in `supabase/migrations/`. Never edit old ones.
+   Every new table enables RLS with policies in the same migration — that is part of "done".
 8. Ask before adding a new heavy dependency (torch, onnxruntime, celery, etc.).
 
 ---
@@ -54,6 +55,8 @@ PGN + clocks ──► │ StockfishEngine: WDL, MultiPV-4, node-limited     │
   and inflates chaos.
 - **P_fail(Elo)** = `1 − Σ P_maia(reply | Elo)` over replies in the safe set.
 - **Stake** = opponent's EP(best reply) − weighted EP of their non-safe replies (how much they lose if they miss).
+  Weighted over the non-safe replies that have a **stored** EP, with Maia probabilities renormalized over
+  that subset; `details` records how much probability mass had no stored EP.
 - **Chaos(Elo)** = `P_fail(Elo) × Stake`, set to 0 when the mover's EP before the move is > 0.9 or < 0.1 (game already decided).
 - **Objective cost** = mover's EP loss vs. engine best move (from Phase 1 data, converted to EP).
 - **Verdict:**
@@ -96,11 +99,14 @@ Tasks:
 - New migration: `position_evals` (fen_key PK = FEN without the fullmove number — keep the halfmove clock,
   it changes fifty-move-rule evals — nodes,
   multipv, lines jsonb, engine_version, created_at). Cache lookup before every search.
-- Clock parsing: extract `%clk` per ply from Chess.com PGN into `game_moves.clock_ms`
-  (new nullable column).
+- Clock parsing: extract `%clk` for **every ply, both players** (new nullable storage). `%clk` is the
+  mover's time *after* their move, so the clock that matters for a lens position is the
+  decision-maker's previous annotation (or the initial time control) — store or derive that explicitly.
 - For each **user move**, run MultiPV-4 on the resulting position (opponent to move) and store it.
   If the 4th line is still within `SAFE_TOL` of the best, widen MultiPV until the first line outside it
   (cap in config), so the safe set is complete.
+- Do the same for each **opponent move** (user to move): the survival lens needs those positions,
+  and lenses may not call the engine later.
 - Skip plies where the mover's EP before the move is > 0.95 or < 0.05.
 
 Files: `app/services/stockfish.py` and `app/services/analysis.py` (existing — extend, don't duplicate),
@@ -170,7 +176,9 @@ Tasks:
 - `scripts/validate_chaos.py`: stream one month of the Lichess open database (CC0), keep 1+0 games
   with clocks, sample ~50k positions stratified by rating band (200-pt) and opponent clock
   (<5s, 5–15s, 15s+).
-- For each sampled user move: compute chaos, then label whether the opponent's *actual* reply lost ≥ 0.10 EP.
+- For each sampled user move: compute chaos, then label whether the opponent's *actual* reply left the
+  safe set (lost more than `SAFE_TOL` EP) — the same event `P_fail` predicts. A ≥ 0.10 EP loss can be
+  reported as a second, separate label.
 - Output: calibration table + chart (predicted P_fail vs. observed error rate, per band and clock bucket),
   compared against two baselines: raw cliff only, and heuristic findability (capture/check/forward).
 - Fit a simple clock multiplier per clock bucket. Write it to `app/lenses/config.py`.

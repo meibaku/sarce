@@ -98,6 +98,15 @@ const SECRET_PATTERNS = [
       "im",
     ),
   },
+  {
+    // Unquoted `KEY: value` in YAML. Values starting with `$` (e.g. ${{ secrets.X }}) are references.
+    name: "Credential in YAML value",
+    files: /\.ya?ml$/i,
+    pattern: new RegExp(
+      `^[ \\t-]*${CREDENTIAL_NAME}[ \\t]*:[ \\t]+(?<value>[^\\s"'#$][^\\s"'#]{11,})[ \\t]*$`,
+      "im",
+    ),
+  },
 ];
 
 function normalizeGitPath(file) {
