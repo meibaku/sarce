@@ -130,6 +130,10 @@ Files: `app/services/stockfish.py` and `app/services/analysis.py` (existing — 
 
 ### M2 — Human model (Maia) (3–4 days)
 
+> **Status:** interface, cache table, Elo ladder and an interim heuristic model are implemented.
+> **Not done:** the Maia spike and the model choice — they need a heavy dependency (rule 8) and a
+> decision; see `docs/adr/0002-human-model.md`. Until then chaos numbers are *not* calibrated.
+
 **Goal:** P(move | Elo) for any position, cached.
 
 Tasks:

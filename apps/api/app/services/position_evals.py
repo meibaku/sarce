@@ -158,6 +158,33 @@ def mover_ep_before(ply: int, user_color: str, phase1_by_ply: dict[int, dict]) -
     return None if pawns is None else cp_to_ep(-pawns * 100)
 
 
+def iter_live_positions(
+    board: chess.Board,
+    moves: list[chess.Move],
+    user_color: str,
+    classified: list[dict],
+    stats: dict[str, int] | None = None,
+):
+    """
+    Yield `(ply, position_after_ply)` for every ply worth storing raw data for.
+
+    Skips plies made from an already decided position and positions with no legal moves,
+    counting both in `stats` when given. The yielded board is reused — copy it to keep it.
+    """
+    phase1_by_ply = {m["ply"]: m for m in classified}
+    stats = stats if stats is not None else {}
+    temp = board.copy()
+    for ply, move in enumerate(moves):
+        before = mover_ep_before(ply, user_color, phase1_by_ply)
+        temp.push(move)
+        if is_decided(before, settings.ep_decided_low, settings.ep_decided_high):
+            stats["skipped_decided"] = stats.get("skipped_decided", 0) + 1
+        elif temp.legal_moves.count() == 0:
+            stats["terminal"] = stats.get("terminal", 0) + 1
+        else:
+            yield ply, temp
+
+
 def evaluate_game_positions(
     board: chess.Board,
     moves: list[chess.Move],
@@ -172,18 +199,8 @@ def evaluate_game_positions(
     The chaos lens reads positions after user moves; the survival lens needs the ones
     after opponent moves. Plies made from an already decided position are skipped.
     """
-    phase1_by_ply = {m["ply"]: m for m in classified}
     stats = {"evaluated": 0, "skipped_decided": 0, "terminal": 0, "failed": 0}
-    temp = board.copy()
-    for ply, move in enumerate(moves):
-        before = mover_ep_before(ply, user_color, phase1_by_ply)
-        temp.push(move)
-        if is_decided(before, settings.ep_decided_low, settings.ep_decided_high):
-            stats["skipped_decided"] += 1
-            continue
-        if temp.legal_moves.count() == 0:
-            stats["terminal"] += 1
-            continue
-        row = evaluate_position(temp, engine, store)
+    for _ply, position in iter_live_positions(board, moves, user_color, classified, stats):
+        row = evaluate_position(position, engine, store)
         stats["failed" if row is None else "evaluated"] += 1
     return stats

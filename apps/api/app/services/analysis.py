@@ -16,10 +16,20 @@ import chess.pgn
 from app.config import settings
 from app.db.supabase import get_supabase
 from app.services.baseline import BaselineService, EMPTY_DISTRIBUTION
+from app.services.human_model import (
+    SupabaseProbStore,
+    cached_move_probs,
+    elo_ladder,
+    get_human_model,
+)
 from app.services.move_classifier import MoveClassifier
 from app.services.move_signals import signal_distribution
 from app.services.pgn_parser import extract_clocks_ms
-from app.services.position_evals import SupabaseEvalStore, evaluate_game_positions
+from app.services.position_evals import (
+    SupabaseEvalStore,
+    evaluate_game_positions,
+    iter_live_positions,
+)
 from app.services.stockfish import StockfishEngine
 
 logger = logging.getLogger(__name__)
@@ -184,6 +194,7 @@ class AnalysisService:
             await asyncio.to_thread(
                 self._store_chaos_raw_data,
                 game_id, row["pgn"], board, moves, user_color, classified,
+                row.get("opponent_rating"),
             )
 
         return {
@@ -201,9 +212,11 @@ class AnalysisService:
         moves: list[chess.Move],
         user_color: str,
         classified: list[dict],
+        opponent_rating: int | None = None,
     ) -> None:
         """
-        Chaos Lens raw data: per-ply clocks and cached position evaluations.
+        Chaos Lens raw data: per-ply clocks, cached position evaluations and human
+        move probabilities at each ladder Elo.
 
         Runs after Phase 1 results are saved and never fails the analysis — a problem
         here is logged and the game stays `complete` (docs/CHAOS_PLAN.md, rule 1).
@@ -217,6 +230,11 @@ class AnalysisService:
                 stats = evaluate_game_positions(
                     board, moves, user_color, classified, engine, SupabaseEvalStore()
                 )
+            model, prob_store = get_human_model(settings.human_model), SupabaseProbStore()
+            elos = elo_ladder(opponent_rating)
+            for _ply, position in iter_live_positions(board, moves, user_color, classified):
+                for elo in elos:
+                    cached_move_probs(position, elo, model, prob_store)
             logger.info("Position evals for game %s: %s", game_id, stats)
             status = "failed" if stats["failed"] else "complete"
         except Exception:

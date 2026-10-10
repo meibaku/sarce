@@ -46,6 +46,8 @@ class Settings(BaseSettings):
     safe_set_tol: float = 0.05
     ep_decided_low: float = 0.05
     ep_decided_high: float = 0.95
+    # Human move model behind services/human_model.py (docs/adr/0002-human-model.md).
+    human_model: str = "heuristic"
 
     # Brilliant detection thresholds (tunable)
     brilliant_eval_margin: float = 0.3
