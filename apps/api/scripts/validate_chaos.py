@@ -196,6 +196,10 @@ def main() -> None:
 
     stream = sys.stdin if args.pgn == "-" else open(args.pgn, encoding="utf-8", errors="replace")
     samples, quota, started, games = [], Counter(), time.time(), 0
+    # Long runs save as they go: a partial file survives an interrupted run.
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    partial = open(args.out_dir / "chaos_samples.partial.csv", "w", newline="", encoding="utf-8")
+    partial_writer = None
     with StockfishEngine() as raw_engine:
         engine = Cached(engine=raw_engine)
         while len(samples) < args.positions:
@@ -205,10 +209,18 @@ def main() -> None:
             if not cv.is_bullet_1_0(game.headers.get("TimeControl")):
                 continue
             games += 1
-            samples.extend(sample_game(game, engine, model, heuristic, args.nodes, quota, args.per_cell, args.min_ply, args.max_ply))
+            new = sample_game(game, engine, model, heuristic, args.nodes, quota, args.per_cell, args.min_ply, args.max_ply)
+            samples.extend(new)
+            if new:
+                if partial_writer is None:
+                    partial_writer = csv.DictWriter(partial, fieldnames=list(new[0]))
+                    partial_writer.writeheader()
+                partial_writer.writerows(new)
+                partial.flush()
             if games % 50 == 0:
                 print(f"{games} games, {len(samples)} samples, {time.time() - started:.0f}s")
 
+    partial.close()
     tuning = [s for s in samples if not cv.is_held_out(s["game_id"])]
     held_out = [s for s in samples if cv.is_held_out(s["game_id"])]
     summary = cv.summarize_validation(tuning, held_out)
