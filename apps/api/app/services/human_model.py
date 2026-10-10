@@ -139,8 +139,12 @@ def cached_move_probs(
 
 
 def get_human_model(name: str) -> HumanModel:
-    """Resolve the configured model (`HUMAN_MODEL`); only the heuristic exists so far."""
-    models = {HeuristicHumanModel.name: HeuristicHumanModel}
-    if name not in models:
-        raise ValueError(f"Unknown human model {name!r}; available: {sorted(models)}")
-    return models[name]()
+    """Resolve the configured model (`HUMAN_MODEL`): `heuristic` (default) or `maia2` (optional)."""
+    if name == HeuristicHumanModel.name:
+        return HeuristicHumanModel()
+    if name == "maia2":
+        # Imported here so the optional adapter is only touched when selected.
+        from app.services.maia_model import Maia2HumanModel
+
+        return Maia2HumanModel()
+    raise ValueError(f"Unknown human model {name!r}; available: ['heuristic', 'maia2']")

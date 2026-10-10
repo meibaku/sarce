@@ -48,7 +48,9 @@ class Settings(BaseSettings):
     ep_decided_low: float = 0.05
     ep_decided_high: float = 0.95
     # Human move model behind services/human_model.py (docs/adr/0002-human-model.md).
-    human_model: str = "heuristic"
+    human_model: str = "heuristic"  # or "maia2" (optional install: requirements-maia.txt)
+    maia2_model_type: str = "blitz"  # "blitz" or "rapid"
+    maia2_cache_dir: str = ".cache/maia2"
     # Intention tagger (M7): engine-free motif tags and idea windows. Off until the
     # intention_tags migration is applied.
     idea_tagger_enabled: bool = False
