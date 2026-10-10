@@ -2,8 +2,9 @@
 
 ## Status
 
-Proposed — the interface and an interim model are implemented; the spike is done and recommends
-Maia-2, but **nothing is integrated until the maintainer decides**.
+Accepted for Maia-2 as an **optional** model — adapter merged, off by default, not in the base
+requirements. Adopted under the maintainer's instruction to implement the recommendations; revert by
+removing `maia_model.py` and `requirements-maia.txt`. Making it the default is still open.
 
 ## Context
 
@@ -82,13 +83,16 @@ Maia-3 could only be used as a separate UCI process, the way Stockfish is, and i
 need a deliberate decision before any hosted deployment. It is also unconfirmed that its UCI output
 gives a probability for every legal move.
 
-### What integrating Maia-2 would involve (not done — awaiting the decision)
+### How Maia-2 is integrated
 
-- `torch` and `maia2` become API dependencies (about 1.6 GB installed) — the heavy-dependency
-  decision from the plan's rule 8.
-- A `Maia2HumanModel(HumanModel)` adapter selected with `HUMAN_MODEL=maia2`; nothing else changes.
-- An explicit exception in `tests/test_philosophy_contracts.py`, which forbids ML dependencies.
-- The Elo ladder's top rung is redundant for this model (2000 = 2400).
+- `apps/api/app/services/maia_model.py` — `Maia2HumanModel`, selected with `HUMAN_MODEL=maia2`. The
+  package is imported lazily, so the API and CI run without it.
+- `apps/api/requirements-maia.txt` — the optional install (about 1.6 GB with PyTorch). It is **not** in
+  `requirements.txt`.
+- `tests/test_architecture.py` bans direct ML imports in `app/`; the adapter imports only `maia2`, so
+  that gate is unchanged. Move classification is still rule-based.
+- Cache rows are versioned `maia2-0.11-blitz`, separate from `heuristic-1`.
+- Still open: making Maia-2 the default, and dropping the redundant 2400 rung of the ladder.
 
 ## Consequences
 
