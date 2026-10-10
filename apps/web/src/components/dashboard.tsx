@@ -18,6 +18,7 @@ import { BrilliantTimeline } from "./brilliant-timeline";
 import { ChaosSummaryPanel } from "./chaos-summary-panel";
 import { DistributionChart } from "./distribution-chart";
 import { ImportGamesForm, type GameSource } from "./import-games-form";
+import { ScoutingPanel } from "./scouting-panel";
 import { StyleMoments } from "./style-moments";
 import { StyleProfilePanel } from "./style-profile-panel";
 import { StyleSummary } from "./style-summary";
@@ -198,6 +199,8 @@ export function Dashboard() {
       <ChaosSummaryPanel summary={chaosSummary} />
 
       <TrapAtlas />
+
+      <ScoutingPanel />
 
       <StyleMoments moments={moments} />
 
