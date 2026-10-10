@@ -56,6 +56,7 @@ sarce/
 │       ├── app/
 │       │   ├── routers/     # HTTP endpoints
 │       │   ├── services/    # Business logic
+│       │   ├── lenses/      # Style lenses — pure functions over stored data
 │       │   └── db/          # Supabase client
 │       ├── scripts/         # One-off batch jobs (Tal benchmark)
 │       └── tests/           # pytest suite
