@@ -8,6 +8,7 @@ read it (rule 3).
 
 from __future__ import annotations
 
+import importlib.util
 import math
 from abc import ABC, abstractmethod
 from typing import Protocol
@@ -138,8 +139,23 @@ def cached_move_probs(
     return probs
 
 
+def maia2_installed() -> bool:
+    """True when the optional Maia-2 package can be imported (without importing it)."""
+    try:
+        return importlib.util.find_spec("maia2") is not None
+    except (ImportError, ValueError):
+        return False
+
+
 def get_human_model(name: str) -> HumanModel:
-    """Resolve the configured model (`HUMAN_MODEL`): `heuristic` (default) or `maia2` (optional)."""
+    """
+    Resolve `HUMAN_MODEL`: `auto` (default), `maia2` or `heuristic`.
+
+    `auto` picks the validated Maia-2 model wherever it is installed and falls back to the
+    heuristic elsewhere, so nobody is forced to install PyTorch.
+    """
+    if name == "auto":
+        name = "maia2" if maia2_installed() else HeuristicHumanModel.name
     if name == HeuristicHumanModel.name:
         return HeuristicHumanModel()
     if name == "maia2":
@@ -147,4 +163,4 @@ def get_human_model(name: str) -> HumanModel:
         from app.services.maia_model import Maia2HumanModel
 
         return Maia2HumanModel()
-    raise ValueError(f"Unknown human model {name!r}; available: ['heuristic', 'maia2']")
+    raise ValueError(f"Unknown human model {name!r}; available: ['auto', 'heuristic', 'maia2']")
