@@ -5,6 +5,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- Chaos Lens M4 pilot on real Lichess games (2,002 positions, Maia-2): GO — results in `docs/VALIDATION.md`.
+  The sampler now caches repeated positions and takes `--max-ply`
 - Chaos Lens M2: optional Maia-2 human model — `services/maia_model.py`, `HUMAN_MODEL=maia2`,
   `apps/api/requirements-maia.txt`. Off by default and not installed in CI
 - ADR 0002: Maia spike findings — Maia-2 measured (MIT, 27.8 ms/position on CPU, full move distribution);

@@ -11,7 +11,7 @@
 | M1 WDL + EP | Merged, off by default; verified on Stockfish 18 | Apply the migration to your own database |
 | M2 Human model | Merged; Maia-2 available as an optional model (`HUMAN_MODEL=maia2`) | Decide whether to make it the default |
 | M3 Lenses | Merged | Thresholds are provisional until M4 |
-| M4 Validation | Tooling merged; sampler executes end to end | **The run on real Lichess data** — go / no-go is still open |
+| M4 Validation | Pilot on real Lichess games: **GO** (2,002 positions, Maia-2) | Full-size run with widened safe sets; tune thresholds |
 | M5 Review UI | Merged; checked against one analysed game | Check against your own games; Tal in chaos terms |
 | M6 Trap atlas | Merged, atlas empty | Run the sampler and `build_trap_atlas` on real data |
 | M7 Intention tagger | v1 merged, off by default | Tune thresholds; "sharpness" part of squeeze |

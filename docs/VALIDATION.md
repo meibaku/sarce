@@ -1,7 +1,6 @@
 # Chaos Lens validation (M4)
 
-**Status: not run yet.** This page describes the check and how to run it. No results are recorded
-here until a real run has produced them.
+**Status: pilot run done (2,002 positions) — GO.** A full-size run is still to do; see *Results*.
 
 ## What is being checked
 
@@ -47,7 +46,7 @@ Start with 2,000 positions to check the pipeline and the runtime, then decide th
 
 ## Before the result can count
 
-- A trained human model must be selected (see [ADR 0002](./adr/0002-human-model.md)). With the
+- Select the trained model with `HUMAN_MODEL=maia2` (see [ADR 0002](./adr/0002-human-model.md)). With the
   default heuristic model, `p_fail` and `baseline_heuristic` are the same predictor, so the model
   cannot beat that baseline by construction.
 - After a passing run, copy the clock multipliers and any threshold changes into
@@ -55,4 +54,54 @@ Start with 2,000 positions to check the pipeline and the runtime, then decide th
 
 ## Results
 
-_None yet._
+### Pilot — 10 Oct 2026
+
+The plan's first step: about 2,000 positions to check the pipeline before deciding the full sample.
+
+| | |
+| --- | --- |
+| Data | First 4.2 MB of `lichess_db_standard_rated_2026-08.pgn.zst`: 4,000 one-minute games with clocks, all from 1 Aug 2026 |
+| Sample | 2,002 positions from 337 games; 1,361 tuning, 641 held-out |
+| Engine | Stockfish 18, 100,000 nodes, MultiPV 4 (the app default is 1.5M nodes) |
+| Human model | `maia2-0.11-blitz` |
+| Runtime | 29 minutes on the development machine |
+
+**Brier score on held-out games (lower is better):**
+
+| Predictor | Brier |
+| --- | --- |
+| `p_fail_adjusted` (Maia-2 + clock multiplier) | **0.175** |
+| `p_fail` (Maia-2, unadjusted) | 0.183 |
+| `baseline_heuristic_adjusted` | 0.223 |
+| `baseline_cliff` | 0.323 |
+| `baseline_heuristic` (unadjusted) | 0.458 |
+
+**Verdict: GO** — the adjusted model beats both baselines on games it was not tuned on.
+
+**Calibration on held-out games** (`p_fail_adjusted`, all bands and clocks pooled):
+
+| Predicted | 0.03 | 0.15 | 0.25 | 0.35 | 0.45 | 0.55 | 0.64 | 0.75 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Observed | 0.09 | 0.16 | 0.27 | 0.31 | 0.51 | 0.53 | 0.66 | 0.78 |
+| Positions | 169 | 69 | 78 | 51 | 70 | 72 | 64 | 68 |
+
+**Clock multipliers fit on the tuning set:** `<5s` 0.79, `5–15s` 0.76, `15s+` 0.80.
+
+### What the pilot does and does not show
+
+- Predicted and observed failure rates track each other closely across the range, and the model is
+  clearly better than the cliff alone or the heuristic.
+- **The multipliers are not a clock effect.** They are almost the same in every bucket and all below 1:
+  Maia-2 over-predicts failure by about a fifth everywhere. The likely cause is that the script uses
+  a fixed MultiPV 4, so a safe fifth-best reply is counted as a predicted failure. Players with under
+  5 seconds did **not** fail more often in this sample (30% against 35% with 15 seconds or more).
+- The sample is small and narrow: 337 games from the first hours of one day, ratings mostly 1000–2600,
+  641 held-out positions, and a search 15 times shallower than the app default.
+- Verdict thresholds (`CHAOS_THRESHOLD`, `SAFE_TOL`) were not tuned.
+
+### Before treating chaos numbers as calibrated
+
+1. Rerun with the safe set widened as the app does (`evaluate_position`), and with more nodes.
+2. Use a larger sample spread across the month — the plan suggests about 50,000 positions.
+3. Decide whether to apply a single calibration factor instead of per-clock multipliers.
+4. Only then copy values into `apps/api/app/lenses/config.py` and make Maia-2 the default model.
