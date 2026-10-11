@@ -1,7 +1,7 @@
 # Chaos Lens validation (M4)
 
-**Status: GO on 4,820 positions from four months** (and on the earlier 2,002-position pilot). The plan's
-50,000-position run is still to do; see *Results*.
+**Status: full-size run done — GO on 50,516 positions from twelve months.** See *Results*; the two earlier,
+smaller runs are kept below it for the record.
 
 ## What is being checked
 
@@ -54,6 +54,66 @@ Start with 2,000 positions to check the pipeline and the runtime, then decide th
   `apps/api/app/lenses/config.py` by hand, and record the numbers on this page.
 
 ## Results
+
+### Full-size run — 10–11 Oct 2026
+
+The plan's target: about 50,000 positions, stratified by rating band and the replier's clock.
+
+| | |
+| --- | --- |
+| Data | The first 1,500 one-minute games with clocks from each of twelve monthly Lichess files, September 2025 to August 2026 |
+| Sample | **50,516 positions from 3,218 games**; 34,429 tuning, 16,087 held-out (split by game) |
+| Engine | Stockfish 18, 100,000 nodes, MultiPV 4 widened to 8 when the safe set was not closed |
+| Human model | `maia2-0.11-blitz` |
+| Compute | 28.7 worker-hours, about 7 hours on the clock with four workers |
+
+**Brier score on held-out games (lower is better):**
+
+| Predictor | Brier |
+| --- | --- |
+| `p_fail_adjusted` (Maia-2 + clock multiplier) | **0.155** |
+| `p_fail` (Maia-2, unadjusted) | 0.156 |
+| `baseline_heuristic_adjusted` | 0.218 |
+| `baseline_cliff` | 0.335 |
+| `baseline_heuristic` (unadjusted) | 0.414 |
+
+**Verdict: GO** — overall, and separately in every one of the twelve months (0.145–0.168 against
+0.212–0.224 for the adjusted heuristic).
+
+**Calibration on the 16,087 held-out positions** (`p_fail_adjusted`):
+
+| Predicted | 0.03 | 0.15 | 0.25 | 0.35 | 0.45 | 0.55 | 0.65 | 0.75 | 0.85 | 0.93 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Observed | 0.06 | 0.17 | 0.25 | 0.35 | 0.44 | 0.53 | 0.62 | 0.71 | 0.83 | 0.94 |
+| Positions | 4,042 | 2,023 | 1,614 | 1,340 | 1,260 | 1,161 | 1,139 | 1,197 | 1,402 | 909 |
+
+**Clock, all 50,516 positions:**
+
+| Replier's clock | Positions | Observed failure | Maia-2 predicted | Multiplier (tuning set) | Range across months |
+| --- | --- | --- | --- | --- | --- |
+| under 5 s | 2,426 | 0.357 | 0.300 | **1.23** | 1.05–1.40 |
+| 5–15 s | 7,255 | 0.365 | 0.366 | **0.98** | 0.88–1.07 |
+| 15 s or more | 40,835 | 0.392 | 0.421 | **0.93** | 0.87–0.96 |
+
+What this settles:
+
+- **The score means something.** Predicted and observed failure rates agree within a few points across
+  the whole range, on games the multipliers were not fit to.
+- **The clock effect is real and stable in direction:** under 5 seconds the multiplier was above 1 in
+  all twelve months. `CLOCK_MULTIPLIERS["maia2"]` in `apps/api/app/lenses/config.py` now holds these
+  values, replacing the four-month estimates.
+- **The trap atlas needs a different sample.** The builder found no traps in these 50,516 positions:
+  they start at ply 8, where positions rarely repeat. The atlas needs an openings-only pass over far
+  more games (the openings pass below found two thin ones in 1,343 games).
+
+Remaining limits:
+
+- Each month is represented by the games at the very start of its file (its first hours), not a
+  spread across the month.
+- 100,000 nodes per search, against the app's default of 1.5 million.
+- One-minute games only; no other time control was tested.
+- `CHAOS_THRESHOLD` and `SAFE_TOL` are still the starting values. Validation shows `P_fail` is
+  calibrated; it does not say where "worth flagging" begins.
 
 ### Pilot — 10 Oct 2026
 
@@ -176,10 +236,8 @@ What changed from the pilot:
 Still short of the plan's target: 4,820 positions, not 50,000; each month is represented by its first
 hours only; the search is 15 times shallower than the app default; verdict thresholds are untuned.
 
-### Before treating chaos numbers as calibrated
+### Still to do
 
-1. Scale the sample toward the plan's 50,000 positions, drawn from across each month rather than its
-   first hours, and at more nodes. At about 3 s per position this is roughly 40 hours of compute here.
-2. Re-fit the clock multipliers on that sample, the under-5-second bucket above all.
-3. Tune `CHAOS_THRESHOLD` and `SAFE_TOL` against how flagged moves read in real reviews.
-4. Then decide whether to make Maia-2 the default model.
+1. Tune `CHAOS_THRESHOLD` and `SAFE_TOL` against how flagged moves read in real game reviews.
+2. Run an openings-only pass over a much larger set of games to fill the trap atlas.
+3. If other time controls matter, repeat the clock fit for them; the multipliers here are for 1+0.

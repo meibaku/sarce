@@ -5,6 +5,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- Chaos Lens M4 full-size validation: **GO** on 50,516 positions from twelve months of Lichess 1+0 games
+  (held-out Brier 0.155 against 0.218 and 0.335 for the baselines); clock multipliers re-fit from it
 - `validate_chaos.py` saves samples as it goes (`chaos_samples.partial.csv`), so a long run can be interrupted
 - `HUMAN_MODEL=auto` is the new default: the validated Maia-2 model where its optional package is installed,
   the heuristic elsewhere
