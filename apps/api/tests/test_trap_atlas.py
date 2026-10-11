@@ -76,3 +76,20 @@ class TestApi:
         sql = MIGRATION.read_text(encoding="utf-8")
         assert "alter table public.trap_atlas enable row level security" in sql
         assert "create policy" in sql
+
+
+class TestShippedAtlas:
+    """The committed atlas file must stay loadable by `build_trap_atlas --load`."""
+
+    def test_data_file_rows_have_the_table_columns(self):
+        import json
+
+        path = Path(__file__).resolve().parents[1] / "data" / "trap_atlas.json"
+        traps = json.loads(path.read_text(encoding="utf-8"))["traps"]
+        columns = {
+            "fen_key", "fen", "band", "speed", "frequency", "common_reply_uci",
+            "common_reply_share", "ep_loss", "best_reply_uci", "p_fail", "stake", "eco",
+        }
+        assert traps and all(set(trap) == columns for trap in traps)
+        assert all(trap["ep_loss"] >= 0.20 and trap["frequency"] >= 3 for trap in traps)
+        assert len({(t["fen_key"], t["band"], t["speed"]) for t in traps}) == len(traps)

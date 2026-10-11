@@ -8,12 +8,16 @@ Usage:
 Reads the per-position samples written by scripts/validate_chaos.py, keeps positions
 where the most-played reply at a rating band loses at least 0.20 EP, and upserts them
 into `trap_atlas`. Run validate_chaos with a low --min-ply so opening positions repeat.
+
+    python -m scripts.build_trap_atlas --samples a.csv b.csv --export data/trap_atlas.json
+    python -m scripts.build_trap_atlas --load data/trap_atlas.json   # needs the database
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
+import json
 import sys
 from pathlib import Path
 
@@ -45,15 +49,28 @@ def load_observations(path: Path) -> list[dict]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build the trap atlas from validation samples")
-    parser.add_argument("--samples", type=Path, default=DEFAULT_SAMPLES)
+    parser.add_argument("--samples", type=Path, nargs="+", default=[DEFAULT_SAMPLES], help="One or more sampler CSVs")
     parser.add_argument("--dry-run", action="store_true", help="Print the result without writing")
+    parser.add_argument("--export", type=Path, help="Write the traps to this JSON file instead of the database")
+    parser.add_argument("--load", type=Path, help="Load traps from a JSON file (e.g. data/trap_atlas.json) into the database")
     args = parser.parse_args()
 
-    traps = build_traps(load_observations(args.samples))
-    print(f"{len(traps)} traps found in {args.samples}")
+    if args.load:
+        traps = json.loads(args.load.read_text(encoding="utf-8"))["traps"]
+        print(f"Loaded {TrapAtlasService().save(traps)} rows from {args.load} into trap_atlas.")
+        return
+
+    observations = [obs for path in args.samples for obs in load_observations(path)]
+    traps = build_traps(observations)
+    print(f"{len(traps)} traps found in {len(observations)} observations")
     for trap in traps[:10]:
         print(f"  band {trap['band']}: {trap['common_reply_uci']} loses {trap['ep_loss']:.2f} EP ({trap['frequency']}x) {trap['fen']}")
-    if not args.dry_run and traps:
+    if args.export:
+        payload = {"observations": len(observations), "traps": traps}
+        args.export.parent.mkdir(parents=True, exist_ok=True)
+        args.export.write_text(json.dumps(payload, indent=1) + "\n", encoding="utf-8")
+        print(f"Wrote {len(traps)} traps to {args.export}")
+    elif not args.dry_run and traps:
         print(f"Saved {TrapAtlasService().save(traps)} rows to trap_atlas.")
 
 
