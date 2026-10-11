@@ -34,7 +34,8 @@ class GameStore:
                 "time_control": parsed["time_control"],
                 "result": parsed["result"],
                 "user_color": parsed["user_color"],
-                "analysis_status": "pending",
+                # No analysis_status here: new rows default to 'pending', and re-importing
+                # a game must not reset one that has already been analysed.
             }
 
             sb.table("games").upsert(row, on_conflict="external_id").execute()
@@ -57,7 +58,7 @@ class GameStore:
                 "user_id": user_id,
                 "chess_com_username": username,
                 "source": source,
-                "analysis_status": "pending",
+                # analysis_status is left to the column default; see store_imported_games.
             }
             sb.table("games").upsert(row, on_conflict="external_id").execute()
         return len(parsed_games)

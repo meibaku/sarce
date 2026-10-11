@@ -71,6 +71,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - `next` 15.5.19 → 15.5.27 and other in-range updates via `npm audit fix` (clears a critical advisory)
 
 ### Fixed
+- Re-importing games no longer resets `analysis_status` to `pending` (it had left all 2,644 local games
+  pending with only three analysed); new games still start as `pending` through the column default
 - Chaos validation go / no-go compared a clock-adjusted model against an unadjusted heuristic baseline,
   so it could report GO when both were the same predictor; the baseline is now adjusted the same way
 - Chaos review: the who-falls-for-it bars had no height; the dashboard chaos panel no longer disappears
