@@ -115,6 +115,29 @@ Remaining limits:
 - `CHAOS_THRESHOLD` and `SAFE_TOL` are still the starting values. Validation shows `P_fail` is
   calibrated; it does not say where "worth flagging" begins.
 
+### Trap atlas — openings pass over twelve months
+
+An openings-only pass (plies 2–11, 50,000 nodes, `maia2-0.11-blitz`) over the same twelve monthly
+samples used for the full run. This is an interim build: the pass was about 40% through its 20,500 games when it was taken, and the file will be refreshed when it finishes.
+
+| | |
+| --- | --- |
+| Games | 8,195 one-minute games |
+| Positions | 73,765 |
+| Traps | **104** positions where the most-played reply at a rating band loses at least 0.20 EP and the position was seen at least 3 times |
+| Seen 5 or more times | 24 |
+
+The traps are in `apps/api/data/trap_atlas.json`. Loading them needs the database:
+
+```bash
+cd apps/api
+python -m scripts.build_trap_atlas --load data/trap_atlas.json
+```
+
+How far to trust it: most traps were seen only three or four times at their band, so each one is a
+lead worth looking at, not a measured rate. The 1400–1999 bands hold most of them because that is
+where the sample has the most games. The atlas keeps positions and counts only — no players or games.
+
 ### Pilot — 10 Oct 2026
 
 The plan's first step: about 2,000 positions to check the pipeline before deciding the full sample.

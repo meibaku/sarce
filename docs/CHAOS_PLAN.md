@@ -13,7 +13,7 @@
 | M3 Lenses | Merged | Thresholds are provisional until M4 |
 | M4 Validation | **GO** on the full 50,516-position run across twelve months (Maia-2); clock multipliers applied | Tune the verdict thresholds |
 | M5 Review UI | Merged; checked against one analysed game | Check against your own games; Tal in chaos terms |
-| M6 Trap atlas | Merged; builder run on 1,343 real games found 2 thin traps (not saved) | A much larger sample, then `build_trap_atlas` against your database |
+| M6 Trap atlas | Merged; 104 traps from 8,195 real games in `apps/api/data/trap_atlas.json` | Load it into your database (`build_trap_atlas --load`); most traps rest on 3–4 sightings |
 | M7 Intention tagger | v1 merged, off by default | Tune thresholds; "sharpness" part of squeeze |
 | M8 Sharing + scouting | Not started | Needs the multi-user decision first |
 
