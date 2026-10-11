@@ -5,7 +5,7 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
-- Trap atlas data: `apps/api/data/trap_atlas.json` — 104 traps from 8,195 real one-minute games
+- Trap atlas data: `apps/api/data/trap_atlas.json` — 277 traps from 18,122 real one-minute games
   (openings pass, Maia-2); `build_trap_atlas.py` gains `--export`, `--load` and multiple `--samples`
 - Chaos Lens M4 full-size validation: **GO** on 50,516 positions from twelve months of Lichess 1+0 games
   (held-out Brier 0.155 against 0.218 and 0.335 for the baselines); clock multipliers re-fit from it
