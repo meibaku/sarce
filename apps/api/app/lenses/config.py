@@ -21,10 +21,10 @@ CHEAP_CHAOS_MIN_COST = 0.10
 # Elo used for the headline score when the opponent's rating is unknown.
 DEFAULT_ELO = 1600
 
-# Clock multipliers for P_fail, per human model, from the M4 validation
-# (docs/VALIDATION.md, 10 Oct 2026: 4,820 positions from four months of Lichess 1+0 games,
-# fit on the tuning set). Keyed by the clock of the player who has to reply. A model with
-# no entry is left unadjusted. Provisional: the "<5s" bucket rests on 384 positions.
+# Clock multipliers for P_fail, per human model, from the full M4 validation
+# (docs/VALIDATION.md, 11 Oct 2026: 50,516 positions from twelve months of Lichess 1+0 games,
+# fit on the 34,429-position tuning set). Keyed by the clock of the player who has to reply.
+# A model with no entry is left unadjusted. Fit on one-minute games only.
 CLOCK_MULTIPLIERS = {
-    "maia2": {"<5s": 1.2849, "5-15s": 1.0285, "15s+": 0.9113},
+    "maia2": {"<5s": 1.2294, "5-15s": 0.9797, "15s+": 0.9317},
 }
