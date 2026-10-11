@@ -118,14 +118,14 @@ Remaining limits:
 ### Trap atlas — openings pass over twelve months
 
 An openings-only pass (plies 2–11, 50,000 nodes, `maia2-0.11-blitz`) over the same twelve monthly
-samples used for the full run. This is an interim build: the pass was about 40% through its 20,500 games when it was taken, and the file will be refreshed when it finishes.
+samples used for the full run. The pass is complete for three of the four worker batches; the fourth was stopped part-way (about 4,850 of its 7,000 games) and its positions so far are included.
 
 | | |
 | --- | --- |
-| Games | 8,195 one-minute games |
-| Positions | 73,765 |
-| Traps | **104** positions where the most-played reply at a rating band loses at least 0.20 EP and the position was seen at least 3 times |
-| Seen 5 or more times | 24 |
+| Games | 18,122 one-minute games |
+| Positions | 162,983 |
+| Traps | **277** positions where the most-played reply at a rating band loses at least 0.20 EP and the position was seen at least 3 times |
+| Seen 5 or more times | 77 |
 
 The traps are in `apps/api/data/trap_atlas.json`. Loading them needs the database:
 
@@ -134,7 +134,9 @@ cd apps/api
 python -m scripts.build_trap_atlas --load data/trap_atlas.json
 ```
 
-How far to trust it: most traps were seen only three or four times at their band, so each one is a
+How far to trust it: most traps were seen only three or four times at their band (77 were seen five
+or more times, 8 ten or more), and the search was shallow (50,000 nodes), so a trap whose cost is close
+to the 0.20 EP threshold may be search noise. Each one is a
 lead worth looking at, not a measured rate. The 1400–1999 bands hold most of them because that is
 where the sample has the most games. The atlas keeps positions and counts only — no players or games.
 
