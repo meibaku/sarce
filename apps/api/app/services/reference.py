@@ -68,7 +68,7 @@ class ReferenceService:
             .maybe_single()
             .execute()
         )
-        if not player_res.data:
+        if not player_res or not player_res.data:
             return self._empty_benchmark(TAL_PLAYER_NAME)
 
         bench_res = (
@@ -78,7 +78,7 @@ class ReferenceService:
             .maybe_single()
             .execute()
         )
-        if not bench_res.data:
+        if not bench_res or not bench_res.data:
             return {
                 "playerName": player_res.data["name"],
                 "brilliantPct": 0,
@@ -151,7 +151,7 @@ class ReferenceService:
             .maybe_single()
             .execute()
         )
-        if player_res.data:
+        if player_res and player_res.data:
             pid = player_res.data["id"]
             sb.table("reference_players").update(
                 {"games_sampled": analyzed, "benchmark_status": "complete"}

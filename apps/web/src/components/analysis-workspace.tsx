@@ -167,22 +167,28 @@ export function AnalysisWorkspace({
   const [intentState, setIntentState] = useState<Record<string, IntentState>>({});
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [mostChaotic, setMostChaotic] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     async function loadGames() {
-      const res = await listGames(username ?? undefined).catch(() => ({
+      const res = await listGames(username ?? undefined, mostChaotic).catch(() => ({
         games: [],
       }));
       if (cancelled) return;
       setGames(res.games);
-      setSelectedGameId((current) => current ?? res.games[0]?.id ?? null);
+      // Keep the open game while it is still listed; otherwise open the new list's top game.
+      setSelectedGameId((current) =>
+        current && res.games.some((g) => g.id === current)
+          ? current
+          : (res.games[0]?.id ?? null),
+      );
     }
     loadGames();
     return () => {
       cancelled = true;
     };
-  }, [username, refreshToken]);
+  }, [username, refreshToken, mostChaotic]);
 
   useEffect(() => {
     let cancelled = false;
@@ -313,9 +319,23 @@ export function AnalysisWorkspace({
 
       <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
         <div className="rounded-lg border border-white/10 bg-surface p-3">
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-3 flex items-center justify-between gap-2">
             <h3 className="text-sm font-medium text-foreground/80">Games</h3>
-            <span className="text-xs text-foreground/45">{games.length}</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                aria-pressed={mostChaotic}
+                onClick={() => setMostChaotic((value) => !value)}
+                className={`rounded border px-2 py-0.5 text-xs transition ${
+                  mostChaotic
+                    ? "border-accent/60 bg-accent/10 text-accent"
+                    : "border-white/15 text-foreground/60 hover:border-white/30"
+                }`}
+              >
+                {mostChaotic ? "Most chaotic" : "Newest"}
+              </button>
+              <span className="text-xs text-foreground/45">{games.length}</span>
+            </div>
           </div>
           <div className="space-y-2">
             {games.slice(0, 12).map((game) => (
@@ -338,14 +358,21 @@ export function AnalysisWorkspace({
                   </span>
                 </div>
                 <div className="mt-1 flex items-center justify-between gap-3 text-xs text-foreground/50">
-                  <span>{game.analysisStatus}</span>
+                  {game.chaosPeak != null ? (
+                    <span>
+                      peak {Math.round(game.chaosPeak * 100)}% · {game.realChaos} real ·{" "}
+                      {game.cheapChaos} cheap
+                    </span>
+                  ) : (
+                    <span>{game.analysisStatus}</span>
+                  )}
                   <span>{fmtPct(game.brilliantPct)}</span>
                 </div>
               </button>
             ))}
             {games.length === 0 && (
               <div className="rounded-md border border-white/10 bg-background/40 px-3 py-6 text-sm text-foreground/50">
-                No imported games
+                {mostChaotic ? "No chaos-analysed games yet" : "No imported games"}
               </div>
             )}
           </div>

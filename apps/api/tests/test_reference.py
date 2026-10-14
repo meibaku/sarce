@@ -26,3 +26,30 @@ class TestInferPlayerColor:
         game.headers["Black"] = "Tal, Mikhail N."
 
         assert infer_player_color(game, "Mikhail Tal") == "black"
+
+
+class _NoRowQuery:
+    """supabase-py's maybe_single().execute() returns None, not an empty result, for no row."""
+
+    def __init__(self, results):
+        self._results = results
+
+    def __getattr__(self, _name):
+        return lambda *args, **kwargs: self
+
+    def execute(self):
+        return self._results.pop(0)
+
+
+class TestTalBenchmark:
+    def test_player_without_a_benchmark_row_is_pending_not_a_crash(self, monkeypatch):
+        import asyncio
+        import types
+
+        from app.services import reference
+
+        player = types.SimpleNamespace(data={"id": "p1", "name": "Mikhail Tal", "games_sampled": 0})
+        query = _NoRowQuery([player, None])
+        monkeypatch.setattr(reference, "get_supabase", lambda: types.SimpleNamespace(table=lambda _t: query))
+        bench = asyncio.run(reference.ReferenceService().get_tal_benchmark())
+        assert bench["status"] == "pending" and bench["playerName"] == "Mikhail Tal"

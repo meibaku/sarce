@@ -61,6 +61,11 @@ export interface GameSummary {
   analysisStatus: "pending" | "processing" | "complete" | "failed";
   brilliantPct: number | null;
   totalMoves: number | null;
+  /** Present only when listed most-chaotic-first. */
+  chaosPeak?: number;
+  realChaos?: number;
+  cheapChaos?: number;
+  calculatedRisk?: number;
 }
 
 export interface AnalyzedMove {

@@ -121,7 +121,7 @@ class AnalysisService:
         """
         sb = get_supabase()
         res = sb.table("games").select("*").eq("id", game_id).maybe_single().execute()
-        if not res.data:
+        if not res or not res.data:
             return None
 
         row = res.data

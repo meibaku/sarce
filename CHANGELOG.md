@@ -5,6 +5,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- Game list "Most chaotic" toggle: `GET /games?chaos=true` returns chaos-analysed games ordered by
+  peak chaos score with real / cheap / calculated counts, so the games most worth reviewing come first
 - Trap atlas data: `apps/api/data/trap_atlas.json` — 277 traps from 18,122 real one-minute games
   (openings pass, Maia-2); `build_trap_atlas.py` gains `--export`, `--load` and multiple `--samples`
 - Chaos Lens M4 full-size validation: **GO** on 50,516 positions from twelve months of Lichess 1+0 games
@@ -71,6 +73,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - `next` 15.5.19 → 15.5.27 and other in-range updates via `npm audit fix` (clears a critical advisory)
 
 ### Fixed
+- The dashboard no longer goes blank when a Tal player row exists without a benchmark: `maybe_single()`
+  lookups now handle supabase-py returning `None` for no row (Tal benchmark, baseline, game lookups)
 - Re-importing games no longer resets `analysis_status` to `pending` (it had left all 2,644 local games
   pending with only three analysed); new games still start as `pending` through the column default
 - Chaos validation go / no-go compared a clock-adjusted model against an unadjusted heuristic baseline,

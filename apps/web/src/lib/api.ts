@@ -78,12 +78,13 @@ export async function getTalBenchmark() {
   );
 }
 
-export async function listGames(username?: string) {
-  const params = username
-    ? `?username=${encodeURIComponent(username)}`
-    : "";
+export async function listGames(username?: string, mostChaotic = false) {
+  const params = new URLSearchParams();
+  if (username) params.set("username", username);
+  if (mostChaotic) params.set("chaos", "true");
+  const query = params.toString();
   return fetchApi<{ games: import("@/types/chess").GameSummary[] }>(
-    `/games${params}`,
+    `/games${query ? `?${query}` : ""}`,
   );
 }
 
