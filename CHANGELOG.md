@@ -5,6 +5,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- Game list "Most chaotic" toggle: `GET /games?chaos=true` returns chaos-analysed games ordered by
+  peak chaos score with real / cheap / calculated counts, so the games most worth reviewing come first
 - Trap atlas data: `apps/api/data/trap_atlas.json` — 277 traps from 18,122 real one-minute games
   (openings pass, Maia-2); `build_trap_atlas.py` gains `--export`, `--load` and multiple `--samples`
 - Chaos Lens M4 full-size validation: **GO** on 50,516 positions from twelve months of Lichess 1+0 games
