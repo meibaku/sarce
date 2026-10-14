@@ -9,6 +9,8 @@ replies; move classification stays rule-based.
 
 from __future__ import annotations
 
+import threading
+
 import chess
 
 from app.config import settings
@@ -29,6 +31,8 @@ class Maia2HumanModel(HumanModel):
         self._model = None
         self._prepared = None
         self._inference = None
+        # Analyses run in worker threads and share one instance, so loading is guarded.
+        self._load_lock = threading.Lock()
 
     @property
     def version(self) -> str:
@@ -36,16 +40,21 @@ class Maia2HumanModel(HumanModel):
         return f"0.11-{settings.maia2_model_type}"
 
     def _load(self) -> None:
-        try:
-            from maia2 import inference, model
-        except ImportError as exc:
-            raise RuntimeError(INSTALL_HINT) from exc
-        # Downloads the checksum-pinned weights on first use (about 280 MB), then caches them.
-        self._model = model.from_pretrained(
-            type=settings.maia2_model_type, device="cpu", save_root=settings.maia2_cache_dir
-        )
-        self._prepared = inference.prepare()
-        self._inference = inference
+        with self._load_lock:
+            if self._model is not None:  # another thread finished loading while we waited
+                return
+            try:
+                from maia2 import inference, model
+            except ImportError as exc:
+                raise RuntimeError(INSTALL_HINT) from exc
+            # Downloads the checksum-pinned weights on first use (about 280 MB), then caches them.
+            loaded = model.from_pretrained(
+                type=settings.maia2_model_type, device="cpu", save_root=settings.maia2_cache_dir
+            )
+            self._prepared = inference.prepare()
+            self._inference = inference
+            # Set last: `move_probs` treats a non-None model as fully ready.
+            self._model = loaded
 
     def move_probs(self, board: chess.Board, elo: int) -> dict[str, float]:
         legal = {move.uci() for move in board.legal_moves}
@@ -66,6 +75,7 @@ class Maia2HumanModel(HumanModel):
 
 
 _shared: dict[str, Maia2HumanModel] = {}
+_shared_lock = threading.Lock()
 
 
 def shared_maia2_model() -> Maia2HumanModel:
@@ -76,6 +86,7 @@ def shared_maia2_model() -> Maia2HumanModel:
     reload them for every game. Inference is read-only, so sharing the instance is safe.
     """
     model_type = settings.maia2_model_type
-    if model_type not in _shared:
-        _shared[model_type] = Maia2HumanModel()
-    return _shared[model_type]
+    with _shared_lock:
+        if model_type not in _shared:
+            _shared[model_type] = Maia2HumanModel()
+        return _shared[model_type]
