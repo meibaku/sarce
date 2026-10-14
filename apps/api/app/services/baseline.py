@@ -39,7 +39,7 @@ class BaselineService:
                 .maybe_single()
                 .execute()
             )
-            if res.data:
+            if res and res.data:
                 return self._format_baseline(res.data)
 
         if chess_com_username:
