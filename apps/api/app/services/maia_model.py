@@ -63,3 +63,19 @@ class Maia2HumanModel(HumanModel):
         if total <= 0:
             return {uci: 1.0 / len(legal) for uci in legal}
         return {uci: p / total for uci, p in probs.items()}
+
+
+_shared: dict[str, Maia2HumanModel] = {}
+
+
+def shared_maia2_model() -> Maia2HumanModel:
+    """
+    One instance per checkpoint type for the whole process.
+
+    Loading the weights takes seconds and a few hundred MB, so a batch of games must not
+    reload them for every game. Inference is read-only, so sharing the instance is safe.
+    """
+    model_type = settings.maia2_model_type
+    if model_type not in _shared:
+        _shared[model_type] = Maia2HumanModel()
+    return _shared[model_type]

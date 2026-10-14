@@ -41,6 +41,14 @@ class TestMaia2Adapter:
         assert isinstance(model, Maia2HumanModel)
         assert model.model_version == "maia2-0.11-blitz"
 
+    def test_registry_shares_one_loaded_model_across_games(self, monkeypatch):
+        monkeypatch.setattr("app.services.maia_model._shared", {})
+        calls = install_fake_maia2(monkeypatch, {"e2e4": 1.0})
+        for _game in range(3):
+            get_human_model("maia2").move_probs(chess.Board(), 1500)
+        assert get_human_model("maia2") is get_human_model("maia2")
+        assert calls["loads"] == 1
+
     def test_missing_package_gives_install_instructions(self, monkeypatch):
         monkeypatch.setitem(sys.modules, "maia2", None)
         with pytest.raises(RuntimeError, match="requirements-maia.txt"):

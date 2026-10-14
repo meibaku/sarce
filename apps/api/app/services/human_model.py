@@ -160,7 +160,7 @@ def get_human_model(name: str) -> HumanModel:
         return HeuristicHumanModel()
     if name == "maia2":
         # Imported here so the optional adapter is only touched when selected.
-        from app.services.maia_model import Maia2HumanModel
+        from app.services.maia_model import shared_maia2_model
 
-        return Maia2HumanModel()
+        return shared_maia2_model()
     raise ValueError(f"Unknown human model {name!r}; available: ['auto', 'heuristic', 'maia2']")
