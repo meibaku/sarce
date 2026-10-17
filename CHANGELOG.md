@@ -5,6 +5,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- v1.0 UI foundation: light design tokens and IBM Plex, UI primitives (buttons, cards, move badges, Brilliant
+  gauge, chaos strip, rook mark, icons), the app shell (desktop header, phone header and tab bar) and the Home
+  view, previewed with the handoff sample data at `/preview/home`. The old dashboard keeps its dark theme via
+  `.theme-lab` until its features move
 - v1.0 design handoff intake: brand assets (7a rook mark, wordmark, app icon) in `apps/web/public/brand`,
   favicons, web manifest, and `docs/DESIGN.md` with the tokens, component rules and copy mapping
 - Trap atlas data: `apps/api/data/trap_atlas.json` — 277 traps from 18,122 real one-minute games

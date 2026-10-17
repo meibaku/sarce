@@ -25,7 +25,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
+    <div className="theme-lab min-h-screen"><main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
       <p className="text-xs uppercase tracking-[0.2em] text-accent-muted">Chess style analysis</p>
       <h1 className="mt-1 text-2xl font-semibold tracking-tight">Sign in to Sarce</h1>
 
@@ -61,6 +61,6 @@ export default function LoginPage() {
       <Link href="/" className="mt-6 text-sm text-foreground/50 hover:text-foreground/80">
         Back to the dashboard
       </Link>
-    </main>
+    </main></div>
   );
 }

@@ -1,31 +1,119 @@
 @import "tailwindcss";
 
+/*
+ * v1.0 design tokens (docs/DESIGN.md). Light only for now; no red, no shadows.
+ * Utilities read the variables, so `.theme-lab` below can re-point them for the
+ * legacy dashboard until every part of it has moved to the new screens.
+ */
 :root {
+  --ink: #1a1f26;
+  --ink-2: #3c434e;
+  --muted: #59616d;
+  --faint: #69717d;
+  --line: #e2e5e9;
+  --line-2: #d8dce1;
+  --line-3: #c8ced5;
+  --hair: #f0f2f4;
+  --page: #fafbfc;
+  --panel: #f5f7fa;
+  --surface: #ffffff;
+  --accent: #2f5f9e;
+  --accent-hover: #284f85;
+  --accent-active: #22446f;
+  --accent-text: #2a5590;
+  --accent-tint: #eef3fa;
+  --accent-mid: #7096c4;
+  --sound: #2f7a55;
+  --checkin: #9a6420;
+  --board-dark: #eef1f5;
+  --press: #eef1f5;
+
+  /* Legacy names used by the old dashboard components. */
+  --background: var(--page);
+  --foreground: var(--ink);
+  --accent-muted: var(--muted);
+  --surface-elevated: var(--panel);
+  --brilliant: var(--accent);
+}
+
+/* The pre-v1 dashboard, kept at /lab while its features move to the new screens. */
+.theme-lab {
   --background: #0f1419;
   --foreground: #e7ecf3;
   --accent: #c9a227;
   --accent-muted: #8b7355;
   --surface: #1a2332;
   --surface-elevated: #243044;
-  --success: #4ade80;
-  --warning: #fbbf24;
-  --danger: #f87171;
   --brilliant: #a855f7;
+  background: var(--background);
+  color: var(--foreground);
 }
 
 @theme inline {
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-line-3: var(--line-3);
+  --color-hair: var(--hair);
+  --color-page: var(--page);
+  --color-panel: var(--panel);
+  --color-surface: var(--surface);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-text: var(--accent-text);
+  --color-accent-tint: var(--accent-tint);
+  --color-accent-mid: var(--accent-mid);
+  --color-sound: var(--sound);
+  --color-checkin: var(--checkin);
+  --color-board-dark: var(--board-dark);
+  --color-press: var(--press);
+  --color-fp-0: #f5f7fa;
+  --color-fp-1: #e6edf6;
+  --color-fp-2: #d3e0f0;
+  --color-fp-3: #b9cde6;
+  --color-fp-4: #97b4d8;
+  --color-fp-5: #7096c4;
+  --color-fp-6: #4f7ab0;
+  --color-fp-7: #2f5f9e;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-accent: var(--accent);
-  --color-surface: var(--surface);
+  --color-accent-muted: var(--accent-muted);
   --color-surface-elevated: var(--surface-elevated);
   --color-brilliant: var(--brilliant);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --font-sans: var(--font-plex-sans), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --ease-sarce: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  /* The handoff lays out on the browser default, not Tailwind's 1.5. */
+  line-height: normal;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Every interactive element shows the same focus ring. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
