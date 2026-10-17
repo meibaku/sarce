@@ -5,6 +5,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- v1.0 Review screen at `/games/{id}/review` (and the Review tab, which opens the latest game): moment chips,
+  the design board with accent rings and corner ticks, idea arcs, the intent note before the engine's mirror
+  line, "who falls for this", a two-move toggle and J / K / ← → / N / E shortcuts
 - v1.0 Review API: `GET /games/{id}/review` (every moment with its board position, squares that mattered,
   question, P_fail at 800–2400, engine mirror line, plan outcome from the tagger and the saved note) and
   `PUT /games/{id}/moves/{ply}/intent`; migration `move_annotations` (RLS)

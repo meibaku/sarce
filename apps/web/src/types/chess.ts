@@ -344,3 +344,32 @@ export interface SummaryApi {
   styleReadVersion: string;
   lichessUrl: string | null;
 }
+
+export type IntentType = "calculated" | "intuitive" | "bluff";
+
+/** GET /games/{id}/review (app/services/review.py). */
+export interface ReviewMoment extends HomeMoment {
+  label: string;
+  clock: string | null;
+  kind: "set" | "survived" | "missed";
+  ask: string;
+  hot: string[];
+  pFail: number[] | null;
+  fallsLine: string;
+  mirror: string;
+  plan: string | null;
+  intent: { type: IntentType | null; note: string } | null;
+}
+
+export interface ReviewApi {
+  gameId: string;
+  opponent: string | null;
+  result: "win" | "loss" | "draw" | null;
+  userColor: "white" | "black" | null;
+  timeControl: string | null;
+  calibrated: boolean;
+  initialFen: string;
+  positions: { ply: number; san: string; uci: string; fen: string }[];
+  moments: ReviewMoment[];
+  ideas: { family: string; startPly: number; endPly: number; verdict: "worked" | "refuted" | "fizzled"; isPivot: boolean }[];
+}

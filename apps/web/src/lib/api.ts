@@ -161,3 +161,18 @@ export async function setGameFelt(gameId: string, answer: import("@/types/chess"
     body: JSON.stringify({ answer }),
   });
 }
+
+export async function getGameReview(gameId: string) {
+  return fetchApi<import("@/types/chess").ReviewApi>(`/games/${gameId}/review`);
+}
+
+export async function saveMoveIntent(
+  gameId: string,
+  ply: number,
+  intent: { type: import("@/types/chess").IntentType | null; note: string },
+) {
+  return fetchApi<{ type: string | null; note: string }>(`/games/${gameId}/moves/${ply}/intent`, {
+    method: "PUT",
+    body: JSON.stringify(intent),
+  });
+}
