@@ -418,3 +418,18 @@ export interface SacrificeRow {
   held: boolean;
   note: string | null;
 }
+
+/** GET /users/recap (app/services/recap.py). */
+export interface RecapApi {
+  week: string;
+  games: number;
+  feltLikeYou: number;
+  bars: { gameId: string; styleRead: number; you: boolean }[];
+  brilliant: { pct: number | null; spread: number | null; games: number; change: number | null };
+  best: { gameId: string; ply: number; label: string } | null;
+  lastFocus: { id: string; label: string | null; line: string | null } | null;
+  streakWeeks: number;
+  focuses: { id: string; label: string }[];
+}
+
+export type FocusKind = "weekly" | "today";

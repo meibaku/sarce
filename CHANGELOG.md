@@ -5,6 +5,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- v1.0 Weekly recap at `/recap` (`GET /users/recap`): the week's games as bars, Brilliant with the change from
+  the week before, best moment, how last week's focus went, and picking next week's focus. `GET`/`PUT
+  /users/focus` stores the weekly focus and today's intention (migration `user_focus`, RLS)
 - v1.0 Sacrifice library at `/library` (`GET /users/sacrifices`): every genuine offer newest first, with what
   was given, Held / Didn't hold, your note, a link into Review and a share-card PNG. A stricter "real offer"
   rule (piece left to a cheaper attacker, or undefended) now feeds the library and the Home, Summary and You

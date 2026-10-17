@@ -186,3 +186,23 @@ export async function getSacrifices(username?: string) {
   const params = username ? `?username=${encodeURIComponent(username)}` : "";
   return fetchApi<{ sacrifices: import("@/types/chess").SacrificeRow[] }>(`/users/sacrifices${params}`);
 }
+
+export async function getRecap() {
+  return fetchApi<import("@/types/chess").RecapApi>(`/users/recap`);
+}
+
+export async function getFocus() {
+  return fetchApi<{
+    weekly: string | null;
+    today: string | null;
+    focuses: Record<string, string>;
+    intents: Record<string, string>;
+  }>(`/users/focus`);
+}
+
+export async function setFocus(kind: import("@/types/chess").FocusKind, value: string) {
+  return fetchApi<{ kind: string; value: string; label: string }>(`/users/focus`, {
+    method: "PUT",
+    body: JSON.stringify({ kind, value }),
+  });
+}
