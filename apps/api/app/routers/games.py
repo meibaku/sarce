@@ -10,6 +10,7 @@ from app.services.job_queue import JobQueue, queue_analysis
 from app.services.lens_service import LensService
 from app.services.lichess import LichessClient, normalize_lichess_username, parse_lichess_game
 from app.services.pgn_parser import mainline_positions
+from app.services.review import INTENTS, ReviewService
 from app.services.summary import FELT, SummaryService
 from app.services.tagger import TaggerService
 
@@ -20,6 +21,7 @@ game_store = GameStore()
 analysis_service = AnalysisService()
 lens_service = LensService()
 summary_service = SummaryService()
+review_service = ReviewService()
 tagger_service = TaggerService()
 
 
@@ -402,3 +404,27 @@ async def set_game_felt(game_id: str, body: FeltRequest):
         raise HTTPException(status_code=422, detail=f"answer must be one of {list(FELT)}")
     summary_service.set_felt(game_id, body.answer)
     return {"gameId": game_id, "felt": body.answer}
+
+
+class IntentRequest(BaseModel):
+    type: str | None = Field(None, description="calculated | intuitive | bluff")
+    note: str = Field("", max_length=2000)
+
+
+@router.get("/{game_id}/review")
+async def get_game_review(game_id: str):
+    """Review: every moment with its board, squares that mattered, P_fail ladder, mirror line and note."""
+    require_game_access(game_id)
+    data = review_service.review(game_id)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Game not found")
+    return data
+
+
+@router.put("/{game_id}/moves/{ply}/intent")
+async def save_move_intent(game_id: str, ply: int, body: IntentRequest):
+    """Saves the player's intent note for a moment (one per move; editing replaces it)."""
+    require_game_access(game_id)
+    if body.type is not None and body.type not in INTENTS:
+        raise HTTPException(status_code=422, detail=f"type must be one of {list(INTENTS)}")
+    return review_service.save_intent(game_id, ply, body.type, body.note, current_user_id())

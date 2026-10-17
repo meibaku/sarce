@@ -97,8 +97,8 @@ def moment_line(glyph: str, move: dict, lenses: dict) -> str:
     return "A speculative try"
 
 
-def pick_moments(moves: list[dict], lens_by_ply: dict[int, dict]) -> list[dict]:
-    """Up to three moments, the strongest first by chaos score, returned in game order."""
+def pick_moments(moves: list[dict], lens_by_ply: dict[int, dict], limit: int = MAX_MOMENTS) -> list[dict]:
+    """Up to `limit` moments (three on Home and Summary), the strongest by chaos score, in game order."""
     found = []
     for move in moves:
         lenses = lens_by_ply.get(move["ply"], {})
@@ -109,7 +109,7 @@ def pick_moments(moves: list[dict], lens_by_ply: dict[int, dict]) -> list[dict]:
         weight += 1.0 if glyph == "!!" else 0.0
         found.append((weight, move, glyph, lenses))
     found.sort(key=lambda item: -item[0])
-    chosen = sorted(found[:MAX_MOMENTS], key=lambda item: item[1]["ply"])
+    chosen = sorted(found[:limit], key=lambda item: item[1]["ply"])
     return [
         {"ply": move["ply"], "san": move.get("san"), "glyph": glyph, "line": moment_line(glyph, move, lenses)}
         for _, move, glyph, lenses in chosen

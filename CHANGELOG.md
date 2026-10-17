@@ -5,6 +5,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- v1.0 Review API: `GET /games/{id}/review` (every moment with its board position, squares that mattered,
+  question, P_fail at 800–2400, engine mirror line, plan outcome from the tagger and the saved note) and
+  `PUT /games/{id}/moves/{ply}/intent`; migration `move_annotations` (RLS)
 - v1.0 After-game Summary at `/games/{id}`: headline, outcome banner, this game's Brilliant % against the
   rolling window, up to three moments with the clock, and the one question "Did this game feel like you?"
   (`GET /games/{id}/summary`, `POST /games/{id}/felt`, migration `games.felt_like_you`). Style read is a
