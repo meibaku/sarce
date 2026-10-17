@@ -5,6 +5,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- v1.0 Home on real data: `GET /users/home` (latest game style read, chaos strip and moments; Brilliant %
+  over the last 64 games with its standard error; streak, sound : unsound and traps survived, hidden under
+  5 games). The new Home replaces `/`; the old dashboard moves to `/lab`
 - v1.0 UI foundation: light design tokens and IBM Plex, UI primitives (buttons, cards, move badges, Brilliant
   gauge, chaos strip, rook mark, icons), the app shell (desktop header, phone header and tab bar) and the Home
   view, previewed with the handoff sample data at `/preview/home`. The old dashboard keeps its dark theme via

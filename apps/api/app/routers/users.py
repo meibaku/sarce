@@ -1,12 +1,24 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
-from app.deps import current_user_id
+from app.deps import current_user_id, scoped_user_id
 
 from app.services.chess_com import normalize_chess_com_username
+from app.services.home import HomeService
 from app.services.lens_service import LensService
 
 router = APIRouter()
 lens_service = LensService()
+home_service = HomeService()
+
+
+@router.get("/home")
+async def get_home(username: str | None = Query(None), user_id: str | None = Query(None)):
+    """Home screen: the latest game's style read and moments, and the Brilliant card."""
+    name = normalize_chess_com_username(username) if username else None
+    try:
+        return home_service.home(scoped_user_id(user_id, username), name)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/{username}/chaos-summary")

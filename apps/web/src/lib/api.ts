@@ -145,3 +145,8 @@ export async function deleteScoutingReport(id: string) {
 }
 
 export { LOCAL_USER_ID };
+
+export async function getHome(username?: string) {
+  const params = username ? `?username=${encodeURIComponent(username)}` : "";
+  return fetchApi<import("@/types/chess").HomeApi>(`/users/home${params}`);
+}

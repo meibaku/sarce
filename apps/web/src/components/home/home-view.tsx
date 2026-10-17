@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { PrimaryLink, TextLink } from "@/components/ui/buttons";
-import { AutoGrid, Card, SectionLabel, Stat } from "@/components/ui/card";
+import { AutoGrid, Card, Dashed, SectionLabel, Stat, UncalibratedBadge } from "@/components/ui/card";
 import { ChaosStrip } from "@/components/ui/chaos-strip";
 import { SarceMark } from "@/components/ui/icons";
 import { StyleGauge } from "@/components/ui/style-gauge";
@@ -16,6 +16,8 @@ export interface HomeData {
   latest: {
     when: string;
     meta: string;
+    /** False for time controls the chaos numbers are not validated on. */
+    calibrated?: boolean;
     styleRead: string;
     chaos: number[];
     highlight: number | null;
@@ -25,15 +27,15 @@ export interface HomeData {
   };
   brilliant: {
     window: string;
-    value: number;
-    spread?: number;
+    value: number | null;
+    spread?: number | null;
     trend?: string;
     goalLo: number;
     goalHi: number;
     gapLine: string;
-    streak: string;
-    soundRatio: string;
-    trapsSurvived: string;
+    streak: string | null;
+    soundRatio: string | null;
+    trapsSurvived: string | null;
   };
   doors: { kicker: string; accentKicker?: boolean; title: string; action: string; href: string }[];
   quietUntil?: string;
@@ -75,12 +77,15 @@ export function HomeView({ data }: { data: HomeData }) {
               <SarceMark height={44} framed />
             </span>
             <span className="rounded-[5px] border border-line-2 px-[7px] py-px">{latest.meta}</span>
+            {latest.calibrated === false && <UncalibratedBadge />}
           </div>
           <span className="text-[22px] leading-[1.3] font-medium text-pretty">{latest.styleRead}</span>
           <ChaosStrip values={latest.chaos} highlight={latest.highlight} />
           <div className="flex flex-wrap items-center gap-[18px]">
             <PrimaryLink href={latest.summaryHref}>
-              See the {latest.momentCount} moment{latest.momentCount === 1 ? "" : "s"}
+              {latest.momentCount === 0
+                ? "Open the game"
+                : `See the ${latest.momentCount === 1 ? "moment" : `${latest.momentCount} moments`}`}
             </PrimaryLink>
             <TextLink href={latest.reviewHref}>Full review</TextLink>
           </div>
@@ -91,6 +96,10 @@ export function HomeView({ data }: { data: HomeData }) {
             <SectionLabel>Brilliant · {brilliant.window}</SectionLabel>
             {quiet ? (
               <span className="font-mono text-[20px] text-faint">hidden this week</span>
+            ) : brilliant.value == null ? (
+              <span className="font-mono text-[32px]">
+                <Dashed />
+              </span>
             ) : (
               <>
                 <span className="font-mono text-[32px] text-accent-text">{brilliant.value.toFixed(1)}%</span>
@@ -110,7 +119,7 @@ export function HomeView({ data }: { data: HomeData }) {
                 value={brilliant.value}
                 goalLo={brilliant.goalLo}
                 goalHi={brilliant.goalHi}
-                spread={brilliant.spread}
+                spread={brilliant.spread ?? undefined}
               />
               <span className="text-[13px] leading-[1.5] text-muted">{brilliant.gapLine}</span>
               <div className="flex flex-wrap gap-5 border-t border-hair pt-[10px]">

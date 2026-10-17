@@ -283,3 +283,42 @@ export interface ScoutingReport {
     ideasPerGame: Record<string, number>;
   };
 }
+
+/** GET /users/home (app/services/home.py). Numbers are null when they rest on fewer than 5 games. */
+export interface HomeMoment {
+  ply: number;
+  san: string | null;
+  glyph: "!!" | "!?" | "✓" | "?!" | "?";
+  line: string;
+}
+
+export interface HomeApi {
+  latest: {
+    gameId: string;
+    playedAt: string | null;
+    opponent: string | null;
+    result: "win" | "loss" | "draw" | null;
+    userColor: "white" | "black" | null;
+    timeControl: string | null;
+    calibrated: boolean;
+    styleRead: string;
+    chaos: number[];
+    highlight: number | null;
+    moments: HomeMoment[];
+  } | null;
+  brilliant: {
+    pct: number | null;
+    spread: number | null;
+    games: number;
+    goalLo: number;
+    goalHi: number;
+    gapLine?: string;
+  };
+  stats: {
+    streak: number | null;
+    real: number;
+    cheap: number;
+    soundRatio: number | null;
+    trapsSurvived: number | null;
+  } | null;
+}
