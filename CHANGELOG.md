@@ -5,6 +5,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- v1.0 You API: `GET /users/you` (Brilliant % with its 12-week trend and formula counts, the style
+  fingerprint of 5 traits × 12 weeks with a one-line reading, your values on the reference axes, the
+  bullet / blitz / rapid split, the hardest problem faced and the sacrifice counts)
 - v1.0 Review screen at `/games/{id}/review` (and the Review tab, which opens the latest game): moment chips,
   the design board with accent rings and corner ticks, idea arcs, the intent note before the engine's mirror
   line, "who falls for this", a two-move toggle and J / K / ← → / N / E shortcuts
