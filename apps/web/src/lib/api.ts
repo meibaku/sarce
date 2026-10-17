@@ -176,3 +176,8 @@ export async function saveMoveIntent(
     body: JSON.stringify(intent),
   });
 }
+
+export async function getYou(username?: string) {
+  const params = username ? `?username=${encodeURIComponent(username)}` : "";
+  return fetchApi<import("@/types/chess").YouApi>(`/users/you${params}`);
+}

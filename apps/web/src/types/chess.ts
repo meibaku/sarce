@@ -373,3 +373,34 @@ export interface ReviewApi {
   moments: ReviewMoment[];
   ideas: { family: string; startPly: number; endPly: number; verdict: "worked" | "refuted" | "fizzled"; isPivot: boolean }[];
 }
+
+/** GET /users/you (app/services/you.py). Nulls rest on fewer than 5 games. */
+export interface YouApi {
+  games: number;
+  goalLo: number;
+  goalHi: number;
+  brilliant: {
+    pct: number | null;
+    spread: number | null;
+    weekly: (number | null)[];
+    from: number | null;
+    brilliantMoves: number;
+    yourMoves: number;
+  } | null;
+  fingerprint: { traits: string[]; levels: number[][]; sentence: string } | null;
+  axes: { name: string; you: number | null }[] | null;
+  timeControls: { class: "bullet" | "blitz" | "rapid"; games: number; pct: number | null; spread: number | null; calibrated: boolean }[];
+  survival: {
+    gameId: string;
+    ply: number;
+    opponent: string | null;
+    moveNumber: number;
+    survived: boolean;
+    reply: string | null;
+    pFail: number | null;
+    clock: string | null;
+    timeControl: string | null;
+    trapsSurvived: number | null;
+  } | null;
+  sacrifices: { played: number; held: number; withNotes: number } | null;
+}

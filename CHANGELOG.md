@@ -5,6 +5,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- v1.0 You screen at `/you`: Brilliant with its 12-week trend and tap-for-formula, the style fingerprint,
+  your reference axes (reference players shown as not yet scored, no ranking), the time-control split with
+  uncalibrated badges, the survival story and the door to the sacrifice library
 - v1.0 You API: `GET /users/you` (Brilliant % with its 12-week trend and formula counts, the style
   fingerprint of 5 traits × 12 weeks with a one-line reading, your values on the reference axes, the
   bullet / blitz / rapid split, the hardest problem faced and the sacrifice counts)

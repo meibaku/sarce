@@ -21,11 +21,13 @@ const NAV: { id: IconName; label: string; href: string }[] = [
 
 /** Which nav item a route belongs to: Summary sits under Review, Library and Recap under You. */
 export function activeNav(pathname: string): IconName | null {
-  if (pathname === "/" || pathname.startsWith("/onboarding") || pathname.startsWith("/preview/home")) return "home";
-  if (pathname.startsWith("/games") || pathname.startsWith("/review") || pathname.startsWith("/preview/summary") || pathname.startsWith("/preview/review")) return "review";
-  if (pathname.startsWith("/you") || pathname.startsWith("/library") || pathname.startsWith("/recap")) return "you";
-  if (pathname.startsWith("/train")) return "train";
-  if (pathname.startsWith("/play")) return "play";
+  const path = pathname.replace(/^\/preview/, "") || "/";
+  const under = (...prefixes: string[]) => prefixes.some((p) => path.startsWith(p));
+  if (path === "/" || under("/home", "/onboarding")) return "home";
+  if (under("/games", "/review", "/summary")) return "review";
+  if (under("/you", "/library", "/recap")) return "you";
+  if (under("/train")) return "train";
+  if (under("/play")) return "play";
   return null;
 }
 
