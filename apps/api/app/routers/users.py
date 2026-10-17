@@ -5,12 +5,14 @@ from app.deps import current_user_id, scoped_user_id
 from app.services.chess_com import normalize_chess_com_username
 from app.services.home import HomeService
 from app.services.lens_service import LensService
+from app.services.library import LibraryService
 from app.services.you import YouService
 
 router = APIRouter()
 lens_service = LensService()
 home_service = HomeService()
 you_service = YouService()
+library_service = LibraryService()
 
 
 @router.get("/home")
@@ -29,6 +31,16 @@ async def get_you(username: str | None = Query(None), user_id: str | None = Quer
     name = normalize_chess_com_username(username) if username else None
     try:
         return you_service.you(scoped_user_id(user_id, username), name)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get("/sacrifices")
+async def get_sacrifices(username: str | None = Query(None), user_id: str | None = Query(None)):
+    """Sacrifice library: every sacrifice played, newest first, with what was offered and the note."""
+    name = normalize_chess_com_username(username) if username else None
+    try:
+        return {"sacrifices": library_service.sacrifices(scoped_user_id(user_id, username), name)}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 

@@ -404,3 +404,17 @@ export interface YouApi {
   } | null;
   sacrifices: { played: number; held: number; withNotes: number } | null;
 }
+
+/** GET /users/sacrifices (app/services/library.py). */
+export interface SacrificeRow {
+  gameId: string;
+  ply: number;
+  label: string;
+  glyph: "!!" | "!?" | "✓" | "?!" | "?";
+  type: string;
+  material: number;
+  opponent: string | null;
+  playedAt: string | null;
+  held: boolean;
+  note: string | null;
+}

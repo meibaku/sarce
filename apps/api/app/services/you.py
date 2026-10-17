@@ -19,7 +19,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 from app.db.supabase import get_supabase
-from app.services.home import HELD, MIN_GAMES, PAGE, HomeService, format_time_control, window_brilliant
+from app.services.home import MIN_GAMES, PAGE, HomeService, format_time_control, window_brilliant
 from app.services.summary import clock_label
 
 WEEKS = 12
@@ -121,14 +121,13 @@ class YouService:
             return {"games": 0, **goal, "brilliant": None, "fingerprint": None, "axes": None, "timeControls": [], "survival": None, "sacrifices": None}
 
         ids = [g["id"] for g in games]
-        moves, lens, notes = [], [], []
+        moves, lens = [], []
         for start in range(0, len(ids), CHUNK):
             part = ids[start : start + CHUNK]
             moves += self._paged(lambda: sb.table("game_moves").select("game_id, ply, san, quality, signals, is_brilliant").in_("game_id", part).order("id"))
             lens += self._paged(
                 lambda: sb.table("move_lens_scores").select("game_id, ply, lens, score, verdict, details").in_("game_id", part).in_("lens", ["chaos", "survival"]).order("game_move_id")
             )
-            notes += sb.table("move_annotations").select("game_id, ply").in_("game_id", part).execute().data or []
 
         by_game_moves: dict[str, list[dict]] = {}
         for m in moves:
@@ -159,8 +158,6 @@ class YouService:
         brilliant_moves = sum(1 for m in moves if m.get("is_brilliant"))
         first_pct = next((p for p in weekly_pct if p is not None), None)
 
-        sacrifices = [m for m in moves if "sacrifice" in (m.get("signals") or [])]
-        noted = {(n["game_id"], n["ply"]) for n in notes}
         return {
             "games": len(games),
             **goal,
@@ -185,12 +182,16 @@ class YouService:
             ],
             "timeControls": self._time_controls(games),
             "survival": self._survival(games, by_game_lens, by_game_moves, end, overall["Defence"], enough),
-            "sacrifices": {
-                "played": len(sacrifices),
-                "held": sum(1 for m in sacrifices if m.get("quality") in HELD),
-                "withNotes": sum(1 for m in sacrifices if (m["game_id"], m["ply"]) in noted),
-            },
+            "sacrifices": self._sacrifices(user_id, username),
         }
+
+    @staticmethod
+    def _sacrifices(user_id: str | None, username: str | None) -> dict:
+        """Same genuine-offer rule as the library, so the two screens agree."""
+        from app.services.library import LibraryService
+
+        rows = LibraryService().sacrifices(user_id, username, limit=10_000)
+        return {"played": len(rows), "held": sum(r["held"] for r in rows), "withNotes": sum(1 for r in rows if r["note"])}
 
     @staticmethod
     def _pct(value: float | None, enough: bool) -> int | None:

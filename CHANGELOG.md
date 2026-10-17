@@ -5,6 +5,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- v1.0 Sacrifice library at `/library` (`GET /users/sacrifices`): every genuine offer newest first, with what
+  was given, Held / Didn't hold, your note, a link into Review and a share-card PNG. A stricter "real offer"
+  rule (piece left to a cheaper attacker, or undefended) now feeds the library and the Home, Summary and You
+  sacrifice counts; Phase 1's broader `sacrifice` signal is unchanged
 - v1.0 You screen at `/you`: Brilliant with its 12-week trend and tap-for-formula, the style fingerprint,
   your reference axes (reference players shown as not yet scored, no ranking), the time-control split with
   uncalibrated badges, the survival story and the door to the sacrifice library

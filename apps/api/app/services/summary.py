@@ -103,7 +103,10 @@ class SummaryService:
 
         verdicts = [r["verdict"] for r in lens_rows if r["lens"] == "chaos"]
         real, calculated, cheap = (verdicts.count(v) for v in ("real_chaos", "calculated_risk", "cheap_chaos"))
-        sacrifices = [m for m in moves if "sacrifice" in (m.get("signals") or [])]
+        from app.services.library import real_sacrifice_plies
+
+        offered = real_sacrifice_plies(game.get("pgn") or "", [m["ply"] for m in moves if "sacrifice" in (m.get("signals") or [])])
+        sacrifices = [m for m in moves if m["ply"] in offered]
         held = sum(1 for m in sacrifices if m.get("quality") in HELD)
         clocks = game.get("clocks_ms") or []
         moments = pick_moments(moves, lens_by_ply)

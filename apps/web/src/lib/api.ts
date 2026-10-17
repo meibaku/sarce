@@ -181,3 +181,8 @@ export async function getYou(username?: string) {
   const params = username ? `?username=${encodeURIComponent(username)}` : "";
   return fetchApi<import("@/types/chess").YouApi>(`/users/you${params}`);
 }
+
+export async function getSacrifices(username?: string) {
+  const params = username ? `?username=${encodeURIComponent(username)}` : "";
+  return fetchApi<{ sacrifices: import("@/types/chess").SacrificeRow[] }>(`/users/sacrifices${params}`);
+}

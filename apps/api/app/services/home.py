@@ -239,6 +239,8 @@ class HomeService:
         return {"goalLo": lo, "goalHi": hi}
 
     def _latest(self, game: dict, lens_rows: list[dict]) -> dict:
+        from app.services.library import real_sacrifice_plies
+
         moves = (
             get_supabase()
             .table("game_moves")
@@ -255,7 +257,10 @@ class HomeService:
         user_plies = sorted({row["ply"] for row in lens_rows if row["lens"] == "chaos"})
         chaos = [float((lens_by_ply[p].get("chaos") or {}).get("score") or 0) for p in user_plies]
         brilliant_ply = next((m["ply"] for m in moves if m.get("is_brilliant")), None)
-        sacrifices = [m for m in moves if "sacrifice" in (m.get("signals") or [])]
+        pgn = (get_supabase().table("games").select("pgn").eq("id", game["id"]).limit(1).execute().data or [{}])[0].get("pgn") or ""
+        tagged = [m["ply"] for m in moves if "sacrifice" in (m.get("signals") or [])]
+        offered = real_sacrifice_plies(pgn, tagged)
+        sacrifices = [m for m in moves if m["ply"] in offered]
         real = sum(1 for p in user_plies if (lens_by_ply[p].get("chaos") or {}).get("verdict") == "real_chaos")
         return {
             "gameId": game["id"],
