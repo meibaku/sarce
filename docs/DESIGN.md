@@ -2,7 +2,11 @@
 
 The UI follows the v1.0 design handoff. The full handoff (HTML prototypes, screenshots, motion and mascot
 reference) lives in the private `meibaku/sarce-private` repo under `design/handoff-v1/`; this page keeps
-the rules the code depends on. North star: **"Did this game feel like you, not did you play like the engine?"**
+the rules the code depends on.
+
+**Status:** being implemented screen by screen (see `CHANGELOG.md`). Until a screen ships, the pre-v1
+dashboard (moving to `/lab`) keeps its old dark palette; the tokens below take effect with the foundation
+change. North star: **"Did this game feel like you, not did you play like the engine?"**
 
 ## Product rules the UI enforces
 
@@ -65,5 +69,7 @@ turns it into a fade.
 
 ## Assets
 
-`apps/web/public/brand/`: the 7a "open break" rook mark (ink and white), the wordmark and the app icon
-(white mark on an accent tile). `src/app/icon.png` and `apple-icon.png` are the favicons.
+`apps/web/public/brand/`: the 7a "open break" rook mark (ink and white) and the app icon (white mark on
+an accent tile). The app sets "sarce" as live IBM Plex text beside the mark; the handoff's wordmark SVG is not
+shipped because its lettering is live text that changes font where Plex is missing. Outline it before any
+brand use outside the app. `src/app/icon.png` and `apple-icon.png` are the favicons.
