@@ -150,3 +150,14 @@ export async function getHome(username?: string) {
   const params = username ? `?username=${encodeURIComponent(username)}` : "";
   return fetchApi<import("@/types/chess").HomeApi>(`/users/home${params}`);
 }
+
+export async function getGameSummary(gameId: string) {
+  return fetchApi<import("@/types/chess").SummaryApi>(`/games/${gameId}/summary`);
+}
+
+export async function setGameFelt(gameId: string, answer: import("@/types/chess").FeltAnswer) {
+  return fetchApi<{ gameId: string; felt: string }>(`/games/${gameId}/felt`, {
+    method: "POST",
+    body: JSON.stringify({ answer }),
+  });
+}

@@ -17,12 +17,14 @@ export interface StyleGaugeProps {
   /** Rolling average, drawn as a grey marker. */
   average?: number;
   label?: string;
+  /** The small Summary variant: 8px track, no scale labels. */
+  compact?: boolean;
 }
 
-export function StyleGauge({ value, goalLo, goalHi, spread, average, label = "Brilliant %" }: StyleGaugeProps) {
+export function StyleGauge({ value, goalLo, goalHi, spread, average, label = "Brilliant %", compact = false }: StyleGaugeProps) {
   return (
     <div className="flex flex-col gap-3" role="img" aria-label={`${label}: ${value == null ? "not enough games yet" : `${value.toFixed(1)}%`}, goal ${goalLo}–${goalHi}%`}>
-      <div className="relative box-content h-[10px] rounded-[6px] border-[1.5px] border-ink">
+      <div className={`relative box-content border-[1.5px] border-ink ${compact ? "h-2 rounded-[5px]" : "h-[10px] rounded-[6px]"}`}>
         <div
           className="absolute top-[-1.5px] bottom-[-1.5px] border-[1.5px] border-accent bg-accent-tint"
           style={{ left: pct(goalLo), width: pct(goalHi - goalLo) }}
@@ -39,15 +41,18 @@ export function StyleGauge({ value, goalLo, goalHi, spread, average, label = "Br
         )}
         {average != null && (
           <div
-            className="absolute top-[-5px] bottom-[-5px] -ml-px w-[2px] rounded-[1px] bg-line-3"
+            className={`absolute -ml-px w-[2px] bg-line-3 ${compact ? "top-[-4px] bottom-[-4px]" : "top-[-5px] bottom-[-5px] rounded-[1px]"}`}
             style={{ left: pct(average) }}
           />
         )}
         {value != null && (
-          <div className="absolute top-[-7px] bottom-[-7px] -ml-px w-[2px] rounded-[1px] bg-ink" style={{ left: pct(value) }} />
+          <div
+            className={`absolute -ml-px w-[2px] bg-ink ${compact ? "top-[-6px] bottom-[-6px]" : "top-[-7px] bottom-[-7px] rounded-[1px]"}`}
+            style={{ left: pct(value) }}
+          />
         )}
       </div>
-      <div className="relative h-3 font-mono text-[10px] text-muted">
+      <div className={`relative h-3 font-mono text-[10px] text-muted ${compact ? "hidden" : ""}`}>
         <span className="absolute left-0">0</span>
         <span className="absolute -translate-x-1/2" style={{ left: pct(goalLo) }}>
           {goalLo}

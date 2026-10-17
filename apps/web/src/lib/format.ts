@@ -30,8 +30,7 @@ export function gameMeta(game: {
     .join(" · ");
 }
 
-/** "19. Rxe5" for White, "23. …Qh4" for Black, from a ply number (1 = White's first move). */
+/** "19. Rxe5" for White, "23. …Qh4" for Black, from a 0-based ply over the whole game. */
 export function moveLabel(ply: number, san: string | null): string {
-  const number = Math.ceil(ply / 2);
-  return `${number}. ${ply % 2 === 0 ? "…" : ""}${san ?? ""}`;
+  return `${Math.floor(ply / 2) + 1}. ${ply % 2 === 1 ? "…" : ""}${san ?? ""}`;
 }

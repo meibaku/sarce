@@ -322,3 +322,25 @@ export interface HomeApi {
     trapsSurvived: number | null;
   } | null;
 }
+
+export type FeltAnswer = "yes" | "partly" | "no";
+
+/** GET /games/{id}/summary (app/services/summary.py). */
+export interface SummaryApi {
+  gameId: string;
+  opponent: string | null;
+  result: "win" | "loss" | "draw" | null;
+  userColor: "white" | "black" | null;
+  timeControl: string | null;
+  calibrated: boolean;
+  moves: number;
+  headline: string;
+  outcome: { kicker: string; accent: boolean; text: string };
+  brilliant: { pct: number; count: number; of: number; rolling: number | null; goalLo: number; goalHi: number };
+  moments: (HomeMoment & { clock: string | null })[];
+  analysing: boolean;
+  felt: FeltAnswer | null;
+  styleRead: number;
+  styleReadVersion: string;
+  lichessUrl: string | null;
+}

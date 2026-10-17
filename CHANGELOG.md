@@ -5,6 +5,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- v1.0 After-game Summary at `/games/{id}`: headline, outcome banner, this game's Brilliant % against the
+  rolling window, up to three moments with the clock, and the one question "Did this game feel like you?"
+  (`GET /games/{id}/summary`, `POST /games/{id}/felt`, migration `games.felt_like_you`). Style read is a
+  provisional v0 score
 - v1.0 Home on real data: `GET /users/home` (latest game style read, chaos strip and moments; Brilliant %
   over the last 64 games with its standard error; streak, sound : unsound and traps survived, hidden under
   5 games). The new Home replaces `/`; the old dashboard moves to `/lab`
