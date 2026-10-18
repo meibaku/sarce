@@ -108,7 +108,7 @@ class YouService:
 
         games = scoped(
             sb.table("games")
-            .select("id, played_at, opponent, time_control, clocks_ms, game_analyses(brilliant_pct, total_moves)")
+            .select("id, played_at, opponent, time_control, clocks_ms, game_analyses(brilliant_pct, total_moves, style_vector)")
             .eq("analysis_status", "complete")
             .order("played_at", desc=True)
             .limit(500)
@@ -157,6 +157,9 @@ class YouService:
         weekly_pct = [window_brilliant(weekly_games[w])["pct"] if len(weekly_games[w]) else None for w in range(WEEKS)]
         brilliant_moves = sum(1 for m in moves if m.get("is_brilliant"))
         first_pct = next((p for p in weekly_pct if p is not None), None)
+        # The first week scored under the find-rate rule (ADR 0004), for the trend's "style v2" marker.
+        v2_weeks = [w for w in range(WEEKS) if any(((g.get("analysis") or {}).get("style_vector") or {}).get("version") == 2 for g in weekly_games[w])]
+        schema = 2 if any(((g.get("analysis") or {}).get("style_vector") or {}).get("version") == 2 for g in games) else 1
 
         return {
             "games": len(games),
@@ -168,7 +171,10 @@ class YouService:
                 "from": first_pct if enough else None,
                 "brilliantMoves": brilliant_moves,
                 "yourMoves": len(moves),
+                "ruleChangedWeek": v2_weeks[0] if v2_weeks and v2_weeks[0] > 0 else None,
+                "findRateRule": schema == 2,
             },
+            "styleSchema": schema,
             "fingerprint": {
                 "traits": TRAITS,
                 "levels": [heat_levels(rows[t]) for t in TRAITS],

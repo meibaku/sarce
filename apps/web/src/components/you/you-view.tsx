@@ -15,7 +15,18 @@ import type { YouApi } from "@/types/chess";
 const FP = ["#f5f7fa", "#e6edf6", "#d3e0f0", "#b9cde6", "#97b4d8", "#7096c4", "#4f7ab0", "#2f5f9e"];
 const REFS = ["Tal", "Shirov", "Morphy"];
 
-function TrendChart({ weekly, goalLo, goalHi }: { weekly: (number | null)[]; goalLo: number; goalHi: number }) {
+function TrendChart({
+  weekly,
+  goalLo,
+  goalHi,
+  changedWeek,
+}: {
+  weekly: (number | null)[];
+  goalLo: number;
+  goalHi: number;
+  /** Week the Brilliant definition changed (ADR 0004): a dashed "style v2" marker. */
+  changedWeek?: number | null;
+}) {
   // Same frame as the handoff: the goal band at y 12–36, so 1% = 6 units.
   const scale = 24 / Math.max(1, goalHi - goalLo);
   const y = (pct: number) => 36 - (pct - goalLo) * scale;
@@ -28,6 +39,22 @@ function TrendChart({ weekly, goalLo, goalHi }: { weekly: (number | null)[]; goa
       <rect x="0" y="12" width="300" height="24" fill="var(--accent-tint)" stroke="var(--accent)" strokeWidth="1.25" />
       {points.length > 1 && (
         <polyline points={points.join(" ")} fill="none" stroke="var(--ink)" strokeWidth="1.75" strokeLinejoin="round" strokeLinecap="round" />
+      )}
+      {changedWeek != null && (
+        <>
+          <line
+            x1={(changedWeek / Math.max(1, weekly.length - 1)) * 300}
+            x2={(changedWeek / Math.max(1, weekly.length - 1)) * 300}
+            y1="2"
+            y2="78"
+            stroke="var(--ink)"
+            strokeWidth="1"
+            strokeDasharray="3 3"
+          />
+          <text x={(changedWeek / Math.max(1, weekly.length - 1)) * 300 + 4} y="8" fontFamily="var(--font-plex-mono)" fontSize="9" fill="var(--muted)">
+            style v2
+          </text>
+        </>
       )}
       {last && <circle cx={last[0]} cy={last[1]} r="3.5" fill="var(--ink)" />}
       {points.length < 2 && (
@@ -52,7 +79,9 @@ export function YouView({ data }: { data: YouApi }) {
     <>
       <div className="flex flex-wrap items-baseline gap-3">
         <h1 className="text-[22px] font-medium">You, as a player</h1>
-        <span className="font-mono text-[11px] text-muted">{data.games} games · style schema v1 · thresholds v0</span>
+        <span className="font-mono text-[11px] text-muted">
+          {data.games} games · style schema v{data.styleSchema ?? 1} · thresholds v0
+        </span>
       </div>
 
       <AutoGrid min={360}>
@@ -75,12 +104,13 @@ export function YouView({ data }: { data: YouApi }) {
             )}
             {b?.from != null && <span className="font-mono text-[12px] text-faint">from {b.from.toFixed(1)}% in 12 weeks</span>}
           </div>
-          <TrendChart weekly={b?.weekly ?? []} goalLo={data.goalLo} goalHi={data.goalHi} />
+          <TrendChart weekly={b?.weekly ?? []} goalLo={data.goalLo} goalHi={data.goalHi} changedWeek={b?.ruleChangedWeek} />
           {explain && b && (
             <div className="rounded-[6px] bg-panel px-3 py-[10px] font-mono text-[12px] leading-[1.6] text-ink-2">
               {b.brilliantMoves} brilliant ÷ {b.yourMoves.toLocaleString()} your moves = {b.pct?.toFixed(1)}%
               <br />
               brilliant = sacrifice · within 0.3 of best · not already winning · not forced
+              {b.findRateRule ? " · found by ≤20% at your rating" : ""}
             </div>
           )}
           <span className="text-[12px] text-muted">Tap the number to see how it&apos;s counted.</span>

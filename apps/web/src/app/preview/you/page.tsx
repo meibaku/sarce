@@ -10,7 +10,8 @@ const SAMPLE: YouApi = {
   games: 64,
   goalLo: 6,
   goalHi: 10,
-  brilliant: { pct: 4.1, spread: 1.2, weekly: [1.67, 2, 1.33, 2.5, 3, 2.67, 3.67, 3.33, 4.17, 3.83, 4.5, 4.67], from: 2.8, brilliantMoves: 44, yourMoves: 1072 },
+  brilliant: { pct: 4.1, spread: 1.2, weekly: [1.67, 2, 1.33, 2.5, 3, 2.67, 3.67, 3.33, 4.17, 3.83, 4.5, 4.67], from: 2.8, brilliantMoves: 44, yourMoves: 1072, ruleChangedWeek: 5, findRateRule: true },
+  styleSchema: 1,
   fingerprint: {
     traits: ["Sacrifice", "Chaos", "Calm", "Initiative", "Defence"],
     levels: [

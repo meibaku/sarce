@@ -117,6 +117,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Phase 3 redefined: move intent narratives + personal chess journal
 
 ### Changed
+- Brilliant also means hard to find (ADR 0004): after the human-model pass, a Brilliant move that players at
+  the opponent's rating find more than 20% of the time becomes "best"; the game's vector becomes version 2
+  (`brilliantRule: find-rate-20`). `scripts/backfill_brilliant_find_rate.py` applies it to analysed games;
+  the You trend marks the week the definition changed
 - CI and the philosophy check now run on pushes and PRs for `staging` as well as `main`
 - `main` ruleset config targets `refs/heads/main` instead of the default branch
 - `next` 15.5.19 → 15.5.27 and other in-range updates via `npm audit fix` (clears a critical advisory)

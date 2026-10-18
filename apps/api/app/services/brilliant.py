@@ -22,6 +22,17 @@ PIECE_VALUES = {
 MIN_BRILLIANT_SACRIFICE_VALUE = PIECE_VALUES[chess.KNIGHT]
 MAX_BRILLIANT_EVAL_LOSS = 0.25
 
+# ADR 0004: a Brilliant move must also be hard to find — players at the relevant rating play it at
+# most this often (human model probability of the played move).
+FIND_RATE_MAX = 0.20
+
+
+def hard_to_find(probs: dict[str, float] | None, move_uci: str) -> bool | None:
+    """True/False for the find-rate clause; None when there is no human-model data to judge by."""
+    if not probs:
+        return None
+    return probs.get(move_uci, 0.0) <= FIND_RATE_MAX
+
 
 def piece_value(piece: chess.Piece | None) -> int:
     """Return simple material value for a piece."""

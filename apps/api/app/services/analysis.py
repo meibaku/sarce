@@ -16,6 +16,7 @@ import chess.pgn
 from app.config import settings
 from app.db.supabase import get_supabase
 from app.services.baseline import BaselineService, EMPTY_DISTRIBUTION
+from app.services.brilliant_find_rate import BrilliantFindRate
 from app.services.human_model import (
     SupabaseProbStore,
     cached_move_probs,
@@ -201,6 +202,11 @@ class AnalysisService:
                 game_id, row["pgn"], board, moves, user_color, classified,
                 row.get("opponent_rating"),
             )
+            # The find-rate rule may have changed Brilliant %, so refresh the baseline.
+            await self.baseline.recompute_baseline(
+                user_id=row.get("user_id"),
+                chess_com_username=row.get("chess_com_username"),
+            )
 
         return {
             "gameId": game_id,
@@ -208,6 +214,13 @@ class AnalysisService:
             "totalMoves": len(classified),
             "distribution": distribution,
         }
+
+    def _apply_find_rate(self, game_id: str) -> None:
+        """Brilliant find-rate rule (ADR 0004). Never fails the analysis."""
+        try:
+            BrilliantFindRate().apply(game_id)
+        except Exception:
+            logger.exception("Brilliant find-rate pass failed for game %s", game_id)
 
     def _tag_ideas(self, game_id: str) -> None:
         """Intention tagger pass. Never fails the analysis (docs/CHAOS_PLAN.md, rule 1)."""
@@ -249,6 +262,7 @@ class AnalysisService:
                     cached_move_probs(position, elo, model, prob_store)
             # Lenses read only what was just stored; no further engine work.
             LensService().score_game(game_id)
+            self._apply_find_rate(game_id)
             logger.info("Position evals for game %s: %s", game_id, stats)
             status = "failed" if stats["failed"] else "complete"
         except Exception:

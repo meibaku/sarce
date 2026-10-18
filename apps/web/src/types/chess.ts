@@ -386,7 +386,11 @@ export interface YouApi {
     from: number | null;
     brilliantMoves: number;
     yourMoves: number;
+    /** Week index (0–11) where the find-rate rule starts, for the "style v2" marker. */
+    ruleChangedWeek?: number | null;
+    findRateRule?: boolean;
   } | null;
+  styleSchema?: number;
   fingerprint: { traits: string[]; levels: number[][]; sentence: string } | null;
   axes: { name: string; you: number | null }[] | null;
   timeControls: { class: "bullet" | "blitz" | "rapid"; games: number; pct: number | null; spread: number | null; calibrated: boolean }[];
