@@ -5,6 +5,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- v1.0 motion, finished: the launch intro (trace then hello, once per session; a still for reduced motion), the
+  header mark tipping on navigation, and mascot toasts for a saved note, a set intention, the felt-like-you
+  answer, a changed goal and the quiet week
 - v1.0 mascot and motion: the handoff's rook mark and skits (dependency-free web components in
   `apps/web/src/lib/motion`) on Home, the Summary banner, Review, Train, Recap, Onboarding, Settings and every
   edge state; Settings → Playful mascot and Motion (follows `prefers-reduced-motion` by default) decide how

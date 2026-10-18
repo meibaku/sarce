@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { SettingsView } from "@/components/settings/settings-view";
 import { AppShell } from "@/components/shell/app-shell";
 import { resetMotionPrefs } from "@/components/ui/mascot";
+import { showToast } from "@/components/ui/toast";
 import { downloadJournal, getHome, getSettings, updateSettings } from "@/lib/api";
 import type { SettingsApi } from "@/types/chess";
 
@@ -32,6 +33,9 @@ export default function SettingsPage() {
               .then((saved) => {
                 resetMotionPrefs();
                 setData((d) => ({ ...saved, kept: d?.kept }));
+                if ("goalLo" in changes || "goalHi" in changes) showToast("Goal changed. Every gauge follows it.", "think");
+                else if ("quietUntil" in changes)
+                  showToast(changes.quietUntil ? "Quiet week on. Numbers are hidden." : "Quiet week over. Numbers are back.", changes.quietUntil ? "sleep" : "stretch");
               })
               .catch(() => {
                 setData(previous);

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { PrimaryLink, TextButton, TextLink } from "@/components/ui/buttons";
 import { AutoGrid, Card, SectionLabel, UncalibratedBadge } from "@/components/ui/card";
 import { Mascot, Skit } from "@/components/ui/mascot";
+import { showToast } from "@/components/ui/toast";
 import { MoveBadge } from "@/components/ui/move-badge";
 import { StyleGauge } from "@/components/ui/style-gauge";
 import { moveLabel } from "@/lib/format";
@@ -60,6 +61,7 @@ export function SummaryView({
     setFelt(value);
     setEditing(false);
     await onFelt(value);
+    showToast("Thanks. It's on your timeline.", "proud");
   }
 
   return (

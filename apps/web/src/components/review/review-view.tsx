@@ -6,6 +6,7 @@ import { PrimaryButton, TextButton, TextLink } from "@/components/ui/buttons";
 import { AutoGrid, SectionLabel, UncalibratedBadge } from "@/components/ui/card";
 import { Board } from "@/components/ui/board";
 import { Mascot } from "@/components/ui/mascot";
+import { showToast } from "@/components/ui/toast";
 import { MoveBadge } from "@/components/ui/move-badge";
 import type { IntentType, ReviewApi, ReviewMoment } from "@/types/chess";
 
@@ -98,6 +99,7 @@ export function ReviewView({
     await onSaveIntent(current.ply, intent);
     setMoments((ms) => ms.map((m, i) => (i === index ? { ...m, intent } : m)));
     setNote("saved");
+    showToast("Note saved. The engine's view is open now.", "nod");
   }
 
   const meta = [data.timeControl, data.result ? RESULT[data.result] : null, current ? `moment ${index + 1} of ${moments.length}` : null]
