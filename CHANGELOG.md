@@ -10,9 +10,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ### Added
 - Faster analysis: several games are analysed at once, one single-threaded Stockfish each (`ANALYSIS_WORKERS`,
   default one per core minus one; results stay deterministic); with the chaos pass on, Phase 1 reads the same
-  per-position search as the lenses instead of three depth-18 searches per move, and positions reached from a
-  decided position get a cheap uncached search; a Stockfish folder with several builds uses the fastest one the
-  CPU can run
+  per-position search as the lenses instead of three depth-18 searches per move; a Stockfish folder with
+  several builds uses the fastest one the CPU can run
 - Tal on the You axes in chaos terms: `scripts/process_tal_chaos.py` runs a local copy of the Tal corpus through
   the same classification and Chaos Lens as your games, in memory, and writes the four axis values to
   `data/reference_axes.json`; You draws a T dot per axis once that file exists, and says Tal isn't scored yet
