@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from app.config import settings
 from app.services import settings_store
 from app.services.sync import SyncService
 
@@ -34,7 +35,7 @@ def test_sync_fetches_saved_sources_then_analyses_newest():
     result, cc, li, analyse = run_sync(prefs, chess_com=3, lichess=2)
     assert result == {"fetched": 5, "analysed": 1, "errors": []}
     cc.assert_awaited_once() and li.assert_awaited_once()
-    analyse.assert_awaited_once_with(user_id="owner", limit=5)
+    analyse.assert_awaited_once_with(user_id="owner", limit=max(5, settings.workers))
 
 
 def test_sync_respects_the_sources_setting():

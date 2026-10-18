@@ -55,7 +55,8 @@ class SyncService:
                 except Exception as exc:
                     errors.append(f"Lichess: {exc}")
             store.record_sync(owner_id, datetime.now(timezone.utc).isoformat(), errors)
-            analysed = await analyse(user_id=owner_id, limit=ANALYSE_PER_SYNC)
+            # At least one game per analysis worker, so a sync keeps every engine busy.
+            analysed = await analyse(user_id=owner_id, limit=max(ANALYSE_PER_SYNC, settings.workers))
             return {"fetched": imported, "analysed": len(analysed or []), "errors": errors}
 
     async def _chess_com(self, username: str, owner_id: str) -> int:

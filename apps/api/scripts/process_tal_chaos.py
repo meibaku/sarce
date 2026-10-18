@@ -28,7 +28,7 @@ from app.lenses.registry import score_ply  # noqa: E402
 from app.services.human_model import cached_move_probs, elo_ladder, get_human_model  # noqa: E402
 from app.services.lens_service import build_ply_contexts, keys_after_each_ply  # noqa: E402
 from app.services.move_classifier import MoveClassifier  # noqa: E402
-from app.services.position_evals import evaluate_game_positions, iter_live_positions  # noqa: E402
+from app.services.position_evals import game_lines, iter_live_positions  # noqa: E402
 from app.services.reference import TAL_PLAYER_NAME, ReferenceService, infer_player_color  # noqa: E402
 from app.services.reference_axes import PATH, axis_values  # noqa: E402
 from app.services.stockfish import StockfishEngine  # noqa: E402
@@ -70,9 +70,9 @@ def score_game(pgn_text: str, classifier, engine, model) -> tuple[list[dict], li
         return None
     board, moves = game.board(), list(game.mainline_moves())
     color = infer_player_color(game, TAL_PLAYER_NAME)
-    classified = classifier.classify_game(board, moves, color)
     evals, probs = MemoryEvalStore(), MemoryProbStore()
-    evaluate_game_positions(board, moves, color, classified, engine, evals)
+    # One search per position, as in the app: classification reads the lines the lenses use.
+    classified = classifier.classify_game(board, moves, color, lines=game_lines(board, moves, engine, evals))
     rating = opponent_rating(game, color)
     for _ply, position in iter_live_positions(board, moves, color, classified):
         for elo in elo_ladder(rating):
@@ -89,21 +89,28 @@ def score_game(pgn_text: str, classifier, engine, model) -> tuple[list[dict], li
     return classified, lens
 
 
-def main(zip_path: Path, max_games: int) -> None:
+def _score_one(args) -> tuple[int, tuple[list[dict], list[dict]] | None, str | None]:
+    """One game with its own engine, so games run in parallel (one engine per worker)."""
+    i, pgn_text, model = args
+    try:
+        with StockfishEngine() as engine:
+            return i, score_game(pgn_text, MoveClassifier(), engine, model), None
+    except Exception as exc:  # one odd PGN must not stop the batch
+        return i, None, str(exc)
+
+
+def main(zip_path: Path, max_games: int, workers: int | None = None) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+
     pgns = ReferenceService._extract_pgns(zip_path, max_games)
     model = get_human_model(settings.human_model)
-    classifier = MoveClassifier()
     all_moves: list[dict] = []
     all_lens: list[dict] = []
     scored = 0
-    with StockfishEngine() as engine:
-        for i, pgn_text in enumerate(pgns, 1):
-            try:
-                result = score_game(pgn_text, classifier, engine, model)
-            except Exception as exc:  # one odd PGN must not stop the batch
-                print(f"game {i}: skipped ({exc})", flush=True)
-                continue
-            if result is None:
+    with ThreadPoolExecutor(workers or settings.workers) as pool:
+        for i, result, error in pool.map(_score_one, [(i, p, model) for i, p in enumerate(pgns, 1)]):
+            if error or result is None:
+                print(f"game {i}: skipped ({error or 'unreadable'})", flush=True)
                 continue
             moves, lens = result
             all_moves += moves
@@ -127,5 +134,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Score Tal's games on the You axes")
     parser.add_argument("--zip", type=Path, required=True, help="Local copy of pgnmentor's Tal.zip")
     parser.add_argument("--max-games", type=int, default=40)
+    parser.add_argument("--workers", type=int, default=None, help="Parallel engines (default: cores - 1)")
     args = parser.parse_args()
-    main(args.zip, args.max_games)
+    main(args.zip, args.max_games, args.workers)
