@@ -343,7 +343,18 @@ export interface SummaryApi {
   styleRead: number;
   styleReadVersion: string;
   lichessUrl: string | null;
+  /** This game's questions, already rotated and cut to the question budget. */
+  questions?: SummaryQuestion[];
+  /** How the game went against "Today I want to…", graded after the game. */
+  intention?: { intent: string; label: string; met: boolean | null; line: string } | null;
 }
+
+export type CheckinAnswer = "distracted" | "time_pressure" | "on_purpose" | "nothing";
+
+export type SummaryQuestion =
+  | { kind: "felt"; answer: FeltAnswer | null }
+  | { kind: "intent"; ply: number; label: string; ask: string; answered: boolean }
+  | { kind: "checkin"; ply: number; label: string; flagged: boolean; answer: CheckinAnswer | null };
 
 export type IntentType = "calculated" | "intuitive" | "bluff";
 

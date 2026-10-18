@@ -263,3 +263,10 @@ export async function downloadJournal() {
   link.click();
   URL.revokeObjectURL(url);
 }
+
+export async function answerCheckin(gameId: string, ply: number, answer: import("@/types/chess").CheckinAnswer, flagged: boolean) {
+  return fetchApi<{ gameId: string; ply: number; answer: string }>(`/games/${gameId}/checkin`, {
+    method: "POST",
+    body: JSON.stringify({ ply, answer, flagged }),
+  });
+}

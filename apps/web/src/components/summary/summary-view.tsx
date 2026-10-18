@@ -6,6 +6,7 @@ import { PrimaryLink, TextButton, TextLink } from "@/components/ui/buttons";
 import { AutoGrid, Card, SectionLabel, UncalibratedBadge } from "@/components/ui/card";
 import { Mascot, Skit } from "@/components/ui/mascot";
 import { showToast } from "@/components/ui/toast";
+import { CheckinQuestion, IntentionResult, IntentQuestion } from "@/components/summary/question-cards";
 import { MoveBadge } from "@/components/ui/move-badge";
 import { StyleGauge } from "@/components/ui/style-gauge";
 import { moveLabel } from "@/lib/format";
@@ -56,6 +57,8 @@ export function SummaryView({
     .filter(Boolean)
     .join(" · ");
   const b = data.brilliant;
+  // Rotated and budgeted by the API; older payloads fall back to the felt question alone.
+  const questions = data.questions ?? (askQuestion ? [{ kind: "felt" as const, answer: data.felt }] : []);
 
   async function answer(value: FeltAnswer) {
     setFelt(value);
@@ -104,6 +107,8 @@ export function SummaryView({
         </div>
       </section>
 
+      {data.intention && <IntentionResult intention={data.intention} />}
+
       <AutoGrid min={360} className="items-start">
         <div className="flex flex-col gap-3 md:gap-[18px]">
           <section className="flex flex-col gap-[10px] rounded-[8px] border border-line bg-surface px-[18px] py-4">
@@ -149,7 +154,10 @@ export function SummaryView({
           </section>
         </div>
 
-        {askQuestion && (
+        <div className="flex flex-col gap-3 md:gap-[18px]">
+          {questions.map((q) =>
+            q.kind === "felt" ? (
+              <div key="felt">
         <Card lead className="gap-3 !p-[18px]">
           <SectionLabel className="!text-accent-text">This game&apos;s one question</SectionLabel>
           <span className="text-[18px] leading-[1.3] font-medium">Did this game feel like you?</span>
@@ -186,7 +194,14 @@ export function SummaryView({
           )}
           <span className="font-mono text-[11px] text-faint">One question per game · the others rotate in</span>
         </Card>
-        )}
+              </div>
+            ) : q.kind === "intent" ? (
+              <IntentQuestion key="intent" gameId={data.gameId} q={q} />
+            ) : (
+              <CheckinQuestion key="checkin" gameId={data.gameId} q={q} />
+            ),
+          )}
+        </div>
       </AutoGrid>
 
       <div className="flex flex-wrap items-center gap-[18px]">

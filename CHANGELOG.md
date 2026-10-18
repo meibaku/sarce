@@ -5,6 +5,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- After-game question rotation and intention grading: Summary asks up to the question budget, rotating between
+  "Did this game feel like you?", the intent prompt on a moment and a random check-in ("Was something going on
+  here?", migration `game_answers`), and grades the game against today's intention first
 - v1.0 motion, finished: the launch intro (trace then hello, once per session; a still for reduced motion), the
   header mark tipping on navigation, and mascot toasts for a saved note, a set intention, the felt-like-you
   answer, a changed goal and the quiet week
