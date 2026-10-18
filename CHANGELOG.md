@@ -5,6 +5,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- v1.0 edge states and Onboarding: one shared `EdgeState` (no games, still analysing, analysis failed, too few
+  games, tracking paused, offline; 56px line icon, title, sentence, one action) now used on every screen;
+  `/states` previews them; `/onboarding` connects a username (imports and starts analysis), shows a real
+  moment from the last game, sets the style goal and explains the one-question rule
 - v1.0 Settings at `/settings` (`GET`/`PUT /users/settings`, `GET /users/journal`): style goal steppers with a
   live gauge, question budget, quiet week, sources, theme, model card, what Sarce keeps, journal export
   (Markdown) and mascot / motion preferences (migration `profiles.settings`). Home shows the quiet-week

@@ -28,22 +28,22 @@ export async function fetchApi<T>(
   return res.json() as Promise<T>;
 }
 
-export async function importChessComGames(username: string) {
+export async function importChessComGames(username: string, analyze = false) {
   return fetchApi<{ imported: number; message: string; username: string }>(
     "/games/import",
     {
       method: "POST",
-      body: JSON.stringify({ username, analyze: false }),
+      body: JSON.stringify({ username, analyze }),
     },
   );
 }
 
-export async function importLichessGames(username: string) {
+export async function importLichessGames(username: string, analyze = false) {
   return fetchApi<{ imported: number; message: string; username: string }>(
     "/games/import/lichess",
     {
       method: "POST",
-      body: JSON.stringify({ username, analyze: false }),
+      body: JSON.stringify({ username, analyze }),
     },
   );
 }

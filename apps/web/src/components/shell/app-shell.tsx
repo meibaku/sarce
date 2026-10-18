@@ -23,7 +23,7 @@ const NAV: { id: IconName; label: string; href: string }[] = [
 export function activeNav(pathname: string): IconName | null {
   const path = pathname.replace(/^\/preview/, "") || "/";
   const under = (...prefixes: string[]) => prefixes.some((p) => path.startsWith(p));
-  if (path === "/" || under("/home", "/onboarding")) return "home";
+  if (path === "/" || under("/home", "/onboarding", "/states")) return "home";
   if (under("/games", "/review", "/summary")) return "review";
   if (under("/you", "/library", "/recap")) return "you";
   if (under("/train")) return "train";
