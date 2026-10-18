@@ -102,7 +102,11 @@ def _score_one(args) -> tuple[int, tuple[list[dict], list[dict]] | None, str | N
 def main(zip_path: Path, max_games: int, workers: int | None = None) -> None:
     from concurrent.futures import ThreadPoolExecutor
 
-    pgns = ReferenceService._extract_pgns(zip_path, max_games)
+    # The corpus is in date order, so the first N games would all be the teenage Tal: take an
+    # evenly spaced sample across the whole career instead.
+    corpus = ReferenceService._extract_pgns(zip_path, 100_000)
+    step = max(1, len(corpus) // max_games)
+    pgns = corpus[::step][:max_games]
     model = get_human_model(settings.human_model)
     all_moves: list[dict] = []
     all_lens: list[dict] = []
@@ -123,7 +127,7 @@ def main(zip_path: Path, max_games: int, workers: int | None = None) -> None:
         "games": scored,
         "axes": axes,
         "model": model.name,
-        "source": "pgnmentor.com Tal corpus",
+        "source": f"pgnmentor.com Tal corpus, every {step}th of {len(corpus)} games",
         "computedAt": datetime.now(timezone.utc).date().isoformat(),
     }
     PATH.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")

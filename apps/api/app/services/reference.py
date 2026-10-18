@@ -182,7 +182,9 @@ class ReferenceService:
             for name in zf.namelist():
                 if not name.endswith(".pgn"):
                     continue
-                content = zf.read(name).decode("utf-8", errors="replace")
+                # pgnmentor files use CRLF; without normalising, the split below finds no game
+                # boundary and the whole corpus reads as its first game.
+                content = zf.read(name).decode("utf-8", errors="replace").replace("\r\n", "\n")
                 # Split multi-game PGN files
                 chunks = content.split("\n\n[")
                 for i, chunk in enumerate(chunks):
