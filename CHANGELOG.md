@@ -5,6 +5,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- v1.0 Train at `/train` (`GET /users/train`, `POST /users/train/answer`): one queue from your games (the
+  sacrifice you didn't play, defend your own sound sacrifice) and the trap atlas at your band, ordered by the
+  week's focus, with "How sure were you?" spacing (tomorrow / 3 days / 9 days; migration `drill_reviews`)
 - v1.0 Weekly recap at `/recap` (`GET /users/recap`): the week's games as bars, Brilliant with the change from
   the week before, best moment, how last week's focus went, and picking next week's focus. `GET`/`PUT
   /users/focus` stores the weekly focus and today's intention (migration `user_focus`, RLS)

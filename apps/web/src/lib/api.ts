@@ -206,3 +206,14 @@ export async function setFocus(kind: import("@/types/chess").FocusKind, value: s
     body: JSON.stringify({ kind, value }),
   });
 }
+
+export async function getTrain() {
+  return fetchApi<import("@/types/chess").TrainApi>(`/users/train`);
+}
+
+export async function answerDrill(drillKey: string, confidence: import("@/types/chess").Confidence) {
+  return fetchApi<{ drillKey: string; confidence: string; nextDue: string; inDays: number }>(`/users/train/answer`, {
+    method: "POST",
+    body: JSON.stringify({ drillKey, confidence }),
+  });
+}

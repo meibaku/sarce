@@ -433,3 +433,25 @@ export interface RecapApi {
 }
 
 export type FocusKind = "weekly" | "today";
+
+/** GET /users/train (app/services/train.py). */
+export interface DrillItem {
+  key: string;
+  source: string;
+  meta: string;
+  title: string;
+  detail: string;
+  fen: string;
+  answer: string | null;
+  gameId: string | null;
+  ply: number | null;
+}
+
+export interface TrainApi {
+  band: number;
+  items: DrillItem[];
+  waiting: number;
+  focus: string | null;
+}
+
+export type Confidence = "guessed" | "unsure" | "sure";

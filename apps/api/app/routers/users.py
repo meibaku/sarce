@@ -8,6 +8,7 @@ from app.services.home import HomeService
 from app.services.lens_service import LensService
 from app.services.library import LibraryService
 from app.services.recap import INTENTS, FOCUSES, RecapService
+from app.services.train import TrainService
 from app.services.you import YouService
 
 router = APIRouter()
@@ -16,6 +17,7 @@ home_service = HomeService()
 you_service = YouService()
 library_service = LibraryService()
 recap_service = RecapService()
+train_service = TrainService()
 
 
 @router.get("/home")
@@ -81,6 +83,29 @@ async def set_focus(body: FocusRequest, user_id: str | None = Query(None)):
         raise HTTPException(status_code=422, detail="kind must be weekly or today")
     try:
         return recap_service.set_focus(resolve_user_id(user_id), body.kind, body.value)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+class DrillAnswer(BaseModel):
+    drillKey: str
+    confidence: str
+
+
+@router.get("/train")
+async def get_train(user_id: str | None = Query(None)):
+    """Train queue: drills from your games and the trap atlas, aimed at this week's focus."""
+    owner = resolve_user_id(user_id)
+    focus = recap_service.current_focus(owner, "weekly")
+    data = train_service.queue(scoped_user_id(user_id, None), owner, focus)
+    return {**data, "focus": FOCUSES.get(focus or "")}
+
+
+@router.post("/train/answer")
+async def answer_drill(body: DrillAnswer, user_id: str | None = Query(None)):
+    """Records "How sure were you?" and schedules the drill (tomorrow / 3 days / 9 days)."""
+    try:
+        return train_service.answer(resolve_user_id(user_id), body.drillKey, body.confidence)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
