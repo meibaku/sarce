@@ -12,6 +12,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from app.db.supabase import get_supabase
+from app.services.distraction import flagged_plies
 from app.services.home import HELD, HomeService, _count, format_time_control, is_calibrated, pick_moments, window_brilliant
 from app.services.pgn_parser import mainline_positions
 from app.services.questions import CHECKIN_ANSWERS, checkin_target, grade_intention, intention_for, rotation
@@ -110,7 +111,7 @@ class SummaryService:
         sacrifices = [m for m in moves if m["ply"] in offered]
         held = sum(1 for m in sacrifices if m.get("quality") in HELD)
         clocks = game.get("clocks_ms") or []
-        moments = pick_moments(moves, lens_by_ply)
+        moments = pick_moments(moves, lens_by_ply, checkin=flagged_plies(game, moves, lens_rows))
         for m in moments:
             # Plies are 0-based over the whole game; clocks_ms has one entry per ply.
             m["clock"] = clock_label(clocks[m["ply"]] if m["ply"] < len(clocks) else None)
@@ -149,7 +150,6 @@ class SummaryService:
 
     def _questions(self, game: dict, moves: list[dict], lens_rows: list[dict], sacrifices: list[dict], moments: list[dict], owner_id: str | None) -> dict:
         """This game's questions (rotation within the budget) and how today's intention went."""
-        from app.services.distraction import flagged_plies
         from app.services.review import ask_for
         from app.services.settings_store import SettingsStore
 
@@ -163,7 +163,8 @@ class SummaryService:
             if kind == "felt":
                 questions.append({"kind": "felt", "answer": game.get("felt_like_you")})
             elif kind == "intent":
-                target = next((m for m in moments if m["ply"] not in notes), moments[0] if moments else None)
+                asked = [m for m in moments if m["glyph"] != "?!"]  # a check-in moment gets the check-in question
+                target = next((m for m in asked if m["ply"] not in notes), asked[0] if asked else None)
                 if target:
                     questions.append({"kind": "intent", "ply": target["ply"], "label": move_label(target["ply"], target.get("san")), "ask": ask_for(target["glyph"], "set", False), "answered": target["ply"] in notes})
             else:

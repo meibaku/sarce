@@ -5,6 +5,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- Distraction check-ins: a detector reads move times from the PGN clocks and flags a costly move played far
+  faster than your own pace, a fast reply to a real problem, or a long pause in a quiet position (skipping the
+  opening, premoves, time trouble and daily games); the strongest flag becomes a ?! "Your pace changed here"
+  moment on Home, Summary and Review and the target of the Summary check-in
 - Automatic game sync: with `AUTO_SYNC_ENABLED` on, the API fetches new finished games every `SYNC_MINUTES` for
   the Chess.com / Lichess usernames saved in Settings (or at onboarding) and analyses up to five pending games,
   newest first; `GET/POST /users/sync` report and start a sync, the header shows the account line and Settings
