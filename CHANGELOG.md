@@ -5,6 +5,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- Automatic game sync: with `AUTO_SYNC_ENABLED` on, the API fetches new finished games every `SYNC_MINUTES` for
+  the Chess.com / Lichess usernames saved in Settings (or at onboarding) and analyses up to five pending games,
+  newest first; `GET/POST /users/sync` report and start a sync, the header shows the account line and Settings
+  gains the username fields and "Sync now"
 - After-game question rotation and intention grading: Summary asks up to the question budget, rotating between
   "Did this game feel like you?", the intent prompt on a moment and a random check-in ("Was something going on
   here?", migration `game_answers`), and grades the game against today's intention first

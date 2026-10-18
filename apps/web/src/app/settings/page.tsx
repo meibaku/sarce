@@ -5,17 +5,19 @@ import { SettingsView } from "@/components/settings/settings-view";
 import { AppShell } from "@/components/shell/app-shell";
 import { resetMotionPrefs } from "@/components/ui/mascot";
 import { showToast } from "@/components/ui/toast";
-import { downloadJournal, getHome, getSettings, updateSettings } from "@/lib/api";
-import type { SettingsApi } from "@/types/chess";
+import { downloadJournal, getHome, getSettings, getSyncStatus, syncNow, updateSettings } from "@/lib/api";
+import type { SettingsApi, SyncStatus } from "@/types/chess";
 
 export default function SettingsPage() {
   const [data, setData] = useState<SettingsApi | null>(null);
   const [brilliant, setBrilliant] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sync, setSync] = useState<SyncStatus | null>(null);
 
   useEffect(() => {
     getSettings().then(setData).catch(() => setError("Sarce can't reach its analysis service."));
     getHome().then((h) => setBrilliant(h.brilliant.pct)).catch(() => undefined);
+    getSyncStatus().then(setSync).catch(() => undefined);
   }, []);
 
   return (
@@ -25,6 +27,12 @@ export default function SettingsPage() {
         <SettingsView
           data={data}
           brilliant={brilliant}
+          sync={sync}
+          onSyncNow={() =>
+            syncNow()
+              .then(() => showToast("Syncing. New games will be analysed in the background.", "hop"))
+              .catch(() => setError("Sync couldn't start. Try again."))
+          }
           onExport={() => downloadJournal().catch(() => setError("The journal couldn't be exported. Try again."))}
           onChange={(changes) => {
             const previous = data;

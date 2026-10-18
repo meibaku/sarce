@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     # Durable per-user analysis queue (needs the analysis_jobs migration). Off: BackgroundTasks.
     job_queue_enabled: bool = False
     job_poll_seconds: float = 2.0
+    # Automatic sync of new finished games for the usernames saved in Settings (services/sync.py).
+    auto_sync_enabled: bool = False
+    sync_minutes: float = 5.0
     job_stale_minutes: int = 60
 
     # Local-first dev: fixed user UUID from supabase/seed.sql

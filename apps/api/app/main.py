@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.deps import authenticate
 from app.routers import analysis, games, health, play, reference, scouting, traps, users
+from app.services.sync import sync_loop
 from app.services.job_queue import JobQueue, analysis_handlers, worker_loop
 
 
@@ -17,11 +18,18 @@ async def lifespan(_app: FastAPI):
     if settings.job_queue_enabled:
         handlers = analysis_handlers(games.analysis_service.analyze_pending)
         worker = asyncio.create_task(worker_loop(JobQueue(), handlers, settings.job_poll_seconds))
+    syncer = None
+    if settings.auto_sync_enabled:
+        syncer = asyncio.create_task(
+            sync_loop(users.sync_service, settings.local_user_id, games.analysis_service.analyze_pending, settings.sync_minutes)
+        )
     try:
         yield
     finally:
         if worker:
             worker.cancel()
+        if syncer:
+            syncer.cancel()
         play.bot_service.close()
 
 app = FastAPI(

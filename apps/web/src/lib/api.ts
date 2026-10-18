@@ -270,3 +270,11 @@ export async function answerCheckin(gameId: string, ply: number, answer: import(
     body: JSON.stringify({ ply, answer, flagged }),
   });
 }
+
+export async function getSyncStatus() {
+  return fetchApi<import("@/types/chess").SyncStatus>(`/users/sync`);
+}
+
+export async function syncNow() {
+  return fetchApi<{ started: boolean }>(`/users/sync`, { method: "POST" });
+}

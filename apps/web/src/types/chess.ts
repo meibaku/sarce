@@ -494,5 +494,20 @@ export interface SettingsApi {
   theme: "light" | "system";
   playfulMascot: boolean;
   motion: "system" | "full" | "reduced";
+  chessComUsername?: string | null;
+  lichessUsername?: string | null;
   kept?: { games: number; notes: number };
+}
+
+/** GET /users/sync (app/services/sync.py). */
+export interface SyncStatus {
+  chessComUsername: string | null;
+  lichessUsername: string | null;
+  sources: "chess_com" | "lichess" | "both";
+  lastSyncedAt: string | null;
+  lastSyncErrors: string[];
+  pending: number;
+  processing: number;
+  autoSync: boolean;
+  chaosPass: boolean;
 }

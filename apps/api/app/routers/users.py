@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
@@ -10,6 +10,7 @@ from app.services.lens_service import LensService
 from app.services.library import LibraryService
 from app.services.recap import INTENTS, FOCUSES, RecapService
 from app.services.settings_store import SettingsStore
+from app.services.sync import SyncService
 from app.services.train import TrainService
 from app.services.you import YouService
 
@@ -21,6 +22,7 @@ library_service = LibraryService()
 recap_service = RecapService()
 train_service = TrainService()
 settings_store = SettingsStore()
+sync_service = SyncService()
 
 
 @router.get("/home")
@@ -138,6 +140,22 @@ async def export_journal(user_id: str | None = Query(None)):
         media_type="text/markdown; charset=utf-8",
         headers={"Content-Disposition": 'attachment; filename="sarce-journal.md"'},
     )
+
+
+@router.get("/sync")
+async def sync_status(user_id: str | None = Query(None)):
+    """Saved usernames, when the last sync ran, and how many games wait for analysis."""
+    return sync_service.status(resolve_user_id(user_id), scoped_user_id(user_id, None))
+
+
+@router.post("/sync")
+async def sync_now(background_tasks: BackgroundTasks, user_id: str | None = Query(None)):
+    """Fetches new finished games now; analysis of them continues in the background."""
+    from app.routers.games import analysis_service
+
+    owner = resolve_user_id(user_id)
+    background_tasks.add_task(sync_service.sync, owner, analysis_service.analyze_pending)
+    return {"started": True}
 
 
 @router.get("/{username}/chaos-summary")

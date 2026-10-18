@@ -5,7 +5,8 @@ import { Stepper, Switch, TextLink } from "@/components/ui/buttons";
 import { AutoGrid, SectionLabel } from "@/components/ui/card";
 import { Mascot } from "@/components/ui/mascot";
 import { StyleGauge } from "@/components/ui/style-gauge";
-import type { SettingsApi } from "@/types/chess";
+import { timeAgo } from "@/lib/format";
+import type { SettingsApi, SyncStatus } from "@/types/chess";
 
 /*
  * Settings (handoff screen 10). Every gauge in the app follows the style goal set here. The
@@ -26,10 +27,14 @@ export function SettingsView({
   brilliant,
   onExport,
   onChange,
+  sync,
+  onSyncNow,
 }: {
   data: SettingsApi;
   brilliant: number | null;
   onExport: () => void;
+  sync?: SyncStatus | null;
+  onSyncNow?: () => void;
   onChange: (changes: Partial<SettingsApi>) => void;
 }) {
   const [systemReduced, setSystemReduced] = useState(false);
@@ -112,6 +117,40 @@ export function SettingsView({
               ))}
             </div>
             <span className="text-[12px] text-muted">Dark theme is planned for v1.1; &quot;Match system&quot; stays light until then.</span>
+            <div className="flex flex-col gap-2 border-t border-hair pt-[10px]">
+              {(
+                [
+                  ["chessComUsername", "Chess.com username"],
+                  ["lichessUsername", "Lichess username"],
+                ] as const
+              ).map(([key, label]) => (
+                <input
+                  key={`${key}-${data[key] ?? ""}`}
+                  defaultValue={data[key] ?? ""}
+                  placeholder={label}
+                  aria-label={label}
+                  autoComplete="off"
+                  onBlur={(e) => {
+                    const value = e.target.value.trim() || null;
+                    if (value !== (data[key] ?? null)) onChange({ [key]: value });
+                  }}
+                  className="h-9 rounded-[6px] border-[1.5px] border-line-2 bg-surface px-3 text-[13px] placeholder:text-faint"
+                />
+              ))}
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="flex-1 font-mono text-[11px] text-muted">
+                  {sync?.lastSyncedAt ? `synced ${timeAgo(sync.lastSyncedAt)}` : "not synced yet"}
+                  {sync && sync.pending + sync.processing > 0 ? ` · ${sync.pending + sync.processing} to analyse` : ""}
+                  {sync && !sync.autoSync ? " · automatic sync off" : ""}
+                </span>
+                {onSyncNow && (
+                  <TextLink href="#" onClick={(e) => { e.preventDefault(); onSyncNow(); }}>
+                    Sync now
+                  </TextLink>
+                )}
+              </div>
+              {sync?.lastSyncErrors?.length ? <span className="text-[12px] text-muted">{sync.lastSyncErrors.join(" · ")}</span> : null}
+            </div>
           </section>
         </div>
 

@@ -327,6 +327,7 @@ class AnalysisService:
             sb.table("games")
             .select("id")
             .eq("analysis_status", "pending")
+            .order("played_at", desc=True)  # newest first: the game just played comes back first
         )
         if limit is not None:
             query = query.limit(limit)
