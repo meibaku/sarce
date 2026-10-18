@@ -1,6 +1,6 @@
 from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Query
 from fastapi.responses import PlainTextResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.deps import current_user_id, resolve_user_id, scoped_user_id
 
@@ -95,6 +95,25 @@ async def set_focus(body: FocusRequest, user_id: str | None = Query(None)):
 class DrillAnswer(BaseModel):
     drillKey: str
     confidence: str
+
+
+class DrillMove(BaseModel):
+    fen: str
+    uci: str = Field(..., min_length=4, max_length=5)
+    answer: str | None = None
+    source: str | None = None
+
+
+@router.post("/train/check")
+async def check_drill_move(body: DrillMove):
+    """Checks your move in a drill on the server (legality, the answer, and whether it still holds)."""
+    from app.routers.play import bot_service
+    from app.services.train import check_move
+
+    try:
+        return check_move(body.fen, body.uci, body.answer, body.source == "find the sacrifice", bot_service.move_loss)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/train")

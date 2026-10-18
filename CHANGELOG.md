@@ -4,7 +4,16 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Fixed
+- Background analysis no longer freezes the API: move classification runs in a worker thread
+
 ### Added
+- Train move input: drills are played on the board (click a piece, then a highlighted square) and checked on the
+  server (`POST /users/train/check`): the answer, another move that still holds, or one that lets the problem
+  through; "find the sacrifice" drills want the sacrifice itself
+- Bot games are saved for review: a finished game against a Sarce bot (`POST /play/save`, migration
+  `sarce_bot_games`) is stored with its clocks, analysed in the background and opens in Summary and Review;
+  bot games stay out of Brilliant %, the fingerprint, the recap and the library
 - Distraction check-ins: a detector reads move times from the PGN clocks and flags a costly move played far
   faster than your own pace, a fast reply to a real problem, or a long pause in a quiet position (skipping the
   opening, premoves, time trouble and daily games); the strongest flag becomes a ?! "Your pace changed here"

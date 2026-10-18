@@ -136,7 +136,8 @@ class AnalysisService:
         sb.table("games").update({"analysis_status": "processing"}).eq("id", game_id).execute()
 
         try:
-            classified = self.classifier.classify_game(board, moves, user_color)
+            # In a worker thread (it opens its own engine): searching on the event loop froze the API.
+            classified = await asyncio.to_thread(self.classifier.classify_game, board, moves, user_color)
         except Exception as exc:
             logger.exception("Analysis failed for game %s: %s", game_id, exc)
             sb.table("games").update({"analysis_status": "failed"}).eq("id", game_id).execute()

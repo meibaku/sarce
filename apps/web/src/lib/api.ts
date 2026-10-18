@@ -218,6 +218,23 @@ export async function answerDrill(drillKey: string, confidence: import("@/types/
   });
 }
 
+export async function checkDrillMove(fen: string, uci: string, answer: string | null, source: string) {
+  return fetchApi<import("@/types/chess").DrillCheck>(`/users/train/check`, {
+    method: "POST",
+    body: JSON.stringify({ fen, uci, answer, source }),
+  });
+}
+
+/** Saves a finished bot game for review; its analysis starts in the background. */
+export async function saveBotGame(body: {
+  bot: import("@/types/chess").BotId;
+  moves: string[];
+  result: "win" | "loss" | "draw";
+  clocks_ms: (number | null)[];
+}) {
+  return fetchApi<{ gameId: string }>(`/play/save`, { method: "POST", body: JSON.stringify(body) });
+}
+
 export async function getBots() {
   return fetchApi<{ bots: { id: import("@/types/chess").BotId; label: string; why: string }[] }>(`/play/bots`);
 }

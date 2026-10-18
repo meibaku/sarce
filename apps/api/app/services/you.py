@@ -110,6 +110,7 @@ class YouService:
             sb.table("games")
             .select("id, played_at, opponent, time_control, clocks_ms, game_analyses(brilliant_pct, total_moves, style_vector)")
             .eq("analysis_status", "complete")
+            .neq("source", "sarce_bot")  # bot games are practice
             .order("played_at", desc=True)
             .limit(500)
         ).execute().data or []

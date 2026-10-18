@@ -105,6 +105,7 @@ class LibraryService:
             sb.table("games")
             .select("id, played_at, opponent, pgn")
             .eq("analysis_status", "complete")
+            .neq("source", "sarce_bot")  # bot games are practice
             .order("played_at", desc=True)
             .limit(500)
         )

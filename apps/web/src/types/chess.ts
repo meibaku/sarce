@@ -460,6 +460,18 @@ export interface DrillItem {
   answer: string | null;
   gameId: string | null;
   ply: number | null;
+  /** Legal moves in `fen`, as UCI, so the board can offer targets. */
+  legal?: string[];
+}
+
+/** Your move in a drill, checked on the server. `sound` is null when the engine couldn't say. */
+export interface DrillCheck {
+  san: string;
+  uci: string;
+  matched: boolean;
+  sound: boolean | null;
+  line: string;
+  fen: string;
 }
 
 export interface TrainApi {

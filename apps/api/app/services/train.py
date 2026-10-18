@@ -27,6 +27,53 @@ BANDS = list(range(800, 2400, 200))
 QUEUE = 5
 
 
+def _bare(san: str | None) -> str:
+    return (san or "").rstrip("+#!?")
+
+
+def check_move(fen: str, uci: str, answer: str | None, sacrifice_drill: bool, loss=None) -> dict:
+    """
+    Your move in a drill, checked on the server: its SAN, whether it is the drill's answer and,
+    when it isn't, whether it still holds (within SAFE_TOL expected points of best, via `loss`).
+    A "find the sacrifice" drill wants the sacrifice itself, so another sound move is "sound,
+    but not the sacrifice". Raises ValueError on an illegal move.
+    """
+    from app.lenses.config import SAFE_TOL
+
+    board = chess.Board(fen)
+    move = chess.Move.from_uci(uci)
+    if move not in board.legal_moves and len(uci) == 4:
+        move = chess.Move.from_uci(uci + "q")  # auto-queen
+    if move not in board.legal_moves:
+        raise ValueError("illegal move")
+    san = board.san(move)
+    matched = bool(answer) and _bare(san) == _bare(answer)
+    sound = None
+    if not matched and loss is not None:
+        try:
+            sound = loss(board, move) <= SAFE_TOL
+        except Exception:
+            sound = None  # no engine: say only whether it matched
+    if matched:
+        line = "That's the move." if not sacrifice_drill else "That's the sacrifice."
+    elif sound and sacrifice_drill:
+        line = f"Sound, but not the sacrifice. {answer} was there."
+    elif sound:
+        line = f"That holds too. The engine's first choice was {answer}." if answer else "That holds."
+    elif sound is False:
+        line = f"That one lets the problem through. {answer} was the safe way." if answer else "That one lets the problem through."
+    else:
+        line = f"The answer was {answer}." if answer else "No answer stored for this one."
+    return {"san": san, "uci": move.uci(), "matched": matched, "sound": sound, "line": line, "fen": _after(board, move)}
+
+
+def _after(board: chess.Board, move: chess.Move) -> str:
+    board.push(move)
+    fen = board.fen()
+    board.pop()
+    return fen
+
+
 def band_for(ratings: list[int]) -> int:
     """The atlas band nearest the average opponent rating (atlas bands start at 800)."""
     known = [r for r in ratings if r]
@@ -162,6 +209,8 @@ class TrainService:
                 if pool and len(items) < QUEUE:
                     items.append(pool.pop(0))
         waiting = sum(len(p) for p in pools) + len(items)
+        for item in items:
+            item["legal"] = [m.uci() for m in chess.Board(item["fen"]).legal_moves]
         return {"band": band, "items": items, "waiting": waiting}
 
     def _not_due(self, owner_id: str) -> set[str]:
