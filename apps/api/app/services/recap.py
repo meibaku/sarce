@@ -23,8 +23,8 @@ FOCUSES = {
 }
 INTENTS = {
     "sacrifice": "look for a sacrifice",
-    "real_problem": "set one real problem",
-    "safe_reply": "find the safe reply",
+    "calm": "stay calm when attacked",
+    "solid": "just play solid",
 }
 
 

@@ -455,3 +455,16 @@ export interface TrainApi {
 }
 
 export type Confidence = "guessed" | "unsure" | "sure";
+
+/** Sarce bots (app/services/bots.py): stateless positions with their legal moves. */
+export type BotId = "defender" | "tal" | "swindler";
+
+export interface BotPosition {
+  fen: string;
+  legal: string[];
+  status: "ongoing" | "checkmate" | "stalemate" | "draw";
+  turn: "white" | "black";
+  playerSan?: string | null;
+  botUci?: string | null;
+  botSan?: string | null;
+}

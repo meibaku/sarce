@@ -28,6 +28,9 @@ export function Board({
   hot = [],
   label,
   compact = false,
+  onSquareClick,
+  selected,
+  targets = [],
 }: {
   fen: string;
   orientation?: "white" | "black";
@@ -35,6 +38,11 @@ export function Board({
   label?: string;
   /** The Train drill board: max 300px, smaller pieces, no file letters. */
   compact?: boolean;
+  /** Makes squares clickable, for playing against a Sarce bot. */
+  onSquareClick?: (square: string) => void;
+  selected?: string | null;
+  /** Legal destinations of the selected piece, shown as dots. */
+  targets?: string[];
 }) {
   const pieces = parseFen(fen);
   const squares: { sq: string; dark: boolean }[] = [];
@@ -58,15 +66,20 @@ export function Board({
           const piece = pieces[sq];
           const isHot = hot.includes(sq);
           const black = piece ? piece === piece.toLowerCase() : false;
+          const Square = onSquareClick ? "button" : "div";
           return (
-            <div
+            <Square
               key={sq}
-              className="relative grid place-items-center"
+              {...(onSquareClick ? { type: "button" as const, onClick: () => onSquareClick(sq), "aria-label": sq } : {})}
+              className="relative grid place-items-center border-0 p-0"
               style={{
-                background: dark ? "var(--board-dark)" : "var(--surface)",
-                boxShadow: isHot ? "inset 0 0 0 2px var(--accent)" : "none",
+                background: selected === sq ? "var(--accent-tint)" : dark ? "var(--board-dark)" : "var(--surface)",
+                boxShadow: isHot || selected === sq ? "inset 0 0 0 2px var(--accent)" : "none",
               }}
             >
+              {targets.includes(sq) && (
+                <span className="absolute h-[22%] w-[22%] rounded-full bg-accent opacity-60" aria-hidden="true" />
+              )}
               {isHot && (
                 <span className="absolute top-[3px] right-[3px] h-[6px] w-[6px] border-t-2 border-r-2 border-accent" aria-hidden="true" />
               )}
@@ -80,7 +93,7 @@ export function Board({
                   {piece.toUpperCase()}
                 </span>
               )}
-            </div>
+            </Square>
           );
         })}
       </div>

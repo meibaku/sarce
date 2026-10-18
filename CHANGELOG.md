@@ -5,6 +5,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- v1.0 Play at `/play` and 3+0 games against Sarce bots at `/play/game` (`/play/bots`, `/play/start`,
+  `/play/move`): Defender · 1600 (human-like among sound moves), Tal-style attacker (the sound move with the
+  highest P_fail × stake for you) and Swindler (wider margin). Stateless, one shared engine, clicks to move;
+  today's intention is saved for the next summary
 - v1.0 Train at `/train` (`GET /users/train`, `POST /users/train/answer`): one queue from your games (the
   sacrifice you didn't play, defend your own sound sacrifice) and the trap atlas at your band, ordered by the
   week's focus, with "How sure were you?" spacing (tomorrow / 3 days / 9 days; migration `drill_reviews`)

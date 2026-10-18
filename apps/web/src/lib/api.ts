@@ -217,3 +217,23 @@ export async function answerDrill(drillKey: string, confidence: import("@/types/
     body: JSON.stringify({ drillKey, confidence }),
   });
 }
+
+export async function getBots() {
+  return fetchApi<{ bots: { id: import("@/types/chess").BotId; label: string; why: string }[] }>(`/play/bots`);
+}
+
+export async function startBotGame() {
+  return fetchApi<import("@/types/chess").BotPosition>(`/play/start`, { method: "POST" });
+}
+
+export async function playBotMove(
+  fen: string,
+  uci: string | null,
+  bot: import("@/types/chess").BotId,
+  { elo = 1600, reply = true }: { elo?: number; reply?: boolean } = {},
+) {
+  return fetchApi<import("@/types/chess").BotPosition>(`/play/move`, {
+    method: "POST",
+    body: JSON.stringify({ fen, uci, bot, elo, reply }),
+  });
+}
