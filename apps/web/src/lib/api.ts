@@ -237,3 +237,29 @@ export async function playBotMove(
     body: JSON.stringify({ fen, uci, bot, elo, reply }),
   });
 }
+
+export async function getSettings() {
+  return fetchApi<import("@/types/chess").SettingsApi>(`/users/settings`);
+}
+
+export async function updateSettings(changes: Partial<import("@/types/chess").SettingsApi>) {
+  return fetchApi<import("@/types/chess").SettingsApi>(`/users/settings`, {
+    method: "PUT",
+    body: JSON.stringify(changes),
+  });
+}
+
+/** Downloads the journal as Markdown, sending the sign-in token like every other call. */
+export async function downloadJournal() {
+  const token = await getAccessToken();
+  const res = await fetch(`${API_BASE}/users/journal`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!res.ok) throw new Error(`Export failed (${res.status})`);
+  const url = URL.createObjectURL(await res.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "sarce-journal.md";
+  link.click();
+  URL.revokeObjectURL(url);
+}

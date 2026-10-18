@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
 from app.deps import current_user_id, resolve_user_id, scoped_user_id
@@ -8,6 +9,7 @@ from app.services.home import HomeService
 from app.services.lens_service import LensService
 from app.services.library import LibraryService
 from app.services.recap import INTENTS, FOCUSES, RecapService
+from app.services.settings_store import SettingsStore
 from app.services.train import TrainService
 from app.services.you import YouService
 
@@ -18,6 +20,7 @@ you_service = YouService()
 library_service = LibraryService()
 recap_service = RecapService()
 train_service = TrainService()
+settings_store = SettingsStore()
 
 
 @router.get("/home")
@@ -108,6 +111,33 @@ async def answer_drill(body: DrillAnswer, user_id: str | None = Query(None)):
         return train_service.answer(resolve_user_id(user_id), body.drillKey, body.confidence)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/settings")
+async def get_settings(user_id: str | None = Query(None)):
+    """Style goal and preferences, plus what Sarce keeps."""
+    owner = resolve_user_id(user_id)
+    return {**settings_store.get(owner), "kept": settings_store.kept(owner, scoped_user_id(user_id, None))}
+
+
+@router.put("/settings")
+async def update_settings(changes: dict = Body(...), user_id: str | None = Query(None)):
+    """Updates any of: goalLo, goalHi, questionBudget, quietUntil, sources, theme, playfulMascot, motion."""
+    try:
+        return settings_store.update(resolve_user_id(user_id), changes)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/journal", response_class=PlainTextResponse)
+async def export_journal(user_id: str | None = Query(None)):
+    """The journal as Markdown (sacrifices and notes), for download or printing to PDF."""
+    owner = resolve_user_id(user_id)
+    return PlainTextResponse(
+        settings_store.journal(owner, scoped_user_id(user_id, None)),
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="sarce-journal.md"'},
+    )
 
 
 @router.get("/{username}/chaos-summary")

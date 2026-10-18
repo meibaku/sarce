@@ -35,9 +35,12 @@ const RESULT = { win: "won", loss: "lost", draw: "drew" } as const;
 export function SummaryView({
   data,
   onFelt,
+  askQuestion = true,
 }: {
   data: SummaryApi;
   onFelt: (answer: FeltAnswer) => Promise<void> | void;
+  /** False when the player chose "None" for questions after a game (Settings). */
+  askQuestion?: boolean;
 }) {
   const [felt, setFelt] = useState<FeltAnswer | null>(data.felt);
   const [editing, setEditing] = useState(data.felt == null);
@@ -137,6 +140,7 @@ export function SummaryView({
           </section>
         </div>
 
+        {askQuestion && (
         <Card lead className="gap-3 !p-[18px]">
           <SectionLabel className="!text-accent-text">This game&apos;s one question</SectionLabel>
           <span className="text-[18px] leading-[1.3] font-medium">Did this game feel like you?</span>
@@ -173,6 +177,7 @@ export function SummaryView({
           )}
           <span className="font-mono text-[11px] text-faint">One question per game · the others rotate in</span>
         </Card>
+        )}
       </AutoGrid>
 
       <div className="flex flex-wrap items-center gap-[18px]">

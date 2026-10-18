@@ -468,3 +468,16 @@ export interface BotPosition {
   botUci?: string | null;
   botSan?: string | null;
 }
+
+/** GET/PUT /users/settings (app/services/settings_store.py). */
+export interface SettingsApi {
+  goalLo: number;
+  goalHi: number;
+  questionBudget: 0 | 1 | 2;
+  quietUntil: string | null;
+  sources: "chess_com" | "lichess" | "both";
+  theme: "light" | "system";
+  playfulMascot: boolean;
+  motion: "system" | "full" | "reduced";
+  kept?: { games: number; notes: number };
+}

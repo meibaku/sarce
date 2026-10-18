@@ -5,6 +5,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- v1.0 Settings at `/settings` (`GET`/`PUT /users/settings`, `GET /users/journal`): style goal steppers with a
+  live gauge, question budget, quiet week, sources, theme, model card, what Sarce keeps, journal export
+  (Markdown) and mascot / motion preferences (migration `profiles.settings`). Home shows the quiet-week
+  variant and Summary drops its question when the budget is None
 - v1.0 Play at `/play` and 3+0 games against Sarce bots at `/play/game` (`/play/bots`, `/play/start`,
   `/play/move`): Defender · 1600 (human-like among sound moves), Tal-style attacker (the sound move with the
   highest P_fail × stake for you) and Swindler (wider margin). Stateless, one shared engine, clicks to move;

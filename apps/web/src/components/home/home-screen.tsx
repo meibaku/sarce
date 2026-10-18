@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { HomeView, type HomeData } from "@/components/home/home-view";
 import { PrimaryLink } from "@/components/ui/buttons";
 import { Card } from "@/components/ui/card";
-import { getHome } from "@/lib/api";
+import { getHome, getSettings } from "@/lib/api";
 import { gameMeta, timeAgo } from "@/lib/format";
 import type { HomeApi } from "@/types/chess";
 
@@ -51,8 +51,14 @@ export function HomeScreen() {
   });
 
   useEffect(() => {
-    getHome()
-      .then((api) => setState({ data: toHomeData(api), status: "ready" }))
+    Promise.all([getHome(), getSettings().catch(() => null)])
+      .then(([api, settings]) => {
+        const data = toHomeData(api);
+        const quiet = settings?.quietUntil
+          ? new Date(`${settings.quietUntil}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+          : undefined;
+        setState({ data: data && quiet ? { ...data, quietUntil: quiet } : data, status: "ready" });
+      })
       .catch(() => setState({ data: null, status: "error" }));
   }, []);
 
