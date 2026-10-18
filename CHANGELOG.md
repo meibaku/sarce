@@ -8,6 +8,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Background analysis no longer freezes the API: move classification runs in a worker thread
 
 ### Added
+- Tal on the You axes in chaos terms: `scripts/process_tal_chaos.py` runs a local copy of the Tal corpus through
+  the same classification and Chaos Lens as your games, in memory, and writes the four axis values to
+  `data/reference_axes.json`; You draws a T dot per axis once that file exists, and says Tal isn't scored yet
+  until then
 - Train move input: drills are played on the board (click a piece, then a highlighted square) and checked on the
   server (`POST /users/train/check`): the answer, another move that still holds, or one that lets the problem
   through; "find the sacrifice" drills want the sacrifice itself

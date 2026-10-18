@@ -403,7 +403,9 @@ export interface YouApi {
   } | null;
   styleSchema?: number;
   fingerprint: { traits: string[]; levels: number[][]; sentence: string } | null;
-  axes: { name: string; you: number | null }[] | null;
+  /** `refs` holds each scored reference player's value on the axis (data/reference_axes.json). */
+  axes: { name: string; you: number | null; refs?: Record<string, number | null> }[] | null;
+  references?: Record<string, { games: number; model: string | null }>;
   timeControls: { class: "bullet" | "blitz" | "rapid"; games: number; pct: number | null; spread: number | null; calibrated: boolean }[];
   survival: {
     gameId: string;

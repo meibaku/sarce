@@ -8,8 +8,9 @@ import type { YouApi } from "@/types/chess";
 
 /*
  * You (handoff screen 5). Brilliant is the one big number; tapping it shows how it is counted.
- * References are shown without ranking. Reference players are not scored in chaos terms yet, so
- * the axes show only you and say so, rather than drawing invented reference dots.
+ * References are shown without ranking. A reference player's dot appears only once their games
+ * have been scored in the same chaos terms (scripts/process_tal_chaos.py); until then the axes
+ * show only you and say so, rather than drawing invented reference dots.
  */
 
 const FP = ["#f5f7fa", "#e6edf6", "#d3e0f0", "#b9cde6", "#97b4d8", "#7096c4", "#4f7ab0", "#2f5f9e"];
@@ -160,6 +161,15 @@ export function YouView({ data }: { data: YouApi }) {
             <span className="text-[13px]">{a.name}</span>
             <div className="relative h-6">
               <div className="absolute top-[11px] right-0 left-0 h-[1.5px] bg-line-2" />
+              {a.refs?.[ref] != null && (
+                <span
+                  className="absolute top-1 -ml-2 grid h-4 w-4 place-items-center rounded-full border-[1.5px] border-ink bg-surface font-mono text-[8px] font-medium"
+                  style={{ left: `${a.refs[ref]}%` }}
+                  aria-label={`${ref}: ${a.refs[ref]}`}
+                >
+                  {ref[0]}
+                </span>
+              )}
               {a.you != null && (
                 <span
                   className="absolute top-1 -ml-2 h-4 w-4 rounded-full bg-accent"
@@ -171,7 +181,9 @@ export function YouView({ data }: { data: YouApi }) {
           </div>
         ))}
         <span className="font-mono text-[11px] text-muted">
-          filled = you · {ref}&apos;s games aren&apos;t scored in these terms yet · no ranking
+          {data.references?.[ref]
+            ? `filled = you · ${ref[0]} = ${ref}, ${data.references[ref].games} games scored the same way · no ranking`
+            : `filled = you · ${ref}'s games aren't scored in these terms yet · no ranking`}
         </span>
       </Card>
 
