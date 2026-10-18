@@ -35,7 +35,7 @@ export function RecapView({ data, onSetFocus }: { data: RecapApi; onSetFocus: (i
       <div className="grid grid-cols-[minmax(0,220px)_minmax(0,1fr)] items-center gap-4 rounded-[8px] border border-line bg-surface pt-2 pr-4 pl-2">
         <div className="flex items-end justify-center gap-3 border-b border-line-2 px-2 pb-1 text-ink" style={{ height: 128 }}>
           {Array.from({ length: Math.max(1, Math.min(3, data.streakWeeks)) }, (_, i) => (
-            <SarceMark key={i} height={i === Math.min(3, data.streakWeeks) - 1 ? 52 : 46} framed />
+            <SarceMark key={i} height={i === Math.min(3, data.streakWeeks) - 1 ? 80 : 64} framed />
           ))}
         </div>
         <span className="pb-2 text-[14px] leading-[1.5] text-ink-2">{streak}</span>
