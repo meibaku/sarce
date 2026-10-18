@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Stepper, Switch, TextLink } from "@/components/ui/buttons";
 import { AutoGrid, SectionLabel } from "@/components/ui/card";
-import { SarceMark } from "@/components/ui/icons";
+import { Mascot } from "@/components/ui/mascot";
 import { StyleGauge } from "@/components/ui/style-gauge";
 import type { SettingsApi } from "@/types/chess";
 
@@ -168,7 +168,7 @@ export function SettingsView({
 
       <section className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-[22px] gap-y-[18px] rounded-[8px] border border-line bg-surface p-[18px]">
         <div className="row-span-3 grid h-[104px] w-24 place-items-center rounded-[8px] bg-page text-ink">
-          <SarceMark height={80} framed />
+          <Mascot state={data.playfulMascot ? "hello" : "static"} size={80} />
         </div>
         <SectionLabel className="!text-accent-text">Mascot and motion</SectionLabel>
         <div className="flex items-center gap-[14px]">

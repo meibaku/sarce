@@ -4,7 +4,7 @@ import { useState } from "react";
 import { PrimaryButton, TextButton } from "@/components/ui/buttons";
 import { AutoGrid } from "@/components/ui/card";
 import { Board } from "@/components/ui/board";
-import { SarceMark } from "@/components/ui/icons";
+import { Mascot } from "@/components/ui/mascot";
 import type { Confidence, DrillItem, TrainApi } from "@/types/chess";
 
 /*
@@ -112,7 +112,7 @@ export function TrainView({ data, onAnswer }: { data: TrainApi; onAnswer: (key: 
                 </div>
                 {answered && (
                   <div className="flex items-center gap-3">
-                    <SarceMark height={40} framed className="text-ink" />
+                    <Mascot state={answered === "sure" ? "proud" : answered === "unsure" ? "think" : "shake"} size={40} />
                     <span className="text-[13px] text-ink-2">{CONFIDENCE.find(([v]) => v === answered)?.[2]}</span>
                   </div>
                 )}

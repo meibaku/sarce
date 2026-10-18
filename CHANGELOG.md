@@ -5,6 +5,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- v1.0 mascot and motion: the handoff's rook mark and skits (dependency-free web components in
+  `apps/web/src/lib/motion`) on Home, the Summary banner, Review, Train, Recap, Onboarding, Settings and every
+  edge state; Settings → Playful mascot and Motion (follows `prefers-reduced-motion` by default) decide how
+  much plays, and a quiet week turns skits off
 - v1.0 edge states and Onboarding: one shared `EdgeState` (no games, still analysing, analysis failed, too few
   games, tracking paused, offline; 56px line icon, title, sentence, one action) now used on every screen;
   `/states` previews them; `/onboarding` connects a username (imports and starts analysis), shows a real

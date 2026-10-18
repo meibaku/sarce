@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { PrimaryLink, TextButton, TextLink } from "@/components/ui/buttons";
 import { AutoGrid, Card, SectionLabel, UncalibratedBadge } from "@/components/ui/card";
-import { SarceMark } from "@/components/ui/icons";
+import { Mascot, Skit } from "@/components/ui/mascot";
 import { MoveBadge } from "@/components/ui/move-badge";
 import { StyleGauge } from "@/components/ui/style-gauge";
 import { moveLabel } from "@/lib/format";
@@ -77,9 +77,16 @@ export function SummaryView({
         style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))" }}
       >
         <div className="w-full max-w-[320px] px-3 pt-2">
-          <div className="grid place-items-center text-ink" style={{ aspectRatio: "240 / 110" }}>
-            <SarceMark height={72} framed />
-          </div>
+          {data.outcome.accent || data.result === "draw" || data.result === "loss" ? (
+            <Skit
+              name={data.outcome.accent ? "brilliant" : data.result === "draw" ? "draw" : "resign"}
+              fallbackState={data.result === "loss" ? "relief" : data.result === "draw" ? "nod" : "proud"}
+            />
+          ) : (
+            <div className="grid place-items-center text-ink" style={{ aspectRatio: "240 / 110" }}>
+              <Mascot state="proud" size={72} />
+            </div>
+          )}
         </div>
         <div className="flex flex-col gap-2 px-5 py-4">
           <SectionLabel className={data.outcome.accent ? "!text-accent-text" : ""}>{data.outcome.kicker}</SectionLabel>

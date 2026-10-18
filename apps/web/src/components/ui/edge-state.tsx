@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { Mascot, useMotionPrefs } from "@/components/ui/mascot";
 
 /*
  * Edge states (handoff screen 11): one 56px line icon (2px stroke), a title, one sentence and one
@@ -6,6 +9,16 @@ import Link from "next/link";
  */
 
 export type EdgeKind = "no-games" | "analysing" | "failed" | "too-few" | "paused" | "offline";
+
+/** The mascot state shown for each edge state once the motion components load. */
+const MARK: Record<EdgeKind, string> = {
+  "no-games": "empty",
+  analysing: "ring",
+  failed: "error",
+  "too-few": "uncalibrated",
+  paused: "quiet",
+  offline: "offline",
+};
 
 export const EDGE: Record<EdgeKind, { title: string; detail: string; action: string; icon: string; dash?: string }> = {
   "no-games": {
@@ -76,9 +89,10 @@ export function EdgeState({
 }) {
   const e = EDGE[kind];
   const label = action ?? e.action;
+  const prefs = useMotionPrefs();
   return (
     <section className="flex flex-col items-center gap-[14px] rounded-[8px] border-[1.5px] border-ink bg-surface px-[22px] py-7 text-center" role="status">
-      <EdgeIcon kind={kind} />
+      {prefs ? <Mascot state={MARK[kind]} size={80} /> : <EdgeIcon kind={kind} />}
       <span className="text-[18px] font-medium">{e.title}</span>
       <span className="max-w-[340px] text-[13px] leading-[1.55] text-ink-2">{detail ?? e.detail}</span>
       {href ? (

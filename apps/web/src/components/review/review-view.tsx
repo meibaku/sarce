@@ -5,7 +5,7 @@ import { FallsChart, IdeaArcs } from "@/components/review/charts";
 import { PrimaryButton, TextButton, TextLink } from "@/components/ui/buttons";
 import { AutoGrid, SectionLabel, UncalibratedBadge } from "@/components/ui/card";
 import { Board } from "@/components/ui/board";
-import { SarceMark } from "@/components/ui/icons";
+import { Mascot } from "@/components/ui/mascot";
 import { MoveBadge } from "@/components/ui/move-badge";
 import type { IntentType, ReviewApi, ReviewMoment } from "@/types/chess";
 
@@ -108,7 +108,12 @@ export function ReviewView({
   return (
     <>
       <div className="flex flex-wrap items-center gap-3">
-        <SarceMark height={30} framed className="text-ink" />
+        <Mascot
+          state={current?.glyph === "!!" ? "brilliant" : current?.glyph === "✓" ? "sound" : current?.glyph === "?!" ? "checkin" : "static"}
+          size={30}
+          eyes={false}
+          className="text-ink"
+        />
         <h1 className="text-[20px] font-medium">vs {data.opponent ?? "opponent"}</h1>
         <span className="flex items-center gap-2 font-mono text-[11px] text-muted">
           {meta}

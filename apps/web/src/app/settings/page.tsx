@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { SettingsView } from "@/components/settings/settings-view";
 import { AppShell } from "@/components/shell/app-shell";
+import { resetMotionPrefs } from "@/components/ui/mascot";
 import { downloadJournal, getHome, getSettings, updateSettings } from "@/lib/api";
 import type { SettingsApi } from "@/types/chess";
 
@@ -28,7 +29,10 @@ export default function SettingsPage() {
             const previous = data;
             setData({ ...data, ...changes });
             updateSettings(changes)
-              .then((saved) => setData((d) => ({ ...saved, kept: d?.kept })))
+              .then((saved) => {
+                resetMotionPrefs();
+                setData((d) => ({ ...saved, kept: d?.kept }));
+              })
               .catch(() => {
                 setData(previous);
                 setError("That change didn't save. Try again.");

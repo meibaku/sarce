@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PrimaryButton, TextButton } from "@/components/ui/buttons";
-import { SarceMark } from "@/components/ui/icons";
+import { Mascot } from "@/components/ui/mascot";
 import { MoveBadge } from "@/components/ui/move-badge";
 import { getHome, importChessComGames, importLichessGames, updateSettings } from "@/lib/api";
 import { moveLabel } from "@/lib/format";
@@ -78,7 +78,7 @@ export function OnboardingFlow() {
     <div className="mx-auto flex w-full max-w-[520px] flex-col gap-4">
       {/* The handoff's inline mark leaves a descender gap below it; pb-1 keeps the same rhythm. */}
       <span className="self-start pb-1 text-ink">
-        <SarceMark height={64} framed />
+        <Mascot state={["hello", "curious", "think", "proud"][step]} size={64} />
       </span>
       <div className="flex gap-[6px]" aria-hidden="true">
         {STEPS.map((s, i) => (
