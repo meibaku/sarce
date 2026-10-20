@@ -75,7 +75,8 @@ class Settings(BaseSettings):
     chess_com_api_base: str = "https://api.chess.com/pub"
     lichess_api_base: str = "https://lichess.org/api"
     analysis_depth: int = 18
-    cors_origins: list[str] = ["http://localhost:3000"]
+    # The web app, and the Expo app when run in a browser (`npx expo start --web`).
+    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:8081"]
 
     # Multi-user: when true every request needs a Supabase access token. When false
     # (local-first default) a token is still honoured if one is sent.
