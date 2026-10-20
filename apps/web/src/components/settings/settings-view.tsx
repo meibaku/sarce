@@ -109,6 +109,7 @@ export function SettingsView({
               {(
                 [
                   ["light", "Light"],
+                  ["dark", "Dark"],
                   ["system", "Match system"],
                 ] as const
               ).map(([id, label]) => (
@@ -117,7 +118,6 @@ export function SettingsView({
                 </button>
               ))}
             </div>
-            <span className="text-[12px] text-muted">Dark theme is planned for v1.1; &quot;Match system&quot; stays light until then.</span>
             <div className="flex flex-col gap-2 border-t border-hair pt-[10px]">
               {(
                 [

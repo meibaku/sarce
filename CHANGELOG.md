@@ -15,6 +15,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Background analysis no longer freezes the API: move classification runs in a worker thread
 
 ### Added
+- Dark theme (the v1.1 item Settings promised): Settings → Theme → Light / Dark / Match system; dark tokens keep
+  every text colour at 4.5:1 or better, the fingerprint ramp follows, and the choice is applied before first
+  paint (no flash)
 - Manual position setter (PHASES 2.1): Train → "Save a position from a video or book" takes a FEN with a live
   board preview and saves it as a drill
 - The Expo app (`apps/mobile`, SDK 58, own lockfile): Home, Review, You, Train and Play tabs plus Summary with its

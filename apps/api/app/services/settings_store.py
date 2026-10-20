@@ -30,7 +30,7 @@ USERNAME = re.compile(r"^[A-Za-z0-9_-]{2,30}$")
 CHOICES = {
     "questionBudget": {0, 1, 2},
     "sources": {"chess_com", "lichess", "both"},
-    "theme": {"light", "system"},
+    "theme": {"light", "dark", "system"},
     "motion": {"system", "full", "reduced"},
 }
 GOAL_MIN, GOAL_MAX = 0, 15

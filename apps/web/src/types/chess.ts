@@ -508,7 +508,7 @@ export interface SettingsApi {
   questionBudget: 0 | 1 | 2;
   quietUntil: string | null;
   sources: "chess_com" | "lichess" | "both";
-  theme: "light" | "system";
+  theme: "light" | "dark" | "system";
   playfulMascot: boolean;
   motion: "system" | "full" | "reduced";
   chessComUsername?: string | null;

@@ -7,6 +7,11 @@ the rules the code depends on.
 **Status:** all eleven screens, edge states, mascot and motion are implemented (see `CHANGELOG.md`). The
 pre-v1 dashboard (`/lab`) is retired (ADR 0005); opponent prep moved to `/prep`, reached from Play. North star: **"Did this game feel like you, not did you play like the engine?"**
 
+## Themes
+
+Light is the reference. Dark (`:root[data-theme="dark"]` in `globals.css`) re-points the same tokens; every text
+token keeps at least 4.5:1 on page, surface and panel. `lib/theme.ts` sets the attribute before first paint.
+
 ## Product rules the UI enforces
 
 - **One filled accent button per screen** — the next step in the loop. Choices are outlined; everything

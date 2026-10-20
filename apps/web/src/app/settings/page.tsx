@@ -6,6 +6,7 @@ import { AppShell } from "@/components/shell/app-shell";
 import { resetMotionPrefs } from "@/components/ui/mascot";
 import { showToast } from "@/components/ui/toast";
 import { downloadJournal, getHome, getSettings, getSyncStatus, syncNow, updateSettings } from "@/lib/api";
+import { applyTheme } from "@/lib/theme";
 import type { SettingsApi, SyncStatus } from "@/types/chess";
 
 export default function SettingsPage() {
@@ -15,7 +16,12 @@ export default function SettingsPage() {
   const [sync, setSync] = useState<SyncStatus | null>(null);
 
   useEffect(() => {
-    getSettings().then(setData).catch(() => setError("Sarce can't reach its analysis service."));
+    getSettings()
+      .then((s) => {
+        setData(s);
+        applyTheme(s.theme); // the profile's choice wins over this device's copy
+      })
+      .catch(() => setError("Sarce can't reach its analysis service."));
     getHome().then((h) => setBrilliant(h.brilliant.pct)).catch(() => undefined);
     getSyncStatus().then(setSync).catch(() => undefined);
   }, []);
@@ -37,6 +43,7 @@ export default function SettingsPage() {
           onChange={(changes) => {
             const previous = data;
             setData({ ...data, ...changes });
+            if (changes.theme) applyTheme(changes.theme);
             updateSettings(changes)
               .then((saved) => {
                 resetMotionPrefs();
