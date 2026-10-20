@@ -52,7 +52,14 @@ def _matches_player_name(header_name: str, player_name: str) -> bool:
 
     player_tokens = _name_tokens(player_name)
     header_tokens = set(_name_tokens(header_name))
-    return bool(player_tokens) and set(player_tokens).issubset(header_tokens)
+    if player_tokens and set(player_tokens).issubset(header_tokens):
+        return True
+    # Transliterations differ ("Tal, Mihail" in pgnmentor vs "Mikhail Tal"): the surname plus the
+    # first name's initial is enough. Without this every Tal game fell back to "white".
+    if len(player_tokens) >= 2:
+        surname, first = player_tokens[-1], player_tokens[0]
+        return surname in header_tokens and any(t != surname and t[0] == first[0] for t in header_tokens)
+    return False
 
 
 class ReferenceService:

@@ -7,7 +7,9 @@ Sources available today:
 - find the sacrifice: the engine's best move genuinely offered material and you played another;
 - trap at your band: a trap atlas position near your opponents' ratings;
 - play the other side: a sacrifice you played, to defend from the other chair;
-- a saved position: one you kept from Review ("Add to Train"), services/positions.py.
+- a saved position: one you kept from Review ("Add to Train"), services/positions.py;
+- Tal in your openings: a position from a Tal game with an ECO you play, where you guess his move
+  (data/reference_positions.json). Traps from your own openings are also put first.
 """
 
 from __future__ import annotations
@@ -30,7 +32,7 @@ def _bare(san: str | None) -> str:
     return (san or "").rstrip("+#!?")
 
 
-def check_move(fen: str, uci: str, answer: str | None, sacrifice_drill: bool, loss=None) -> dict:
+def check_move(fen: str, uci: str, answer: str | None, sacrifice_drill: bool, loss=None, reference_drill: bool = False) -> dict:
     """
     Your move in a drill, checked on the server: its SAN, whether it is the drill's answer and,
     when it isn't, whether it still holds (within SAFE_TOL expected points of best, via `loss`).
@@ -53,7 +55,18 @@ def check_move(fen: str, uci: str, answer: str | None, sacrifice_drill: bool, lo
             sound = loss(board, move) <= SAFE_TOL
         except Exception:
             sound = None  # no engine: say only whether it matched
-    if matched:
+    if reference_drill:
+        # The answer is what Tal played, not the engine's choice: say so.
+        line = (
+            "That's what Tal played."
+            if matched
+            else f"That holds too. Tal played {answer}."
+            if sound
+            else f"That one lets the problem through. Tal played {answer}."
+            if sound is False
+            else f"Tal played {answer}."
+        )
+    elif matched:
         line = "That's the move." if not sacrifice_drill else "That's the sacrifice."
     elif sound and sacrifice_drill:
         line = f"Sound, but not the sacrifice. {answer} was there."
@@ -71,6 +84,39 @@ def _after(board: chess.Board, move: chess.Move) -> str:
     fen = board.fen()
     board.pop()
     return fen
+
+
+def your_openings(user_id: str | None, top: int = 5) -> list[str]:
+    """Your most played ECO codes, most played first (games.eco, migration game_openings)."""
+    q = get_supabase().table("games").select("eco").neq("source", "sarce_bot").order("played_at", desc=True).limit(500)
+    if user_id:
+        q = q.eq("user_id", user_id)
+    counts: dict[str, int] = {}
+    for row in q.execute().data or []:
+        if row.get("eco"):
+            counts[row["eco"]] = counts.get(row["eco"], 0) + 1
+    return sorted(counts, key=lambda e: -counts[e])[:top]
+
+
+def reference_items(ecos: list[str], seed: int) -> list[dict]:
+    """ "Tal in your openings": guess Tal's move in a position from a Tal game in an opening you play."""
+    from app.services.reference_axes import in_your_openings, reference_positions
+
+    picks = in_your_openings(reference_positions().get("Tal", []), ecos, seed)
+    return [
+        {
+            "key": f"tal:{p['eco']}:{p['fen']}",
+            "source": "Tal in your openings",
+            "meta": f"{p.get('year') or 'Tal'} · {p['eco']}",
+            "title": "What did Tal play here?",
+            "detail": f"Tal vs {p.get('opponent') or 'opponent'}{', ' + p['event'] if p.get('event') else ''}, from the {p['eco']} family you play. Find his move.",
+            "fen": p["fen"],
+            "answer": p["san"],
+            "gameId": None,
+            "ply": None,
+        }
+        for p in picks
+    ]
 
 
 def band_for(ratings: list[int]) -> int:
@@ -178,7 +224,11 @@ class TrainService:
                     })
 
         band = band_for([g.get("opponent_rating") for g in games])
-        traps = sb.table("trap_atlas").select("fen_key, fen, band, eco, common_reply_uci, common_reply_share, best_reply_uci, frequency").eq("band", band).order("frequency", desc=True).limit(10).execute().data or []
+        ecos = your_openings(user_id)
+        traps = sb.table("trap_atlas").select("fen_key, fen, band, eco, common_reply_uci, common_reply_share, best_reply_uci, frequency").eq("band", band).order("frequency", desc=True).limit(40).execute().data or []
+        # Traps in your own openings first (exact ECO, then family), then the band's most common.
+        rank = {eco: i for i, eco in enumerate(ecos)}
+        traps = sorted(traps, key=lambda t: (rank.get(t.get("eco"), len(rank) + (0 if any((t.get("eco") or "")[:2] == e[:2] for e in ecos) else 1)), -(t.get("frequency") or 0)))[:10]
         trap_items = []
         for t in traps:
             board = chess.Board(t["fen"])
@@ -202,9 +252,10 @@ class TrainService:
         from app.services.positions import PositionStore, drill_items
 
         saved = drill_items(PositionStore().list(owner_id))
+        tal = reference_items(ecos, datetime.now(timezone.utc).date().toordinal())
         # Interleave, putting the week's focus first, and skip drills not yet due.
-        order = {"safe_reply": [trap_items, missed, other_side, saved], "calm_after_sacrifice": [other_side, missed, trap_items, saved]}.get(
-            focus or "", [missed, trap_items, other_side, saved]
+        order = {"safe_reply": [trap_items, missed, other_side, tal, saved], "calm_after_sacrifice": [other_side, missed, trap_items, tal, saved]}.get(
+            focus or "", [missed, trap_items, tal, other_side, saved]
         )
         wanted = next((i for pool in order for i in pool if i["key"] == first), None) if first else None
         pools = [[i for i in pool if i["key"] not in due and i is not wanted] for pool in order]

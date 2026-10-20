@@ -58,9 +58,21 @@ function downloadShareCard(row: SacrificeRow) {
 
 export function LibraryView({ rows }: { rows: SacrificeRow[] }) {
   const [filter, setFilter] = useState<Filter>("all");
+  const [eco, setEco] = useState<string>("");
+  // Openings you sacrificed in, most frequent first, by ECO family name.
+  const openings = useMemo(() => {
+    const counts = new Map<string, { label: string; n: number }>();
+    for (const r of rows) {
+      if (!r.eco) continue;
+      const entry = counts.get(r.eco) ?? { label: `${r.eco} · ${r.opening ?? "opening"}`, n: 0 };
+      entry.n += 1;
+      counts.set(r.eco, entry);
+    }
+    return [...counts.entries()].sort((a, b) => b[1].n - a[1].n);
+  }, [rows]);
   const shown = useMemo(
-    () => rows.filter((r) => filter === "all" || (filter === "held" ? r.held : !r.held)),
-    [rows, filter],
+    () => rows.filter((r) => (filter === "all" || (filter === "held" ? r.held : !r.held)) && (!eco || r.eco === eco)),
+    [rows, filter, eco],
   );
   const [selected, setSelected] = useState(0);
   const sel = shown[Math.min(selected, shown.length - 1)];
@@ -94,6 +106,24 @@ export function LibraryView({ rows }: { rows: SacrificeRow[] }) {
             {label}
           </button>
         ))}
+        {openings.length > 1 && (
+          <select
+            value={eco}
+            onChange={(e) => {
+              setEco(e.target.value);
+              setSelected(0);
+            }}
+            aria-label="Opening"
+            className="h-8 max-w-[260px] truncate rounded-[6px] border-[1.5px] border-line-2 bg-surface px-2 text-[12px] font-medium"
+          >
+            <option value="">Any opening</option>
+            {openings.map(([code, { label, n }]) => (
+              <option key={code} value={code}>
+                {label} ({n})
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       <AutoGrid min={380} className="items-start">

@@ -434,6 +434,9 @@ export interface SacrificeRow {
   playedAt: string | null;
   held: boolean;
   note: string | null;
+  /** The game's opening (games.eco / games.opening); null for games imported before ECO extraction. */
+  eco?: string | null;
+  opening?: string | null;
 }
 
 /** GET /users/recap (app/services/recap.py). */

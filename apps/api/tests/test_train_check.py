@@ -27,3 +27,18 @@ def test_unsound_move_and_engine_failure():
 def test_illegal_move_raises():
     with pytest.raises(ValueError):
         check_move(START, "e2e5", "e4", False)
+
+
+def test_reference_drill_names_tal_not_the_engine():
+    assert check_move(START, "e2e4", "e4", False, reference_drill=True)["line"] == "That's what Tal played."
+    out = check_move(START, "d2d4", "e4", False, loss=lambda b, m: 0.0, reference_drill=True)
+    assert out["line"] == "That holds too. Tal played e4."
+
+
+def test_in_your_openings_prefers_exact_eco_then_family():
+    from app.services.reference_axes import in_your_openings
+
+    positions = [{"eco": "C50", "fen": "a"}, {"eco": "C55", "fen": "b"}, {"eco": "B20", "fen": "c"}]
+    picks = in_your_openings(positions, ["C54", "B20"], seed=0, count=3)
+    # Exact pass: only B20 matches. Family pass: C5x gives "a" (seed 0); B2x has nothing new.
+    assert [p["fen"] for p in picks] == ["c", "a"]

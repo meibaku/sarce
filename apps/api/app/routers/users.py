@@ -111,7 +111,10 @@ async def check_drill_move(body: DrillMove):
     from app.services.train import check_move
 
     try:
-        return check_move(body.fen, body.uci, body.answer, body.source == "find the sacrifice", bot_service.move_loss)
+        return check_move(
+            body.fen, body.uci, body.answer, body.source == "find the sacrifice", bot_service.move_loss,
+            reference_drill=body.source == "Tal in your openings",
+        )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
