@@ -6,9 +6,8 @@ days, Sure → 9 days).
 Sources available today:
 - find the sacrifice: the engine's best move genuinely offered material and you played another;
 - trap at your band: a trap atlas position near your opponents' ratings;
-- play the other side: a sacrifice you played, to defend from the other chair.
-The handoff's reference-game guess and saved video positions need data Sarce does not have yet,
-so they are not invented here.
+- play the other side: a sacrifice you played, to defend from the other chair;
+- a saved position: one you kept from Review ("Add to Train"), services/positions.py.
 """
 
 from __future__ import annotations
@@ -103,7 +102,8 @@ def missed_sacrifice(board: chess.Board, played: chess.Move, best_uci: str | Non
 
 
 class TrainService:
-    def queue(self, user_id: str | None, owner_id: str, focus: str | None) -> dict:
+    def queue(self, user_id: str | None, owner_id: str, focus: str | None, first: str | None = None) -> dict:
+        """The queue; `first` (a drill key, e.g. from the library's "Defend it yourself") goes to the front."""
         sb = get_supabase()
         q = (
             sb.table("games")
@@ -199,11 +199,17 @@ class TrainService:
                 "ply": None,
             })
 
+        from app.services.positions import PositionStore, drill_items
+
+        saved = drill_items(PositionStore().list(owner_id))
         # Interleave, putting the week's focus first, and skip drills not yet due.
-        order = {"safe_reply": [trap_items, missed, other_side], "calm_after_sacrifice": [other_side, missed, trap_items]}.get(
-            focus or "", [missed, trap_items, other_side]
+        order = {"safe_reply": [trap_items, missed, other_side, saved], "calm_after_sacrifice": [other_side, missed, trap_items, saved]}.get(
+            focus or "", [missed, trap_items, other_side, saved]
         )
-        pools = [[i for i in pool if i["key"] not in due] for pool in order]
+        wanted = next((i for pool in order for i in pool if i["key"] == first), None) if first else None
+        pools = [[i for i in pool if i["key"] not in due and i is not wanted] for pool in order]
+        if wanted:
+            items.append(wanted)
         while len(items) < QUEUE and any(pools):
             for pool in pools:
                 if pool and len(items) < QUEUE:

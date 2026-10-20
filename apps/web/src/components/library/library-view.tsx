@@ -144,7 +144,10 @@ export function LibraryView({ rows }: { rows: SacrificeRow[] }) {
               <PrimaryLink href={`/games/${sel.gameId}/review?ply=${sel.ply}`} className="!h-10 !px-4">
                 Open in Review
               </PrimaryLink>
-              <TextLink href="/train">Defend it yourself</TextLink>
+              {/* Only a sacrifice that held has a defence drill ("play the other side", the reply after it). */}
+              <TextLink href={sel.held ? `/train?drill=${encodeURIComponent(`defend:${sel.gameId}:${sel.ply + 1}`)}` : "/train"}>
+                Defend it yourself
+              </TextLink>
               <TextButton onClick={() => downloadShareCard(sel)}>Share card</TextButton>
             </div>
           </section>

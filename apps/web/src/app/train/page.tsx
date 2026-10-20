@@ -12,7 +12,9 @@ export default function TrainPage() {
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    getTrain().then(setData).catch(() => setFailed(true));
+    // Read once on mount (no useSearchParams, so the page needs no Suspense boundary).
+    const drill = new URLSearchParams(window.location.search).get("drill");
+    getTrain(drill).then(setData).catch(() => setFailed(true));
   }, []);
 
   return (

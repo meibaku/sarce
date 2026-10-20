@@ -207,8 +207,14 @@ export async function setFocus(kind: import("@/types/chess").FocusKind, value: s
   });
 }
 
-export async function getTrain() {
-  return fetchApi<import("@/types/chess").TrainApi>(`/users/train`);
+/** The Train queue; `drill` (a drill key) is put first, e.g. from the library's "Defend it yourself". */
+export async function getTrain(drill?: string | null) {
+  return fetchApi<import("@/types/chess").TrainApi>(`/users/train${drill ? `?drill=${encodeURIComponent(drill)}` : ""}`);
+}
+
+/** Review → "Add to Train": keeps a position as a Train drill. */
+export async function savePosition(body: { fen: string; title?: string; note?: string; gameId?: string; ply?: number }) {
+  return fetchApi<{ id: string }>(`/users/positions`, { method: "POST", body: JSON.stringify(body) });
 }
 
 export async function answerDrill(drillKey: string, confidence: import("@/types/chess").Confidence) {
@@ -267,6 +273,16 @@ export async function updateSettings(changes: Partial<import("@/types/chess").Se
 }
 
 /** Downloads the journal as Markdown, sending the sign-in token like every other call. */
+/** The journal as Markdown text (for the printable PDF view). */
+export async function getJournalText() {
+  const token = await getAccessToken();
+  const res = await fetch(`${API_BASE}/users/journal`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!res.ok) throw new Error(`Export failed (${res.status})`);
+  return res.text();
+}
+
 export async function downloadJournal() {
   const token = await getAccessToken();
   const res = await fetch(`${API_BASE}/users/journal`, {

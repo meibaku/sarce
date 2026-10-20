@@ -116,12 +116,47 @@ async def check_drill_move(body: DrillMove):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+class SavePosition(BaseModel):
+    fen: str = Field(..., max_length=120)
+    title: str | None = Field(None, max_length=200)
+    note: str | None = Field(None, max_length=4000)
+    gameId: str | None = None
+    ply: int | None = Field(None, ge=0, le=1200)
+
+
+@router.get("/positions")
+async def list_positions(user_id: str | None = Query(None)):
+    """Positions you saved to drill (Review → Add to Train)."""
+    from app.services.positions import PositionStore
+
+    return {"positions": PositionStore().list(resolve_user_id(user_id))}
+
+
+@router.post("/positions")
+async def save_position(body: SavePosition, user_id: str | None = Query(None)):
+    """Saves a position for Train; the engine's move from the game's analysis becomes the answer."""
+    from app.services.positions import PositionStore
+
+    try:
+        return PositionStore().save(resolve_user_id(user_id), body.fen, body.title, body.note, body.gameId, body.ply)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.delete("/positions/{position_id}")
+async def delete_position(position_id: str, user_id: str | None = Query(None)):
+    from app.services.positions import PositionStore
+
+    PositionStore().delete(resolve_user_id(user_id), position_id)
+    return {"deleted": position_id}
+
+
 @router.get("/train")
-async def get_train(user_id: str | None = Query(None)):
-    """Train queue: drills from your games and the trap atlas, aimed at this week's focus."""
+async def get_train(user_id: str | None = Query(None), drill: str | None = Query(None, max_length=200)):
+    """Train queue: drills from your games, the trap atlas and saved positions, aimed at this week's focus."""
     owner = resolve_user_id(user_id)
     focus = recap_service.current_focus(owner, "weekly")
-    data = train_service.queue(scoped_user_id(user_id, None), owner, focus)
+    data = train_service.queue(scoped_user_id(user_id, None), owner, focus, first=drill)
     return {**data, "focus": FOCUSES.get(focus or "")}
 
 

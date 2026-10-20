@@ -195,6 +195,15 @@ export function SettingsView({
               >
                 Export journal (Markdown)
               </button>
+              {/* PDF without a dependency: a print-styled page; the browser's "Save as PDF" does the rest. */}
+              <a
+                href="/journal?print=1"
+                target="_blank"
+                rel="noopener"
+                className="inline-flex h-9 items-center rounded-[6px] border-[1.5px] border-ink bg-surface px-[14px] text-[12px] font-medium hover:bg-panel active:bg-press"
+              >
+                Export journal (PDF)
+              </a>
             </div>
           </section>
 

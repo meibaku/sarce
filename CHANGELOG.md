@@ -8,6 +8,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Background analysis no longer freezes the API: move classification runs in a worker thread
 
 ### Added
+- Saved positions: Review → "Add to Train" keeps the moment's position (migration `saved_positions`, with the
+  engine's move as the answer when the game was analysed) and Train drills it as "a saved position"; the
+  library's "Defend it yourself" opens that sacrifice's defence drill (`/train?drill=`); Settings → "Export
+  journal (PDF)" opens a print-styled journal (`/journal`) for the browser's Save as PDF
 - Faster analysis: several games are analysed at once, one single-threaded Stockfish each (`ANALYSIS_WORKERS`,
   default one per core minus one; results stay deterministic); with the chaos pass on, Phase 1 reads the same
   per-position search as the lenses instead of three depth-18 searches per move; a Stockfish folder with
