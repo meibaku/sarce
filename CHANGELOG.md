@@ -4,6 +4,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Removed
+- The pre-v1 dashboard at `/lab` and the components only it used (ADR 0005); the Brilliant headline contract now
+  checks Home; sign-in status moved to Settings
+
 ### Fixed
 - Reference players: pgnmentor spells Tal "Mihail", so name matching failed and every Tal game counted him as
   White; matching now accepts surname plus first initial. The Tal axis values from the earlier run mixed in his
@@ -11,6 +15,7 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Background analysis no longer freezes the API: move classification runs in a worker thread
 
 ### Added
+- Opponent prep at `/prep` (from Play): private reports from an opponent's finished games, in the v1 design
 - Openings (ECO extraction, PHASES 1.8): `games.eco` and `games.opening` from the PGN headers (migration
   `game_openings` backfills stored games); Train adds "Tal in your openings" (guess Tal's move in a position
   from a Tal game in an opening you play, `data/reference_positions.json` from

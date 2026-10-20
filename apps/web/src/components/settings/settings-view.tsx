@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AuthStatus } from "@/components/auth-status";
 import { Stepper, Switch, TextLink } from "@/components/ui/buttons";
 import { AutoGrid, SectionLabel } from "@/components/ui/card";
 import { Mascot } from "@/components/ui/mascot";
@@ -210,6 +211,7 @@ export function SettingsView({
           <div className="flex flex-wrap gap-[18px]">
             <TextLink href="/onboarding">Replay onboarding</TextLink>
             <TextLink href="/states">Preview edge states</TextLink>
+            <AuthStatus />
           </div>
         </div>
       </AutoGrid>

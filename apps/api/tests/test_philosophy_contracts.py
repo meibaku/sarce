@@ -67,28 +67,26 @@ class TestStyleVectorContracts:
         assert "sacrificeRate" in vec
 
 
-class TestDashboardContracts:
-    """UI must surface Brilliant as headline, not hide it."""
+class TestHomeContracts:
+    """UI must surface Brilliant as the headline, not hide it (Home replaced the old dashboard, ADR 0005)."""
 
-    def test_brilliant_gauge_component_exists(self):
-        assert (WEB_SRC / "components" / "brilliant-gauge.tsx").is_file()
+    def test_style_gauge_component_exists(self):
+        assert (WEB_SRC / "components" / "ui" / "style-gauge.tsx").is_file()
 
-    def test_dashboard_imports_brilliant_gauge(self):
-        dashboard = (WEB_SRC / "components" / "dashboard.tsx").read_text(
-            encoding="utf-8"
-        )
-        assert "BrilliantGauge" in dashboard
-        assert "brilliantPct" in dashboard
+    def test_home_shows_the_brilliant_gauge(self):
+        home = (WEB_SRC / "components" / "home" / "home-view.tsx").read_text(encoding="utf-8")
+        assert "StyleGauge" in home
+        assert "Brilliant" in home
 
-    def test_style_summary_uses_encouraging_framing(self):
-        summary = (WEB_SRC / "components" / "style-summary.tsx").read_text(
-            encoding="utf-8"
-        )
-        # Must frame as target range, not failure language
-        assert "target range" in summary.lower() or "Tal-style" in summary
+    def test_home_gap_line_uses_encouraging_framing(self):
+        from app.services.home import gap_line
+
+        lines = [gap_line(None, 6, 10), gap_line(2.0, 6, 10), gap_line(8.0, 6, 10), gap_line(14.0, 6, 10)]
         punitive = ["you failed", "bad player", "terrible", "shame"]
-        for word in punitive:
-            assert word not in summary.lower()
+        for line in lines:
+            assert not any(word in line.lower() for word in punitive)
+        home = (WEB_SRC / "components" / "home" / "home-view.tsx").read_text(encoding="utf-8").lower()
+        assert not any(word in home for word in punitive)
 
 
 class TestPhilosophyDocAnchors:

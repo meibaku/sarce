@@ -48,87 +48,6 @@ export async function importLichessGames(username: string, analyze = false) {
   );
 }
 
-export async function analyzePendingGames(username?: string, limit?: number) {
-  return fetchApi<{ message: string; username: string | null; userId: string }>(
-    "/games/analyze",
-    {
-      method: "POST",
-      body: JSON.stringify({ username, limit }),
-    },
-  );
-}
-
-export async function getUserBaseline(username?: string) {
-  const params = username ? `?username=${encodeURIComponent(username)}` : "";
-  return fetchApi<import("@/types/chess").UserBaseline>(
-    `/analysis/baseline/${LOCAL_USER_ID}${params}`,
-  );
-}
-
-export async function getTimeline(username?: string) {
-  const params = username ? `?username=${encodeURIComponent(username)}` : "";
-  return fetchApi<{ points: import("@/types/chess").TimelinePoint[] }>(
-    `/analysis/timeline/${LOCAL_USER_ID}${params}`,
-  );
-}
-
-export async function getTalBenchmark() {
-  return fetchApi<import("@/types/chess").ReferenceBenchmark>(
-    "/reference/tal",
-  );
-}
-
-export async function listGames(username?: string) {
-  const params = username
-    ? `?username=${encodeURIComponent(username)}`
-    : "";
-  return fetchApi<{ games: import("@/types/chess").GameSummary[] }>(
-    `/games${params}`,
-  );
-}
-
-export async function getStyleProfile(username?: string) {
-  const params = username ? `?username=${encodeURIComponent(username)}` : "";
-  return fetchApi<import("@/types/chess").StyleProfile>(
-    `/analysis/style-profile/${LOCAL_USER_ID}${params}`,
-  );
-}
-
-export async function getGameDetail(gameId: string, username?: string) {
-  const params = username ? `?username=${encodeURIComponent(username)}` : "";
-  return fetchApi<import("@/types/chess").GameDetail>(
-    `/games/${gameId}${params}`,
-  );
-}
-
-export async function listStyleMoments(username?: string) {
-  const params = username
-    ? `?username=${encodeURIComponent(username)}`
-    : "";
-  return fetchApi<{
-    moments: import("@/types/chess").StyleMoment[];
-  }>(`/games/moments${params}`);
-}
-
-export async function getGameLenses(gameId: string) {
-  return fetchApi<import("@/types/chess").GameLenses>(`/games/${gameId}/lenses`);
-}
-
-export async function getChaosSummary(username: string) {
-  return fetchApi<import("@/types/chess").ChaosSummary>(
-    `/users/${encodeURIComponent(username)}/chaos-summary`,
-  );
-}
-
-export async function listTraps(band?: number) {
-  const params = band == null ? "" : `?band=${band}`;
-  return fetchApi<{ traps: import("@/types/chess").Trap[] }>(`/traps${params}`);
-}
-
-export async function getGameIdeas(gameId: string) {
-  return fetchApi<import("@/types/chess").GameIdeas>(`/games/${gameId}/ideas`);
-}
-
 export async function listScoutingReports() {
   return fetchApi<{ reports: import("@/types/chess").ScoutingReport[] }>("/scouting/reports");
 }
@@ -239,10 +158,6 @@ export async function saveBotGame(body: {
   clocks_ms: (number | null)[];
 }) {
   return fetchApi<{ gameId: string }>(`/play/save`, { method: "POST", body: JSON.stringify(body) });
-}
-
-export async function getBots() {
-  return fetchApi<{ bots: { id: import("@/types/chess").BotId; label: string; why: string }[] }>(`/play/bots`);
 }
 
 export async function startBotGame() {
