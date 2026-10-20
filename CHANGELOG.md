@@ -15,6 +15,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Background analysis no longer freezes the API: move classification runs in a worker thread
 
 ### Added
+- Manual position setter (PHASES 2.1): Train → "Save a position from a video or book" takes a FEN with a live
+  board preview and saves it as a drill
 - The Expo app (`apps/mobile`, SDK 58, own lockfile): Home, Review, You, Train and Play tabs plus Summary with its
   questions, Review with intent notes and "Add to Train", the library, the weekly recap, Settings with sync,
   onboarding and games against Sarce bots, on the same API (`EXPO_PUBLIC_API_URL`); the handoff's app icons and

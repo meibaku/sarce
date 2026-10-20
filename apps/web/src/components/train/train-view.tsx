@@ -5,6 +5,7 @@ import { PrimaryButton, TextButton } from "@/components/ui/buttons";
 import { AutoGrid } from "@/components/ui/card";
 import { Board } from "@/components/ui/board";
 import { Mascot } from "@/components/ui/mascot";
+import { PositionSetter } from "@/components/train/position-setter";
 import { checkDrillMove } from "@/lib/api";
 import type { Confidence, DrillCheck, DrillItem, TrainApi } from "@/types/chess";
 
@@ -70,6 +71,8 @@ export function TrainView({ data, onAnswer }: { data: TrainApi; onAnswer: (key: 
           {data.focus ? `aimed at this week's focus: ${data.focus.toLowerCase()}` : `${data.waiting} waiting · pick a focus in your weekly recap`}
         </span>
       </div>
+
+      <PositionSetter />
 
       <AutoGrid min={380} className="items-start">
         <section className="overflow-hidden rounded-[8px] border border-line bg-surface">
