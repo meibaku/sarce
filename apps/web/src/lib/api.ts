@@ -131,9 +131,52 @@ export async function getTrain(drill?: string | null) {
   return fetchApi<import("@/types/chess").TrainApi>(`/users/train${drill ? `?drill=${encodeURIComponent(drill)}` : ""}`);
 }
 
-/** Review → "Add to Train": keeps a position as a Train drill. */
-export async function savePosition(body: { fen: string; title?: string; note?: string; gameId?: string; ply?: number }) {
+/** Keeps a position as a Train drill (Review → Add to Train, or from a video / screenshot / book). */
+export async function savePosition(body: {
+  fen: string;
+  title?: string;
+  note?: string;
+  gameId?: string;
+  ply?: number;
+  sourceUrl?: string;
+  sourceTimeS?: number;
+  excerpt?: string;
+  aiSummary?: string;
+}) {
   return fetchApi<{ id: string }>(`/users/positions`, { method: "POST", body: JSON.stringify(body) });
+}
+
+/** Saved positions, optionally filtered by words in titles, notes and transcripts. */
+export async function listPositions(q?: string) {
+  return fetchApi<{ positions: import("@/types/chess").SavedPosition[] }>(`/users/positions${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+}
+
+export async function deletePosition(id: string) {
+  return fetchApi<{ deleted: string }>(`/users/positions/${id}`, { method: "DELETE" });
+}
+
+/** The captions around a moment of a YouTube video (no AI); `transcript` when YouTube blocks the fetch. */
+export async function videoExcerpt(url: string, transcript?: string) {
+  return fetchApi<{ videoId: string; at: number; text: string; start: number; end: number }>(`/videos/excerpt`, {
+    method: "POST",
+    body: JSON.stringify({ url, transcript }),
+  });
+}
+
+/** Opt-in, sent to Claude: read a board from a screenshot. The FEN comes back checked. */
+export async function fenFromImage(data: string, mediaType: string) {
+  return fetchApi<{ fen: string; confidence: "high" | "medium" | "low"; notes: string; flipped: boolean }>(`/videos/fen-from-image`, {
+    method: "POST",
+    body: JSON.stringify({ data, mediaType }),
+  });
+}
+
+/** Opt-in, sent to Claude: a short title, summary and ideas from what a commentator said. */
+export async function summarizeExcerpt(excerpt: string, fen?: string) {
+  return fetchApi<{ title: string; summary: string; ideas: string[] }>(`/videos/summary`, {
+    method: "POST",
+    body: JSON.stringify({ excerpt, fen }),
+  });
 }
 
 export async function answerDrill(drillKey: string, confidence: import("@/types/chess").Confidence) {

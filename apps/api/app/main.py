@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.deps import authenticate
-from app.routers import analysis, games, health, play, reference, scouting, traps, users
+from app.routers import analysis, games, health, play, reference, scouting, traps, users, videos
 from app.services.sync import sync_loop
 from app.services.job_queue import JobQueue, analysis_handlers, worker_loop
 
@@ -58,3 +58,4 @@ app.include_router(users.router, prefix="/users", tags=["users"], dependencies=A
 app.include_router(traps.router, prefix="/traps", tags=["traps"], dependencies=AUTH)
 app.include_router(scouting.router, prefix="/scouting", tags=["scouting"], dependencies=AUTH)
 app.include_router(play.router, prefix="/play", tags=["play"], dependencies=AUTH)
+app.include_router(videos.router, prefix="/videos", tags=["videos"], dependencies=AUTH)

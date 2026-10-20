@@ -15,6 +15,15 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Background analysis no longer freezes the API: move classification runs in a worker thread
 
 ### Added
+- Positions from videos (PHASES 2.2–2.4): Train → Save a position takes a YouTube link and keeps the captions
+  around that moment (or a pasted transcript when YouTube blocks the request); with Settings → "Video help (sent
+  to AI)" on and Claude credentials on the server, Claude reads a board from a screenshot (FEN checked by
+  python-chess) and summarises what was said. Saved positions are searchable (titles, notes, transcripts,
+  summaries). Migration `position_sources`; new dependencies `anthropic`, `youtube-transcript-api`
+
+### Fixed
+- Background analysis no longer fails games when engines are starved: a 60 s engine protocol timeout (was 10 s),
+  and the default `ANALYSIS_WORKERS` is half the CPU threads so the app and database stay responsive
 - Tal's axis values from 40 games across his career, scored with him on the right side of the board (sacrifice
   18, chaos 36, calm 96, initiative 24; heuristic human model)
 - Mobile: opponent prep (from Play) and Settings → Export journal through the system share sheet

@@ -99,7 +99,8 @@ class Settings(BaseSettings):
     analysis_nodes: int = 1_500_000
     analysis_multipv: int = 4
     analysis_multipv_cap: int = 8
-    # Games analysed at once, one single-threaded engine each; 0 = one per core, leaving one free.
+    # Games analysed at once, one single-threaded engine each; 0 = half the CPU threads, so the app and
+    # the database stay responsive while background sync analyses (set it higher for a batch run).
     analysis_workers: int = 0
     safe_set_tol: float = 0.05
     ep_decided_low: float = 0.05
@@ -122,7 +123,7 @@ class Settings(BaseSettings):
     def workers(self) -> int:
         import os
 
-        return self.analysis_workers if self.analysis_workers > 0 else max(1, (os.cpu_count() or 2) - 1)
+        return self.analysis_workers if self.analysis_workers > 0 else max(1, (os.cpu_count() or 2) // 2)
 
     @property
     def stockfish_executable(self) -> str:
