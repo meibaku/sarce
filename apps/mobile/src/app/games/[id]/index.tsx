@@ -7,6 +7,7 @@ import { useState } from "react";
 import { View } from "react-native";
 import type { CheckinAnswer, FeltAnswer, SummaryQuestion } from "@sarce/types";
 import { Badge, Card, Choice, Edge, Gauge, Label, Link, Loading, Primary, Screen, T, Uncalibrated, s } from "@/components/ui";
+import { Mascot } from "@/components/mascot";
 import { answerCheckin, getSummary, setFelt } from "@/lib/api";
 import { useLoad } from "@/lib/use-load";
 
@@ -78,6 +79,8 @@ export default function Summary() {
             </Card>
           )}
           <View style={s.row}>
+            {/* The summary banner (handoff motion table): brilliant, else proud / relief / nod by result. */}
+            <Mascot state={data.brilliant.count > 0 ? "brilliant" : data.result === "win" ? "proud" : data.result === "draw" ? "relief" : "nod"} size={48} />
             <T mono size={11} tone={data.outcome.accent ? "accentText" : "muted"}>{data.outcome.kicker}</T>
             {!data.calibrated && <Uncalibrated />}
           </View>

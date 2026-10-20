@@ -18,7 +18,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - The Expo app (`apps/mobile`, SDK 58, own lockfile): Home, Review, You, Train and Play tabs plus Summary with its
   questions, Review with intent notes and "Add to Train", the library, the weekly recap, Settings with sync,
   onboarding and games against Sarce bots, on the same API (`EXPO_PUBLIC_API_URL`); the handoff's app icons and
-  splash; CI job `mobile-check` (typecheck + lint); the API allows the Expo web dev origin
+  splash; the rook mascot (the handoff's motion maths drawn with react-native-svg, still under Reduce Motion);
+  CI job `mobile-check` (typecheck + lint); the API allows the Expo web dev origin
 - Opponent prep at `/prep` (from Play): private reports from an opponent's finished games, in the v1 design
 - Openings (ECO extraction, PHASES 1.8): `games.eco` and `games.opening` from the PGN headers (migration
   `game_openings` backfills stored games); Train adds "Tal in your openings" (guess Tal's move in a position

@@ -8,6 +8,7 @@ import { Pressable, TextInput, View } from "react-native";
 import type { IntentType, ReviewApi } from "@sarce/types";
 import { Board } from "@/components/board";
 import { Badge, Card, Choice, Edge, Label, Link, Loading, Primary, Screen, T, Uncalibrated, s } from "@/components/ui";
+import { Mascot } from "@/components/mascot";
 import { getReview, saveIntent, savePosition } from "@/lib/api";
 import { color, font } from "@/lib/theme";
 import { useLoad } from "@/lib/use-load";
@@ -87,6 +88,7 @@ export function ReviewBody({ gameId, back }: { gameId: string; back?: boolean })
 
       <Card lead>
         <View style={s.row}>
+          <Mascot state={m.glyph === "!!" ? "brilliant" : m.glyph === "✓" ? "sound" : m.glyph === "?!" ? "checkin" : "think"} size={36} eyes={false} />
           <Badge glyph={m.glyph} />
           <T weight="medium" size={15} style={{ flex: 1 }}>{`${m.label} · ${m.line}`}</T>
           {m.clock && <T mono size={11} tone="muted">{m.clock}</T>}

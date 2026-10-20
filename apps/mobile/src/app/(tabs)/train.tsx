@@ -7,6 +7,7 @@ import { View } from "react-native";
 import type { Confidence, DrillCheck } from "@sarce/types";
 import { Board, nextSelection } from "@/components/board";
 import { Card, Choice, Edge, Link, Loading, Screen, T, s } from "@/components/ui";
+import { Mascot } from "@/components/mascot";
 import { answerDrill, checkDrill, getTrain } from "@/lib/api";
 import { useLoad } from "@/lib/use-load";
 
@@ -100,7 +101,12 @@ export default function Train() {
             </View>
           ))}
         </View>
-        {answered && <T size={13} tone="ink2">{CONFIDENCE.find(([v]) => v === answered)?.[2]}</T>}
+        {answered && (
+          <View style={s.row}>
+            <Mascot state={answered === "sure" ? "proud" : answered === "unsure" ? "think" : "shake"} size={40} />
+            <T size={13} tone="ink2" style={{ flex: 1 }}>{CONFIDENCE.find(([v]) => v === answered)?.[2]}</T>
+          </View>
+        )}
       </Card>
     </Screen>
   );

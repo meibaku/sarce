@@ -6,6 +6,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { TextInput, View } from "react-native";
 import { Card, Choice, Label, Primary, Screen, T } from "@/components/ui";
+import { Mascot } from "@/components/mascot";
 import { importGames, updateSettings } from "@/lib/api";
 import { color, font } from "@/lib/theme";
 
@@ -47,6 +48,7 @@ export default function Onboarding() {
           <View key={i} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: i <= step ? color.accent : color.line }} />
         ))}
       </View>
+      <Mascot state={step === 0 ? "hello" : step === 1 ? "curious" : "proud"} size={56} />
       {step === 0 && (
         <Card lead>
           <Label accent>Step 1 of 3</Label>

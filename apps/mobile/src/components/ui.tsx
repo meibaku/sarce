@@ -7,6 +7,7 @@ import { router } from "expo-router";
 import type { ReactNode } from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Mascot, type MascotState } from "@/components/mascot";
 import { color, font } from "@/lib/theme";
 
 export function T({
@@ -184,19 +185,19 @@ export function Loading() {
 
 export type EdgeKind = "no-games" | "analysing" | "failed" | "too-few" | "offline";
 
-const EDGE: Record<EdgeKind, { title: string; line: string }> = {
-  "no-games": { title: "No games yet", line: "Connect your Chess.com or Lichess username and Sarce reads your finished games." },
-  analysing: { title: "Still analysing", line: "Your games are being scored. Moments appear as they're ready." },
-  failed: { title: "Analysis didn't finish", line: "Something went wrong reading this game. Try again in a moment." },
-  "too-few": { title: "A few more games", line: "This fills in after five analysed games." },
-  offline: { title: "Can't reach Sarce", line: "The analysis service isn't answering. Is it running, and is the app pointed at it?" },
+const EDGE: Record<EdgeKind, { title: string; line: string; mascot: MascotState }> = {
+  "no-games": { mascot: "empty", title: "No games yet", line: "Connect your Chess.com or Lichess username and Sarce reads your finished games." },
+  analysing: { mascot: "ring", title: "Still analysing", line: "Your games are being scored. Moments appear as they're ready." },
+  failed: { mascot: "error", title: "Analysis didn't finish", line: "Something went wrong reading this game. Try again in a moment." },
+  "too-few": { mascot: "uncalibrated", title: "A few more games", line: "This fills in after five analysed games." },
+  offline: { mascot: "offline", title: "Can't reach Sarce", line: "The analysis service isn't answering. Is it running, and is the app pointed at it?" },
 };
 
 export function Edge({ kind, action, onAction, detail }: { kind: EdgeKind; action?: string; onAction?: () => void; detail?: string }) {
   const e = EDGE[kind];
   return (
     <Card style={{ alignItems: "flex-start", gap: 8, paddingVertical: 24 }}>
-      <Image source={require("../../assets/mark.png")} style={{ width: 40, height: 48, opacity: 0.9 }} resizeMode="contain" />
+      <Mascot state={e.mascot} size={56} />
       <T weight="medium" size={18}>{e.title}</T>
       <T size={13} tone="ink2">{detail ?? e.line}</T>
       {action && onAction && <Link label={action} onPress={onAction} />}

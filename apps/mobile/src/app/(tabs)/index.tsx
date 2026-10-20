@@ -2,6 +2,7 @@
 import { router } from "expo-router";
 import { View } from "react-native";
 import { Badge, Card, ChaosStrip, Edge, Gauge, Label, Link, Loading, Primary, Screen, T, Uncalibrated, s } from "@/components/ui";
+import { Mascot } from "@/components/mascot";
 import { getHome } from "@/lib/api";
 import { useLoad } from "@/lib/use-load";
 
@@ -36,7 +37,10 @@ export default function Home() {
               </T>
               {!data.latest.calibrated && <Uncalibrated />}
             </View>
-            <T weight="medium" size={18}>{data.latest.styleRead}</T>
+            <View style={[s.row, { alignItems: "flex-start" }]}>
+              <T weight="medium" size={18} style={{ flex: 1 }}>{data.latest.styleRead}</T>
+              <Mascot state="idle" size={40} />
+            </View>
             {data.latest.chaos.length > 0 && <ChaosStrip chaos={data.latest.chaos} highlight={data.latest.highlight} />}
             {data.latest.moments.map((m) => (
               <View key={m.ply} style={s.row}>

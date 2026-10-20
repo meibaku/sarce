@@ -23,7 +23,11 @@ same API as the web app and keeps nothing on a server of its own.
 Builds for the stores go through EAS (`npx eas-cli@latest build`); icons and the splash come from the
 design handoff (`assets/`).
 
-## Not yet on mobile
+## Mascot
 
-The rook mascot's animations (web components on the web) still need a Reanimated or Lottie port, so the
-app shows the still mark. Opponent prep and the printable journal are web-only for now.
+The rook mascot uses the handoff's motion maths unchanged (`src/lib/mascot-frames.ts`), drawn with
+`react-native-svg`; with the system's Reduce Motion on it holds each state's still pose.
+
+## Web-only for now
+
+Opponent prep and the printable journal.
