@@ -15,6 +15,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Background analysis no longer freezes the API: move classification runs in a worker thread
 
 ### Added
+- Mobile: Settings → Mascot and motion (Playful mascot, Motion: follow system / full / reduced), the quiet-week
+  Home (numbers hidden, sleeping mascot, "End early") and the "Tracking paused" edge state, as on the web
 - Dark theme (the v1.1 item Settings promised): Settings → Theme → Light / Dark / Match system; dark tokens keep
   every text colour at 4.5:1 or better, the fingerprint ramp follows, and the choice is applied before first
   paint (no flash)

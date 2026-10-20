@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { AccessibilityInfo } from "react-native";
 import Svg, { Circle, ClipPath, Defs, Ellipse, G, Path, Polygon, Text as SvgText } from "react-native-svg";
 import { C, D, REST as REST_POSES, S as STATES } from "@/lib/mascot-frames";
+import { usePrefs } from "@/lib/prefs";
 
 /** A frame: transforms, eyes, badge and ring for one instant (see lib/mascot-frames.ts). */
 type Frame = { [key: string]: any };
@@ -31,8 +32,13 @@ function useReducedMotion() {
   return reduced;
 }
 
-export function Mascot({ state = "idle", size = 44, progress, eyes = true }: { state?: MascotState; size?: number; progress?: number; eyes?: boolean }) {
-  const reduced = useReducedMotion();
+export function Mascot({ state: wanted = "idle", size = 44, progress, eyes: wantEyes = true }: { state?: MascotState; size?: number; progress?: number; eyes?: boolean }) {
+  const prefs = usePrefs();
+  const systemReduced = useReducedMotion();
+  // Playful off: the still mark, no eyes. Motion follows the setting, or the system when "system".
+  const state = prefs.playful ? wanted : "static";
+  const eyes = prefs.playful && wantEyes;
+  const reduced = !prefs.playful || prefs.motion === "reduced" || (prefs.motion === "system" && systemReduced);
   const [t, setT] = useState(0);
 
   useEffect(() => {

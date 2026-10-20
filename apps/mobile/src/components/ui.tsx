@@ -183,13 +183,14 @@ export function Loading() {
   );
 }
 
-export type EdgeKind = "no-games" | "analysing" | "failed" | "too-few" | "offline";
+export type EdgeKind = "no-games" | "analysing" | "failed" | "too-few" | "paused" | "offline";
 
 const EDGE: Record<EdgeKind, { title: string; line: string; mascot: MascotState }> = {
   "no-games": { mascot: "empty", title: "No games yet", line: "Connect your Chess.com or Lichess username and Sarce reads your finished games." },
   analysing: { mascot: "ring", title: "Still analysing", line: "Your games are being scored. Moments appear as they're ready." },
   failed: { mascot: "error", title: "Analysis didn't finish", line: "Something went wrong reading this game. Try again in a moment." },
   "too-few": { mascot: "uncalibrated", title: "A few more games", line: "This fills in after five analysed games." },
+  paused: { mascot: "quiet", title: "Tracking paused", line: "Games still sync but aren't counted toward your style." },
   offline: { mascot: "offline", title: "Can't reach Sarce", line: "The analysis service isn't answering. Is it running, and is the app pointed at it?" },
 };
 
