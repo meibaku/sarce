@@ -15,6 +15,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Background analysis no longer freezes the API: move classification runs in a worker thread
 
 ### Added
+- Tal's axis values from 40 games across his career, scored with him on the right side of the board (sacrifice
+  18, chaos 36, calm 96, initiative 24; heuristic human model)
 - Mobile: opponent prep (from Play) and Settings → Export journal through the system share sheet
 - Mobile: Settings → Mascot and motion (Playful mascot, Motion: follow system / full / reduced), the quiet-week
   Home (numbers hidden, sleeping mascot, "End early") and the "Tracking paused" edge state, as on the web
