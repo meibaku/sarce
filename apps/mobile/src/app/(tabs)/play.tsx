@@ -5,7 +5,7 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import type { BotId } from "@sarce/types";
-import { Card, Choice, Label, Primary, Screen, T } from "@/components/ui";
+import { Card, Choice, Label, Link, Primary, Screen, T } from "@/components/ui";
 import { setFocus } from "@/lib/api";
 import { BOTS, INTENTS } from "@/lib/play";
 
@@ -40,6 +40,11 @@ export default function Play() {
         <T size={13} tone="ink2">{`Why this bot: ${current.why}`}</T>
       </Card>
       <Primary label="Play 3+0" onPress={() => router.push({ pathname: "/play/game", params: { bot } })} />
+      <Card>
+        <Label>Opponent prep · private</Label>
+        <T size={13} tone="ink2">Playing someone you know? Their openings and tendencies from finished games only.</T>
+        <Link label="Prep for an opponent" onPress={() => router.push("/prep")} />
+      </Card>
     </Screen>
   );
 }

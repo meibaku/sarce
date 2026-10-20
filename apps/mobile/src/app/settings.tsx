@@ -4,10 +4,10 @@
  */
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable, Switch, TextInput, View } from "react-native";
+import { Pressable, Share, Switch, TextInput, View } from "react-native";
 import type { SettingsApi } from "@sarce/types";
 import { Card, Choice, Edge, Gauge, Label, Link, Loading, Screen, T, s } from "@/components/ui";
-import { API_BASE, getSettings, getSync, syncNow, updateSettings } from "@/lib/api";
+import { API_BASE, getJournal, getSettings, getSync, syncNow, updateSettings } from "@/lib/api";
 import { setPrefs } from "@/lib/prefs";
 import { color, font } from "@/lib/theme";
 import { useLoad } from "@/lib/use-load";
@@ -180,6 +180,14 @@ export default function Settings() {
 
       <View style={[s.row, { gap: 18 }]}>
         <Link label="Replay onboarding" onPress={() => router.push("/onboarding")} />
+        <Link
+          label="Export journal"
+          onPress={() =>
+            getJournal()
+              .then((text) => Share.share({ title: "Sarce journal", message: text }))
+              .catch(() => setNote("The journal couldn't be exported."))
+          }
+        />
       </View>
     </Screen>
   );

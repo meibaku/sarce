@@ -15,6 +15,7 @@ import type {
   HomeApi,
   IntentType,
   RecapApi,
+  ScoutingReport,
   ReviewApi,
   SacrificeRow,
   SettingsApi,
@@ -65,5 +66,14 @@ export const getSettings = () => api<SettingsApi>("/users/settings");
 export const updateSettings = (changes: Partial<SettingsApi>) => api<SettingsApi>("/users/settings", put(changes));
 export const getSync = () => api<SyncStatus>("/users/sync");
 export const syncNow = () => api("/users/sync", { method: "POST" });
+/** The journal as Markdown (Settings → Export journal, shared through the system share sheet). */
+export async function getJournal(): Promise<string> {
+  const res = await fetch(`${API_BASE}/users/journal`);
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  return res.text();
+}
+export const listReports = () => api<{ reports: ScoutingReport[] }>("/scouting/reports");
+export const createReport = (username: string, source: "chess_com" | "lichess") => api<ScoutingReport>("/scouting/reports", post({ username, source }));
+export const deleteReport = (id: string) => api(`/scouting/reports/${id}`, { method: "DELETE" });
 export const importGames = (site: "chess_com" | "lichess", username: string) =>
   api<{ imported: number }>(site === "lichess" ? "/games/import/lichess" : "/games/import", post({ username, analyze: true }));
