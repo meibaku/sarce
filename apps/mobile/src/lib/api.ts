@@ -26,6 +26,8 @@ import type {
 } from "@sarce/types";
 
 export const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8001";
+/** Where shared links open (the web app's /s/<token> page). */
+export const WEB_BASE = process.env.EXPO_PUBLIC_WEB_URL ?? "http://localhost:3001";
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -75,5 +77,7 @@ export async function getJournal(): Promise<string> {
 export const listReports = () => api<{ reports: ScoutingReport[] }>("/scouting/reports");
 export const createReport = (username: string, source: "chess_com" | "lichess") => api<ScoutingReport>("/scouting/reports", post({ username, source }));
 export const deleteReport = (id: string) => api(`/scouting/reports/${id}`, { method: "DELETE" });
+export const createShare = (kind: "summary" | "sacrifice", gameId: string, ply?: number) =>
+  api<{ id: string; token: string }>("/shares", post({ kind, gameId, ply }));
 export const importGames = (site: "chess_com" | "lichess", username: string) =>
   api<{ imported: number }>(site === "lichess" ? "/games/import/lichess" : "/games/import", post({ username, analyze: true }));

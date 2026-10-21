@@ -15,7 +15,7 @@
 | M5 Review UI | Merged; rebuilt as the v1.0 Review screen (web and mobile); `/lab` retired (ADR 0005) | Tal in chaos terms: scoring script done, the rerun after the name-matching fix restores `data/reference_axes.json` |
 | M6 Trap atlas | Merged; 277 traps loaded; Train serves traps at your band, your own openings first (ECO) | Most traps rest on 3–4 sightings: grow the atlas with more games |
 | M7 Intention tagger | v1 merged, off by default | Tune thresholds; "sharpness" part of squeeze |
-| M8 Sharing + scouting | Lichess import + automatic sync, opponent prep (`/prep`), durable job queue, optional sign-in (verified against a live Supabase Auth: `scripts/auth_smoke.py`) | Sharing beyond static exports waits for the multi-user decision |
+| M8 Sharing + scouting | Multi-user: sign-in (verified against a live Supabase Auth, `scripts/auth_smoke.py`), per-user sync and analysis, shared read-only links (`/s/<token>`, snapshots with no third-party names, revocable); opponent prep (`/prep`); Lichess import | Done |
 
 **What has actually been run** (10 Oct 2026, Stockfish 18, a throwaway Supabase Postgres + PostgREST stack):
 
