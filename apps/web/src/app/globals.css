@@ -130,6 +130,23 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Touch target: an invisible hit area of at least 44×44 centred on a smaller control, so text links, steppers
+   and compact toggles stay as drawn in the handoff but are easy to tap on a phone. */
+@layer components {
+  .tap {
+    position: relative;
+  }
+  .tap::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+}
+
 /* Every interactive element shows the same focus ring. */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--accent);

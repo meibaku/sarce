@@ -49,15 +49,15 @@ export function RecapView({ data, onSetFocus }: { data: RecapApi; onSetFocus: (i
         <span className="pb-2 text-[14px] leading-[1.5] text-ink-2">{streak}</span>
       </div>
 
-      <div className="flex h-[72px] items-end gap-1 border-b-[1.5px] border-ink pb-1" role="img" aria-label="This week's games by style read">
+      <div className="flex h-[72px] items-end gap-1 border-b-[1.5px] border-ink pb-1" role="group" aria-label="This week's games by style read">
+        {/* Each link fills its column, so the tap target is the full 72px height, not the (data-sized) bar. */}
         {data.bars.map((bar) => (
-          <Link
-            key={bar.gameId}
-            href={`/games/${bar.gameId}`}
-            className="flex-1 rounded-t-[2px]"
-            style={{ height: `${Math.max(8, bar.styleRead)}%`, background: bar.you ? "var(--accent)" : "var(--line-3)" }}
-            aria-label={`Game, style read ${bar.styleRead}%`}
-          />
+          <Link key={bar.gameId} href={`/games/${bar.gameId}`} className="flex h-full flex-1 items-end" aria-label={`Game, style read ${bar.styleRead}%`}>
+            <span
+              className="w-full rounded-t-[2px]"
+              style={{ height: `${Math.max(8, bar.styleRead)}%`, background: bar.you ? "var(--accent)" : "var(--line-3)" }}
+            />
+          </Link>
         ))}
       </div>
 

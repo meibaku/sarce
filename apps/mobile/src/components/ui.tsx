@@ -5,8 +5,9 @@
  */
 import { router } from "expo-router";
 import type { ReactNode } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Icon, SarceMark } from "@/components/icons";
 import { Mascot, type MascotState } from "@/components/mascot";
 import { color, font } from "@/lib/theme";
 
@@ -41,11 +42,13 @@ export function Screen({ title, children, back }: { title: string; children: Rea
     <SafeAreaView edges={["top"]} style={s.safe}>
       <View style={s.header}>
         {back ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} hitSlop={12}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 19, right: 19 }}>
             <T size={20} tone="accentText">‹</T>
           </Pressable>
         ) : (
-          <Image source={require("../../assets/mark.png")} style={{ width: 18, height: 22 }} resizeMode="contain" accessibilityLabel="Sarce" />
+          <View accessibilityLabel="Sarce" accessible>
+            <SarceMark height={22} color={color.ink} />
+          </View>
         )}
         <T weight="semibold" size={16}>sarce</T>
         <T mono size={11} tone="muted" style={{ marginLeft: 4 }} numberOfLines={1}>
@@ -53,8 +56,8 @@ export function Screen({ title, children, back }: { title: string; children: Rea
         </T>
         <View style={{ flex: 1 }} />
         {!back && (
-          <Pressable accessibilityRole="button" accessibilityLabel="Settings" onPress={() => router.push("/settings")} style={s.gear} hitSlop={6}>
-            <T size={15} tone="ink2">⚙</T>
+          <Pressable accessibilityRole="button" accessibilityLabel="Settings" onPress={() => router.push("/settings")} style={s.gear} hitSlop={4}>
+            <Icon name="settings" size={17} color={color.ink} />
           </Pressable>
         )}
       </View>
@@ -127,7 +130,7 @@ export function Badge({ glyph }: { glyph: string }) {
   const g = GLYPH[glyph] ?? GLYPH["?"];
   return (
     <View accessibilityLabel={g.label} style={[s.badge, { borderColor: color[g.tone] }]}>
-      <T mono weight="medium" size={11} tone={g.tone}>
+      <T weight="semibold" size={11} tone={g.tone}>
         {glyph}
       </T>
     </View>
@@ -143,19 +146,34 @@ export function Uncalibrated() {
 }
 
 /** Brilliant % on the 0–15 scale with the goal band; dashed when it rests on fewer than five games. */
-export function Gauge({ value, lo, hi, compact }: { value: number | null; lo: number; hi: number; compact?: boolean }) {
-  const pct = (v: number) => `${(Math.max(0, Math.min(15, v)) / 15) * 100}%` as const;
+/**
+ * Brilliant gauge, as the web StyleGauge (docs/DESIGN.md): a 10px ink-outlined track on 0–15%, the goal band in
+ * accent tint, an optional ±spread hatch, a 2px ink marker at the value, and 0 / lo / hi / 15% under it.
+ */
+export function Gauge({ value, lo, hi, spread, compact }: { value: number | null; lo: number; hi: number; spread?: number | null; compact?: boolean }) {
+  const at = (v: number) => (Math.max(0, Math.min(15, v)) / 15) * 100;
+  const pct = (v: number) => `${at(v)}%` as const;
+  const h = compact ? 8 : 10;
+  const hatch = value != null && spread ? { from: at(value - spread), to: at(Math.min(value + spread, 15)) } : null;
   return (
-    <View style={{ gap: 4 }}>
-      <View style={[s.track, compact && { height: 8 }]}>
-        <View style={[s.band, { left: pct(lo), width: `${((hi - lo) / 15) * 100}%` }]} />
-        {value != null && <View style={[s.marker, { left: pct(value) }]} />}
+    <View style={{ gap: 6 }} accessibilityLabel={`Brilliant: ${value == null ? "not enough games yet" : `${value.toFixed(1)}%`}, goal ${lo}–${hi}%`}>
+      <View style={{ height: h, borderWidth: 1.5, borderColor: color.ink, borderRadius: compact ? 5 : 6, backgroundColor: color.surface }}>
+        <View style={{ position: "absolute", top: -1.5, bottom: -1.5, left: pct(lo), width: `${((hi - lo) / 15) * 100}%`, backgroundColor: color.accentTint, borderWidth: 1.5, borderColor: color.accent }} />
+        {hatch && (
+          <View style={{ position: "absolute", top: 1, bottom: 1, left: `${hatch.from}%`, width: `${hatch.to - hatch.from}%`, flexDirection: "row", gap: 2, overflow: "hidden" }}>
+            {Array.from({ length: 40 }, (_, i) => (
+              <View key={i} style={{ width: 2, backgroundColor: color.line3 }} />
+            ))}
+          </View>
+        )}
+        {value != null && <View style={{ position: "absolute", top: compact ? -6 : -7, bottom: compact ? -6 : -7, left: pct(value), width: 2, marginLeft: -1, backgroundColor: color.ink, borderRadius: 1 }} />}
       </View>
       {!compact && (
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <T mono size={10} tone="faint">0%</T>
-          <T mono size={10} tone="accentText">{`${lo}–${hi}% your band`}</T>
-          <T mono size={10} tone="faint">15%</T>
+        <View style={{ height: 14 }}>
+          <T mono size={10} tone="muted" style={{ position: "absolute", left: 0 }}>0</T>
+          <T mono size={10} tone="muted" style={{ position: "absolute", left: pct(lo), transform: [{ translateX: -4 }] }}>{String(lo)}</T>
+          <T mono size={10} tone="muted" style={{ position: "absolute", left: pct(hi), transform: [{ translateX: -6 }] }}>{String(hi)}</T>
+          <T mono size={10} tone="muted" style={{ position: "absolute", right: 0 }}>15%</T>
         </View>
       )}
     </View>
@@ -209,16 +227,13 @@ export function Edge({ kind, action, onAction, detail }: { kind: EdgeKind; actio
 export const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: color.page },
   header: { height: 52, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: color.line, backgroundColor: color.surface },
-  gear: { width: 32, height: 32, borderRadius: 6, borderWidth: 1.5, borderColor: color.line2, alignItems: "center", justifyContent: "center" },
+  gear: { width: 36, height: 36, borderRadius: 6, borderWidth: 1.5, borderColor: color.line2, alignItems: "center", justifyContent: "center" },
   body: { padding: 16, gap: 12, paddingBottom: 32 },
   card: { backgroundColor: color.surface, borderWidth: 1, borderColor: color.line, borderRadius: 8, padding: 16, gap: 10 },
   lead: { borderWidth: 1.5, borderColor: color.ink },
   primary: { height: 44, borderRadius: 6, alignItems: "center", justifyContent: "center", paddingHorizontal: 18, alignSelf: "flex-start" },
   choice: { minHeight: 44, borderRadius: 6, borderWidth: 1.5, borderColor: color.line2, backgroundColor: color.surface, justifyContent: "center", paddingHorizontal: 14 },
   choiceOn: { borderColor: color.accent, backgroundColor: color.accentTint },
-  badge: { minWidth: 26, height: 22, borderRadius: 4, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
-  track: { height: 14, borderRadius: 3, backgroundColor: color.panel, borderWidth: 1, borderColor: color.line, overflow: "visible" },
-  band: { position: "absolute", top: 0, bottom: 0, backgroundColor: color.accentTint, borderWidth: 1, borderColor: color.accent },
-  marker: { position: "absolute", top: -4, bottom: -4, width: 3, marginLeft: -1.5, backgroundColor: color.ink, borderRadius: 1 },
+  badge: { width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, alignItems: "center", justifyContent: "center" }, // round, as the web MoveBadge
   row: { flexDirection: "row", alignItems: "center", gap: 10 },
 });

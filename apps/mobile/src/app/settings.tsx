@@ -19,6 +19,7 @@ function Stepper({ value, onChange, min, max }: { value: number; onChange: (v: n
       accessibilityLabel={label === "−" ? "Lower" : "Higher"}
       disabled={next < min || next > max}
       onPress={() => onChange(next)}
+      hitSlop={4} // 36px drawn, 44px to the touch
       style={{ width: 36, height: 36, borderRadius: 6, borderWidth: 1.5, borderColor: color.line2, alignItems: "center", justifyContent: "center", opacity: next < min || next > max ? 0.4 : 1 }}
     >
       <T size={16}>{label}</T>
@@ -27,7 +28,7 @@ function Stepper({ value, onChange, min, max }: { value: number; onChange: (v: n
   return (
     <View style={s.row}>
       {btn("−", value - 1)}
-      <T mono weight="medium" size={16} style={{ width: 36, textAlign: "center" }}>{`${value}%`}</T>
+      <T mono size={20} tone="accentText" style={{ minWidth: 56, textAlign: "center" }}>{`${value}%`}</T>
       {btn("+", value + 1)}
     </View>
   );
@@ -64,33 +65,34 @@ export default function Settings() {
 
       <Card lead>
         <Label accent>Style goal</Label>
-        <View style={[s.row, { justifyContent: "space-between" }]}>
-          <View style={{ gap: 4 }}>
-            <T size={12} tone="muted">From</T>
-            <Stepper value={data.goalLo} min={0} max={data.goalHi - 1} onChange={(v) => change({ goalLo: v })} />
+        <T size={13} tone="ink2">Your target Brilliant band. Every gauge in the app follows it.</T>
+        {(
+          [
+            ["from", data.goalLo, 0, data.goalHi - 1, "goalLo"],
+            ["to", data.goalHi, data.goalLo + 1, 15, "goalHi"],
+          ] as const
+        ).map(([label, value, min, max, key]) => (
+          <View key={label} style={[s.row, { gap: 12 }]}>
+            <T size={13} tone="muted" style={{ width: 36 }}>{label}</T>
+            <Stepper value={value} min={min} max={max} onChange={(v) => change({ [key]: v })} />
           </View>
-          <View style={{ gap: 4 }}>
-            <T size={12} tone="muted">To</T>
-            <Stepper value={data.goalHi} min={data.goalLo + 1} max={15} onChange={(v) => change({ goalHi: v })} />
-          </View>
-        </View>
-        <Gauge value={null} lo={data.goalLo} hi={data.goalHi} />
-        <T size={12} tone="muted">Every gauge in the app follows this band.</T>
+        ))}
+        <Gauge value={null} lo={data.goalLo} hi={data.goalHi} compact />
+        <T mono size={11} tone="muted">references: Tal · change in You</T>
       </Card>
 
       <Card>
         <Label>Questions after a game</Label>
-        <View style={{ flexDirection: "row", gap: 6 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
           {([0, 1, 2] as const).map((n) => (
-            <View key={n} style={{ flex: 1 }}>
-              <Choice label={n === 0 ? "None" : String(n)} selected={data.questionBudget === n} onPress={() => change({ questionBudget: n })} />
-            </View>
+            <Choice key={n} label={["None", "One per game", "Up to two"][n]} selected={data.questionBudget === n} onPress={() => change({ questionBudget: n })} />
           ))}
         </View>
+        <T size={12} tone="muted">Rotates between &quot;felt like you&quot;, intent and random check-ins. Notifications: after a game, quiet 23:00–08:00.</T>
         <View style={[s.row, { justifyContent: "space-between" }]}>
           <View style={{ flex: 1 }}>
             <T weight="medium" size={14}>Quiet week</T>
-            <T size={12} tone="muted">{quiet ? `Until ${data.quietUntil} · numbers hidden, moments stay.` : "Hide numbers for seven days."}</T>
+            <T size={12} tone="muted">{quiet ? `Numbers hidden until ${data.quietUntil}.` : "Hide every number for 7 days."}</T>
           </View>
           <Switch
             value={quiet}
@@ -102,7 +104,7 @@ export default function Settings() {
       </Card>
 
       <Card>
-        <Label>Sources</Label>
+        <Label>Sources and theme</Label>
         <View style={{ flexDirection: "row", gap: 6 }}>
           {(
             [
@@ -116,6 +118,20 @@ export default function Settings() {
             </View>
           ))}
         </View>
+        <View style={{ flexDirection: "row", gap: 6 }}>
+          {(
+            [
+              ["light", "Light"],
+              ["system", "Match system"],
+            ] as const
+          ).map(([v, label]) => (
+            <View key={v} style={{ flex: 1 }}>
+              <Choice label={label} selected={(data.theme === "dark" ? "system" : data.theme) === v} onPress={() => change({ theme: v })} />
+            </View>
+          ))}
+        </View>
+        {/* The phone app draws light only so far (the web has dark); the handoff's own note says the same. */}
+        <T size={12} tone="muted">Dark theme is planned for v1.1; &quot;Match system&quot; stays light until then.</T>
         {(
           [
             ["chessComUsername", "Chess.com username"],

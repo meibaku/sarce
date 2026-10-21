@@ -4,6 +4,28 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Fixed
+- Phone app (Expo): the board wrapped each row after seven squares, showing stripes instead of a checkerboard; it now
+  has proper rank rows and file letters. The tab bar and header use the handoff's line icons and rook mark instead of
+  text glyphs, and the tab labels are no longer clipped
+- Phone app screens follow the handoff:
+  - Home: latest-game card and Brilliant gauge
+  - Review: header and round badges
+  - Train: queue rows, with "Up next" then Start (Train also accepts a drill deep link)
+  - Recap: streak card
+  - Library: detail card with "Defend it yourself"
+  - Play: warm-up card and bot chips
+  - Onboarding: the four steps
+  - Settings: labels and theme row
+- Web Play: the Opponent prep card no longer displaces the Sarce bot card from its handoff position
+- `docs/QA_V1.md` now covers every screen side by side, including the phone app
+
+### Fixed
+- Touch targets: every control is at least 44×44 to the touch on a phone. On the web, a `.tap` hit area covers the
+  header Settings button, text links, steppers and compact toggles, and Recap's game bars fill their column. In the
+  Expo app, `hitSlop` covers the back arrow and the steppers. The drawn sizes are unchanged. The QA record is in
+  `docs/QA_V1.md`
+
 ### Added
 - All games, from Review (`/games`): newest first, or most chaotic first (highest chaos peak, with real /
   calculated / unsound chaos counts). `GET /games?chaos=true` reads the top-scoring chaos rows in score order
