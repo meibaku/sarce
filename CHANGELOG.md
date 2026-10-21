@@ -4,6 +4,14 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Fixed
+- You took ~33 s (and sometimes hit the database statement timeout) on a 3,000-game library: sacrifice offers are
+  parsed once per finished game and cached, the lens query reads only the three `details` keys it uses, and the
+  heavy screens (Home, You, Library, Recap, Train) run off the event loop so one slow request no longer stalls
+  the rest. Warm You load: ~2 s
+- Library sacrifice glyphs: chaos verdicts were looked up per game and hit PostgREST's 1000-row cap, dropping
+  most of them; they are now fetched for the tagged moves only
+
 ### Changed
 - Licence: GNU AGPL-3.0 (was MIT), see ADR 0006 — open source and self-hostable; a modified version run as a
   service must share its source; compatible with python-chess (GPL-3.0+)

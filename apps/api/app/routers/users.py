@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
@@ -30,7 +32,8 @@ async def get_home(username: str | None = Query(None), user_id: str | None = Que
     """Home screen: the latest game's style read and moments, and the Brilliant card."""
     name = normalize_chess_com_username(username) if username else None
     try:
-        return home_service.home(scoped_user_id(user_id, username), name)
+        # Heavy, synchronous database work: run it off the event loop so other requests keep flowing.
+        return await asyncio.to_thread(home_service.home, scoped_user_id(user_id, username), name)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -40,7 +43,7 @@ async def get_you(username: str | None = Query(None), user_id: str | None = Quer
     """You: Brilliant trend and formula, style fingerprint, reference axes, time controls, survival."""
     name = normalize_chess_com_username(username) if username else None
     try:
-        return you_service.you(scoped_user_id(user_id, username), name)
+        return await asyncio.to_thread(you_service.you, scoped_user_id(user_id, username), name)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -50,7 +53,7 @@ async def get_sacrifices(username: str | None = Query(None), user_id: str | None
     """Sacrifice library: every sacrifice played, newest first, with what was offered and the note."""
     name = normalize_chess_com_username(username) if username else None
     try:
-        return {"sacrifices": library_service.sacrifices(scoped_user_id(user_id, username), name)}
+        return {"sacrifices": await asyncio.to_thread(library_service.sacrifices, scoped_user_id(user_id, username), name)}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -63,7 +66,7 @@ class FocusRequest(BaseModel):
 @router.get("/recap")
 async def get_recap(user_id: str | None = Query(None)):
     """Weekly recap: the week's games, Brilliant, best moment, last focus and next week's options."""
-    data = recap_service.recap(scoped_user_id(user_id, None), resolve_user_id(user_id))
+    data = await asyncio.to_thread(recap_service.recap, scoped_user_id(user_id, None), resolve_user_id(user_id))
     if data is None:
         raise HTTPException(status_code=404, detail="No analysed games yet")
     return data
@@ -169,7 +172,7 @@ async def get_train(user_id: str | None = Query(None), drill: str | None = Query
     """Train queue: drills from your games, the trap atlas and saved positions, aimed at this week's focus."""
     owner = resolve_user_id(user_id)
     focus = recap_service.current_focus(owner, "weekly")
-    data = train_service.queue(scoped_user_id(user_id, None), owner, focus, first=drill)
+    data = await asyncio.to_thread(train_service.queue, scoped_user_id(user_id, None), owner, focus, first=drill)
     return {**data, "focus": FOCUSES.get(focus or "")}
 
 
