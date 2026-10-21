@@ -1,7 +1,9 @@
 """Maia-2 adapter — tested with a stand-in for the optional `maia2` package."""
 
 import sys
+import time
 import types
+from concurrent.futures import ThreadPoolExecutor
 
 import chess
 import pytest
@@ -40,6 +42,29 @@ class TestMaia2Adapter:
         model = get_human_model("maia2")
         assert isinstance(model, Maia2HumanModel)
         assert model.model_version == "maia2-0.11-blitz"
+
+    def test_registry_shares_one_loaded_model_across_games(self, monkeypatch):
+        monkeypatch.setattr("app.services.maia_model._shared", {})
+        calls = install_fake_maia2(monkeypatch, {"e2e4": 1.0})
+        for _game in range(3):
+            get_human_model("maia2").move_probs(chess.Board(), 1500)
+        assert get_human_model("maia2") is get_human_model("maia2")
+        assert calls["loads"] == 1
+
+    def test_concurrent_first_use_loads_once(self, monkeypatch):
+        calls = install_fake_maia2(monkeypatch, {"e2e4": 1.0})
+        slow_load = sys.modules["maia2.model"].from_pretrained
+
+        def from_pretrained(**kwargs):
+            time.sleep(0.05)  # widen the window two unguarded threads would both fall into
+            return slow_load(**kwargs)
+
+        monkeypatch.setattr(sys.modules["maia2.model"], "from_pretrained", from_pretrained)
+        model = Maia2HumanModel()
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            results = list(pool.map(lambda _: model.move_probs(chess.Board(), 1500), range(4)))
+        assert calls["loads"] == 1
+        assert all(r["e2e4"] == pytest.approx(1.0) for r in results)
 
     def test_missing_package_gives_install_instructions(self, monkeypatch):
         monkeypatch.setitem(sys.modules, "maia2", None)
