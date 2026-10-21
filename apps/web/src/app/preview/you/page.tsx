@@ -24,11 +24,12 @@ const SAMPLE: YouApi = {
     sentence: "More sacrifice and initiative, with defence holding steady.",
   },
   axes: [
-    { name: "Sacrifice rate", you: 34 },
-    { name: "Chaos created", you: 52 },
-    { name: "Calm under fire", you: 61 },
-    { name: "Initiative kept", you: 47 },
+    { name: "Sacrifice rate", you: 34, refs: { Tal: 48 } },
+    { name: "Chaos created", you: 52, refs: { Tal: 71 } },
+    { name: "Calm under fire", you: 61, refs: { Tal: 55 } },
+    { name: "Initiative kept", you: 47, refs: { Tal: 80 } },
   ],
+  references: { Tal: { games: 40, model: "heuristic" } },
   timeControls: [
     { class: "bullet", games: 64, pct: 4.1, spread: 1.2, calibrated: true },
     { class: "blitz", games: 0, pct: null, spread: null, calibrated: false },

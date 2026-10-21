@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { AccountLine } from "@/components/shell/account-line";
 import { LaunchIntro } from "@/components/shell/launch-intro";
 import { Mascot } from "@/components/ui/mascot";
 import { Toaster } from "@/components/ui/toast";
@@ -30,7 +31,7 @@ export function activeNav(pathname: string): IconName | null {
   if (under("/games", "/review", "/summary")) return "review";
   if (under("/you", "/library", "/recap")) return "you";
   if (under("/train")) return "train";
-  if (under("/play")) return "play";
+  if (under("/play", "/prep")) return "play";
   return null;
 }
 
@@ -107,8 +108,10 @@ export function AppShell({
             );
           })}
         </nav>
-        {account && <span className="ml-auto font-mono text-[11px] text-muted">{account}</span>}
-        <span className={account ? "" : "ml-auto"}>
+        <span className="ml-auto">
+          {account ? <span className="font-mono text-[11px] text-muted">{account}</span> : <AccountLine />}
+        </span>
+        <span>
           <SettingsButton size={34} active={onSettings} />
         </span>
       </header>

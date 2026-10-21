@@ -13,6 +13,8 @@ import chess.engine
 from app.config import settings
 from app.services.ep import line_ep
 
+ENGINE_TIMEOUT_S = 60.0
+
 
 def score_to_pawns(score: chess.engine.Score, board: chess.Board) -> float | None:
     """Convert engine score to pawns from the perspective of the side to move."""
@@ -37,7 +39,9 @@ class StockfishEngine:
         self._engine: chess.engine.SimpleEngine | None = None
 
     def __enter__(self) -> StockfishEngine:
-        self._engine = chess.engine.SimpleEngine.popen_uci(self.path)
+        # Generous protocol timeout: with several engines busy, a starved process can take more than
+        # python-chess's default 10 s to answer `isready`, which used to fail the whole game's analysis.
+        self._engine = chess.engine.SimpleEngine.popen_uci(self.path, timeout=ENGINE_TIMEOUT_S)
         # Output-only option: adds win/draw/loss to info lines without changing the search.
         if "UCI_ShowWDL" in self._engine.options:
             self._engine.configure({"UCI_ShowWDL": True})
