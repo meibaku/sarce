@@ -340,6 +340,29 @@ export async function getWhy(gameId: string, ply: number) {
   return fetchApi<WhyApi>(`/games/${gameId}/moves/${ply}/why`);
 }
 
+/** One position on the chaos map (app/services/chaos_map.py). `problem` = P_fail × stake. */
+export interface ChaosMapPosition {
+  fen: string;
+  line: string;
+  seen: number;
+  predictability: number | null;
+  usual: { san: string; pFail: number | null; stake: number | null; problem: number | null };
+  chaos: { san: string; uci: string; pFail: number | null; stake: number | null; epLoss: number | null; problem: number | null };
+  same: boolean;
+  elo: number;
+  computedAt: string;
+}
+
+/** Your chaos map: frequent opening positions and the sound move that asks the most of opponents. */
+export async function getChaosMap() {
+  return fetchApi<{ positions: ChaosMapPosition[]; building: boolean }>(`/users/chaos-map`);
+}
+
+/** Rebuilds the map in the background; poll getChaosMap until `building` is false. */
+export async function rebuildChaosMap() {
+  return fetchApi<{ building: boolean }>(`/users/chaos-map`, { method: "POST" });
+}
+
 export async function getSyncStatus() {
   return fetchApi<import("@/types/chess").SyncStatus>(`/users/sync`);
 }

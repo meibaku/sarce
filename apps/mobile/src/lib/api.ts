@@ -90,5 +90,19 @@ export type WhyApi = {
   lines: { title: string; note: string; eval: string; kind: string; steps: { san: string; fen: string }[] }[];
 };
 export const getWhy = (gameId: string, ply: number) => api<WhyApi>(`/games/${gameId}/moves/${ply}/why`);
+/** Your chaos map (the web's ChaosMapPosition in apps/web/src/lib/api.ts). `problem` = P_fail × stake. */
+export type ChaosMapPosition = {
+  key: string;
+  fen: string;
+  line: string;
+  seen: number;
+  predictability: number | null;
+  usual: { san: string; pFail: number | null; problem: number | null };
+  chaos: { san: string; uci: string; pFail: number | null; problem: number | null };
+  same: boolean;
+  elo: number;
+};
+export const getChaosMap = () => api<{ positions: ChaosMapPosition[]; building: boolean }>("/users/chaos-map");
+export const rebuildChaosMap = () => api<{ building: boolean }>("/users/chaos-map", { method: "POST" });
 export const importGames = (site: "chess_com" | "lichess", username: string) =>
   api<{ imported: number }>(site === "lichess" ? "/games/import/lichess" : "/games/import", post({ username, analyze: true }));

@@ -4,6 +4,12 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Added
+- Your chaos map (You, web and phone): the opening positions you reach most often, how predictably opponents
+  steer into each, your usual move, and the one sound move that sets opponents at your level the hardest problem
+  (P_fail × stake, the Tal bot's measure). `GET`/`POST /users/chaos-map`, new `chaos_map` table (RLS). Moves that
+  clearly ask more than your usual one become a Train drill, "chaos move in your opening"
+
 ### Fixed
 - Analysis past ~300 games: the baseline recompute put every game id in one URL (HTTP 414) and failed each
   analysis right after it was marked complete, skipping its chaos pass, find-rate rule and idea tagger; the ids
