@@ -15,7 +15,7 @@
 | M5 Review UI | Merged; rebuilt as the v1.0 Review screen (web and mobile); `/lab` retired (ADR 0005) | Tal in chaos terms: scoring script done, the rerun after the name-matching fix restores `data/reference_axes.json` |
 | M6 Trap atlas | Merged; 277 traps loaded; Train serves traps at your band, your own openings first (ECO) | Most traps rest on 3–4 sightings: grow the atlas with more games |
 | M7 Intention tagger | v1 merged, off by default | Tune thresholds; "sharpness" part of squeeze |
-| M8 Sharing + scouting | Lichess import + automatic sync, opponent prep (`/prep`), durable job queue, optional sign-in | Sign-in untested against a live Supabase Auth; sharing beyond static exports waits for the multi-user decision |
+| M8 Sharing + scouting | Lichess import + automatic sync, opponent prep (`/prep`), durable job queue, optional sign-in (verified against a live Supabase Auth: `scripts/auth_smoke.py`) | Sharing beyond static exports waits for the multi-user decision |
 
 **What has actually been run** (10 Oct 2026, Stockfish 18, a throwaway Supabase Postgres + PostgREST stack):
 
@@ -310,7 +310,8 @@ Tasks in `apps/web`:
 ### M8 — Sharing + opponent scouting (later)
 
 > **Status:** Lichess import, opponent scouting and a style focus picker (ADR 0003) are implemented. A durable per-user analysis
-> job queue (`JOB_QUEUE_ENABLED`) and optional sign-in (`AUTH_REQUIRED`) are implemented too; sign-in is untested against a live Supabase Auth.
+> job queue (`JOB_QUEUE_ENABLED`) and optional sign-in (`AUTH_REQUIRED`) are implemented too; sign-in is verified against a
+> live Supabase Auth by `scripts/auth_smoke.py` (token required, forged tokens refused, per-user isolation).
 
 - Multi-user: auth flows, per-user queues, replace `BackgroundTasks` with a real job queue.
 - Style picker: users choose their lens; dashboard mirrors that identity.

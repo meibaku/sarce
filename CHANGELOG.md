@@ -19,6 +19,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Background analysis no longer freezes the API: move classification runs in a worker thread
 
 ### Added
+- `scripts/auth_smoke.py`: sign-in checked against a real Supabase Auth (throwaway user; token required, forged
+  tokens refused, another user's data unreachable, settings on the right profile); passes on the local stack
 - Positions from videos (PHASES 2.2–2.4): Train → Save a position takes a YouTube link and keeps the captions
   around that moment (or a pasted transcript when YouTube blocks the request); with Settings → "Video help (sent
   to AI)" on and Claude credentials on the server, Claude reads a board from a screenshot (FEN checked by
