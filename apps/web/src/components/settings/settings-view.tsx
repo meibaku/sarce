@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AuthStatus } from "@/components/auth-status";
 import { Stepper, Switch, TextLink } from "@/components/ui/buttons";
 import { AutoGrid, SectionLabel } from "@/components/ui/card";
-import { SarceMark } from "@/components/ui/icons";
+import { Mascot } from "@/components/ui/mascot";
 import { StyleGauge } from "@/components/ui/style-gauge";
-import type { SettingsApi } from "@/types/chess";
+import { timeAgo } from "@/lib/format";
+import type { SettingsApi, SyncStatus } from "@/types/chess";
 
 /*
  * Settings (handoff screen 10). Every gauge in the app follows the style goal set here. The
@@ -26,10 +28,14 @@ export function SettingsView({
   brilliant,
   onExport,
   onChange,
+  sync,
+  onSyncNow,
 }: {
   data: SettingsApi;
   brilliant: number | null;
   onExport: () => void;
+  sync?: SyncStatus | null;
+  onSyncNow?: () => void;
   onChange: (changes: Partial<SettingsApi>) => void;
 }) {
   const [systemReduced, setSystemReduced] = useState(false);
@@ -103,6 +109,7 @@ export function SettingsView({
               {(
                 [
                   ["light", "Light"],
+                  ["dark", "Dark"],
                   ["system", "Match system"],
                 ] as const
               ).map(([id, label]) => (
@@ -111,7 +118,40 @@ export function SettingsView({
                 </button>
               ))}
             </div>
-            <span className="text-[12px] text-muted">Dark theme is planned for v1.1; &quot;Match system&quot; stays light until then.</span>
+            <div className="flex flex-col gap-2 border-t border-hair pt-[10px]">
+              {(
+                [
+                  ["chessComUsername", "Chess.com username"],
+                  ["lichessUsername", "Lichess username"],
+                ] as const
+              ).map(([key, label]) => (
+                <input
+                  key={`${key}-${data[key] ?? ""}`}
+                  defaultValue={data[key] ?? ""}
+                  placeholder={label}
+                  aria-label={label}
+                  autoComplete="off"
+                  onBlur={(e) => {
+                    const value = e.target.value.trim() || null;
+                    if (value !== (data[key] ?? null)) onChange({ [key]: value });
+                  }}
+                  className="h-9 rounded-[6px] border-[1.5px] border-line-2 bg-surface px-3 text-[13px] placeholder:text-faint"
+                />
+              ))}
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="flex-1 font-mono text-[11px] text-muted">
+                  {sync?.lastSyncedAt ? `synced ${timeAgo(sync.lastSyncedAt)}` : "not synced yet"}
+                  {sync && sync.pending + sync.processing > 0 ? ` · ${sync.pending + sync.processing} to analyse` : ""}
+                  {sync && !sync.autoSync ? " · automatic sync off" : ""}
+                </span>
+                {onSyncNow && (
+                  <TextLink href="#" onClick={(e) => { e.preventDefault(); onSyncNow(); }}>
+                    Sync now
+                  </TextLink>
+                )}
+              </div>
+              {sync?.lastSyncErrors?.length ? <span className="text-[12px] text-muted">{sync.lastSyncErrors.join(" · ")}</span> : null}
+            </div>
           </section>
         </div>
 
@@ -128,7 +168,7 @@ export function SettingsView({
               <span className="text-muted">Human model</span>
               <span className="font-mono">Maia-2 · validated on 1+0</span>
               <span className="text-muted">Style schema</span>
-              <span className="font-mono">v1 · sacrifice, sound, not forced</span>
+              <span className="font-mono">v2 · Brilliant needs ≤20% find-rate</span>
               <span className="text-muted">Thresholds</span>
               <span className="font-mono">v0 · provisional</span>
             </div>
@@ -148,6 +188,18 @@ export function SettingsView({
                 </div>
               ))}
             </div>
+            {/* The one thing that leaves your machine, and only when you use it: off by default. */}
+            <div className="flex flex-col gap-1 border-t border-hair pt-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[13px] font-medium">Video help (sent to AI)</span>
+                <Switch label="Video help (sent to AI)" on={Boolean(data.aiHelp)} onChange={(on) => data.aiAvailable && onChange({ aiHelp: on })} />
+              </div>
+              <span className="text-[12px] leading-[1.45] text-muted">
+                {data.aiAvailable
+                  ? "Reading a board from a screenshot and summarising what a video said are sent to Anthropic (Claude) when you use them. Transcripts come from YouTube's captions."
+                  : "Not set up on this server: add Claude credentials (ANTHROPIC_API_KEY) to the API to use it."}
+              </span>
+            </div>
             <div className="flex flex-wrap items-center gap-[18px]">
               <button
                 type="button"
@@ -156,19 +208,29 @@ export function SettingsView({
               >
                 Export journal (Markdown)
               </button>
+              {/* PDF without a dependency: a print-styled page; the browser's "Save as PDF" does the rest. */}
+              <a
+                href="/journal?print=1"
+                target="_blank"
+                rel="noopener"
+                className="inline-flex h-9 items-center rounded-[6px] border-[1.5px] border-ink bg-surface px-[14px] text-[12px] font-medium hover:bg-panel active:bg-press"
+              >
+                Export journal (PDF)
+              </a>
             </div>
           </section>
 
           <div className="flex flex-wrap gap-[18px]">
             <TextLink href="/onboarding">Replay onboarding</TextLink>
             <TextLink href="/states">Preview edge states</TextLink>
+            <AuthStatus />
           </div>
         </div>
       </AutoGrid>
 
       <section className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-[22px] gap-y-[18px] rounded-[8px] border border-line bg-surface p-[18px]">
         <div className="row-span-3 grid h-[104px] w-24 place-items-center rounded-[8px] bg-page text-ink">
-          <SarceMark height={80} framed />
+          <Mascot state={data.playfulMascot ? "hello" : "static"} size={80} />
         </div>
         <SectionLabel className="!text-accent-text">Mascot and motion</SectionLabel>
         <div className="flex items-center gap-[14px]">

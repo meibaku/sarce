@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { HomeView, type HomeData } from "@/components/home/home-view";
-import { PrimaryLink } from "@/components/ui/buttons";
-import { Card } from "@/components/ui/card";
+import { EdgeState } from "@/components/ui/edge-state";
 import { getHome, getSettings } from "@/lib/api";
 import { gameMeta, timeAgo } from "@/lib/format";
 import type { HomeApi } from "@/types/chess";
@@ -68,17 +67,5 @@ export function HomeScreen() {
   }
   if (state.data) return <HomeView data={state.data} />;
 
-  return (
-    <Card className="items-start gap-3">
-      <span className="text-[18px] font-medium">
-        {state.status === "error" ? "Sarce can't reach its analysis service" : "No analysed games yet"}
-      </span>
-      <span className="text-[13px] leading-[1.55] text-ink-2">
-        {state.status === "error"
-          ? "Start the API, then reload. Your games and notes are safe."
-          : "Import your recent games and Sarce will read the first one while you wait."}
-      </span>
-      <PrimaryLink href="/lab">{state.status === "error" ? "Open the lab" : "Import your games"}</PrimaryLink>
-    </Card>
-  );
+  return state.status === "error" ? <EdgeState kind="offline" /> : <EdgeState kind="no-games" href="/onboarding" />;
 }
