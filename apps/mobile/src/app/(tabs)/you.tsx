@@ -7,9 +7,13 @@ import { getYou } from "@/lib/api";
 import { color, ramp } from "@/lib/theme";
 import { useLoad } from "@/lib/use-load";
 
+/** Reference players on the axes, as on the web; a dot appears once their games are scored. */
+const REFS = ["Tal", "Shirov", "Morphy"] as const;
+
 export default function You() {
   const { data, failed, reload } = useLoad(getYou);
   const [tc, setTc] = useState(0);
+  const [ref, setRef] = useState<(typeof REFS)[number]>("Tal");
   if (failed || !data) return <Screen title="you">{failed ? <Edge kind="offline" action="Try again" onAction={reload} /> : <Loading />}</Screen>;
   if (data.games === 0) return <Screen title="you"><Edge kind="no-games" action="Connect an account" onAction={() => router.push("/onboarding")} /></Screen>;
   const weekly = data.brilliant?.weekly ?? [];
@@ -59,9 +63,16 @@ export default function You() {
 
       {data.axes && (
         <Card>
-          <Label>Against Tal</Label>
+          <Label>Against your references</Label>
+          <View style={{ flexDirection: "row", gap: 6 }}>
+            {REFS.map((r) => (
+              <View key={r} style={{ flex: 1 }}>
+                <Choice label={r} selected={ref === r} onPress={() => setRef(r)} />
+              </View>
+            ))}
+          </View>
           {data.axes.map((a) => {
-            const tal = a.refs?.Tal;
+            const tal = a.refs?.[ref];
             return (
               <View key={a.name} style={{ gap: 4 }}>
                 <View style={s.row}>
@@ -72,7 +83,7 @@ export default function You() {
                   <View style={{ height: 1.5, backgroundColor: color.line2 }} />
                   {tal != null && (
                     <View style={[dot, { left: `${tal}%`, borderWidth: 1.5, borderColor: color.ink, backgroundColor: color.surface }]}>
-                      <T mono size={7} style={{ lineHeight: 9 }}>T</T>
+                      <T mono size={7} style={{ lineHeight: 9 }}>{ref[0]}</T>
                     </View>
                   )}
                   {a.you != null && <View style={[dot, { left: `${a.you}%`, backgroundColor: color.accent }]} />}
@@ -81,9 +92,9 @@ export default function You() {
             );
           })}
           <T mono size={11} tone="muted">
-            {data.references?.Tal
-              ? `filled = you · T = Tal, ${data.references.Tal.games} games scored the same way · no ranking`
-              : "filled = you · Tal is not scored in these terms yet · no ranking"}
+            {data.references?.[ref]
+              ? `filled = you · ${ref[0]} = ${ref}, ${data.references[ref].games} games scored the same way · no ranking`
+              : `filled = you · ${ref} is not scored in these terms yet · no ranking`}
           </T>
         </Card>
       )}

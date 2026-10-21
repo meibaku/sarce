@@ -99,12 +99,32 @@ class SyncService:
         }
 
 
-async def sync_loop(service: SyncService, owner_id: str, analyse, minutes: float) -> None:
-    """Background loop started with the API when AUTO_SYNC_ENABLED is on."""
+def owners_to_sync(local_user_id: str | None) -> list[str]:
+    """
+    Every profile with a Chess.com or Lichess username saved (multi-user), plus the local user in
+    single-user mode. Each owner's games are fetched and analysed separately.
+    """
+    rows = get_supabase().table("profiles").select("id, settings").limit(10_000).execute().data or []
+    owners = [
+        r["id"] for r in rows
+        if (r.get("settings") or {}).get("chessComUsername") or (r.get("settings") or {}).get("lichessUsername")
+    ]
+    if local_user_id and local_user_id not in owners:
+        owners.append(local_user_id)
+    return owners
+
+
+async def sync_loop(service: SyncService, owner_id: str | None, analyse, minutes: float) -> None:
+    """
+    Background loop started with the API when AUTO_SYNC_ENABLED is on. With `owner_id` it syncs that one
+    user; with None, every user who saved a username (multi-user), one after another.
+    """
     while True:
-        try:
-            result = await service.sync(owner_id, analyse)
-            logger.info("Sync: %s", result)
-        except Exception:
-            logger.exception("Sync failed")
+        owners = [owner_id] if owner_id else owners_to_sync(settings.local_user_id or None)
+        for owner in owners:
+            try:
+                result = await service.sync(owner, analyse)
+                logger.info("Sync %s: %s", owner, result)
+            except Exception:
+                logger.exception("Sync failed for %s", owner)
         await asyncio.sleep(minutes * 60)
