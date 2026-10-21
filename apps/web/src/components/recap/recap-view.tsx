@@ -5,6 +5,7 @@ import { useState } from "react";
 import { PrimaryButton, TextLink } from "@/components/ui/buttons";
 import { Dashed, SectionLabel } from "@/components/ui/card";
 import { SarceMark } from "@/components/ui/icons";
+import { useMotionPrefs, Skit } from "@/components/ui/mascot";
 import type { RecapApi } from "@/types/chess";
 
 /*
@@ -17,6 +18,9 @@ const ORDINAL = ["", "first", "second", "third", "fourth", "fifth", "sixth", "se
 export function RecapView({ data, onSetFocus }: { data: RecapApi; onSetFocus: (id: string) => Promise<void> }) {
   const [focus, setFocus] = useState<string>(data.lastFocus?.id ?? data.focuses[0]?.id ?? "");
   const [busy, setBusy] = useState(false);
+  const prefs = useMotionPrefs();
+  // The streak skit when skits are on; otherwise one still rook per week of the streak.
+  const skits = Boolean(prefs?.playful && !prefs.quiet && data.streakWeeks > 0);
   const b = data.brilliant;
   const streak =
     data.streakWeeks > 1
@@ -33,11 +37,15 @@ export function RecapView({ data, onSetFocus }: { data: RecapApi; onSetFocus: (i
       </h1>
 
       <div className="grid grid-cols-[minmax(0,220px)_minmax(0,1fr)] items-center gap-4 rounded-[8px] border border-line bg-surface pt-2 pr-4 pl-2">
-        <div className="flex items-end justify-center gap-3 border-b border-line-2 px-2 pb-1 text-ink" style={{ height: 128 }}>
-          {Array.from({ length: Math.max(1, Math.min(3, data.streakWeeks)) }, (_, i) => (
-            <SarceMark key={i} height={i === Math.min(3, data.streakWeeks) - 1 ? 80 : 64} framed />
-          ))}
-        </div>
+        {skits ? (
+          <Skit name="streak" />
+        ) : (
+          <div className="flex items-end justify-center gap-3 border-b border-line-2 px-2 pb-1 text-ink" style={{ height: 128 }}>
+            {Array.from({ length: Math.max(1, Math.min(3, data.streakWeeks)) }, (_, i) => (
+              <SarceMark key={i} height={i === Math.min(3, data.streakWeeks) - 1 ? 80 : 64} framed />
+            ))}
+          </div>
+        )}
         <span className="pb-2 text-[14px] leading-[1.5] text-ink-2">{streak}</span>
       </div>
 

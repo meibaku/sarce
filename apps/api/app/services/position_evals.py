@@ -16,7 +16,7 @@ import chess
 from app.config import settings
 from app.db.supabase import get_supabase
 from app.services.ep import cp_to_ep, is_decided
-from app.services.move_classifier import is_user_ply
+from app.services.move_classifier import is_user_ply, line_pawns
 
 logger = logging.getLogger(__name__)
 
@@ -183,6 +183,55 @@ def iter_live_positions(
             stats["terminal"] = stats.get("terminal", 0) + 1
         else:
             yield ply, temp
+
+
+def game_lines(
+    board: chess.Board,
+    moves: list[chess.Move],
+    engine: LineEngine,
+    store: EvalStore,
+    stats: dict[str, int] | None = None,
+) -> list[list[dict] | None]:
+    """
+    One search per mainline position, shared by Phase 1 classification and the Chaos Lens.
+
+    Index i is the position after i plies (0 = the start). Live positions get the full
+    node-limited MultiPV search and are cached (exactly what `evaluate_game_positions` would
+    store, so the lens pass that follows only reads). A position reached by a move made from a
+    decided position gets a search at the same node count but only three lines, and is not
+    cached, because the lenses skip those positions. (A cheaper search there was tried: mixing
+    its evals with the deep ones around it turned a quiet endgame move into a "blunder".)
+    [] marks a position with no legal moves, None one the engine gave no line for.
+
+    Deciding uses this pass's own eval of the previous position (the mover's EP before the
+    move), the same quantity `mover_ep_before` reads from Phase 1.
+    """
+    stats = stats if stats is not None else {}
+    out: list[list[dict] | None] = []
+    temp = board.copy()
+    previous: list[dict] | None = None
+    for i in range(len(moves) + 1):
+        if i:
+            temp.push(moves[i - 1])
+        if temp.legal_moves.count() == 0:
+            out.append([])
+            stats["terminal"] = stats.get("terminal", 0) + 1
+            previous = []
+            continue
+        # cp_to_ep of the best line in pawns: what mover_ep_before computes from the Phase 1 evals
+        # this pass produces, so the lens pass afterwards skips exactly the same positions.
+        pawns = line_pawns(previous[0]) if previous else None
+        before = None if pawns is None else cp_to_ep(pawns * 100)
+        if i and is_decided(before, settings.ep_decided_low, settings.ep_decided_high):
+            lines = engine.analyse(temp, nodes=settings.analysis_nodes, multipv=3) or None
+            stats["decided_uncached"] = stats.get("decided_uncached", 0) + 1
+        else:
+            row = evaluate_position(temp, engine, store)
+            lines = row["lines"] if row else None
+            stats["evaluated" if row else "failed"] = stats.get("evaluated" if row else "failed", 0) + 1
+        out.append(lines)
+        previous = lines
+    return out
 
 
 def evaluate_game_positions(
