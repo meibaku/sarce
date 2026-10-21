@@ -4,6 +4,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Added
+- Shirov and Morphy reference values on the You axes (40 games each from the pgnmentor corpora, scored the same
+  way as Tal): Shirov sacrifice 20 · chaos 36 · calm 95 · initiative 25; Morphy 22 · 31 · 90 · 22
+
 ### Changed
 - Licence: GNU AGPL-3.0 (was MIT), see ADR 0006 — open source and self-hostable; a modified version run as a
   service must share its source; compatible with python-chess (GPL-3.0+)
