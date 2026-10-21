@@ -26,6 +26,10 @@ class FakeQuery:
         self.calls.append((self.table_name, column, value))
         return self
 
+    def neq(self, column, value):
+        self.calls.append((self.table_name, column, value))
+        return self
+
     def execute(self):
         if self.table_name == "games":
             return FakeResult(

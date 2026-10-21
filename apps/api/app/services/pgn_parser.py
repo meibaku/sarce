@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import io
+import re
 
 import chess
 import chess.pgn
@@ -77,3 +78,24 @@ def extract_clocks_ms(pgn_text: str) -> list[int | None]:
         seconds = node.clock()
         clocks.append(None if seconds is None else round(seconds * 1000))
     return clocks
+
+
+_ECO = re.compile(r'\[ECO "([A-E][0-9]{2})"\]')
+_OPENING = re.compile(r'\[Opening "([^"]+)"\]')
+_ECO_URL = re.compile(r'\[ECOUrl "[^"]*/openings/([^"]+)"\]')
+
+
+def opening_from_pgn(pgn_text: str | None) -> tuple[str | None, str | None]:
+    """
+    (ECO code, opening name) from PGN headers: Lichess's [Opening], or the name part of Chess.com's
+    [ECOUrl] slug ("Caro-Kann-Defense-Exchange-Variation-3...cxd5" → "Caro Kann Defense Exchange
+    Variation"). Same rule as the game_openings migration's backfill.
+    """
+    if not pgn_text:
+        return None, None
+    eco = _ECO.search(pgn_text)
+    name = _OPENING.search(pgn_text)
+    opening = name.group(1) if name else None
+    if opening is None and (url := _ECO_URL.search(pgn_text)):
+        opening = re.sub(r"-[0-9].*$", "", url.group(1)).replace("-", " ") or None
+    return (eco.group(1) if eco else None), opening

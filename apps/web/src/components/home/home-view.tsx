@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PrimaryLink, TextLink } from "@/components/ui/buttons";
 import { AutoGrid, Card, Dashed, SectionLabel, Stat, UncalibratedBadge } from "@/components/ui/card";
 import { ChaosStrip } from "@/components/ui/chaos-strip";
-import { SarceMark } from "@/components/ui/icons";
+import { Mascot } from "@/components/ui/mascot";
 import { StyleGauge } from "@/components/ui/style-gauge";
 
 /*
@@ -74,7 +74,7 @@ export function HomeView({ data }: { data: HomeData }) {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-[6px] font-mono text-[11px] text-muted">
             <span>Latest game · {latest.when}</span>
             <span className="order-9 -mt-[10px] -mb-2 ml-auto text-ink">
-              <SarceMark height={44} framed />
+              <Mascot state={quiet ? "sleep" : "idle"} size={44} />
             </span>
             <span className="rounded-[5px] border border-line-2 px-[7px] py-px">{latest.meta}</span>
             {latest.calibrated === false && <UncalibratedBadge />}
