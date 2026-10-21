@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { THEME_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 const plexSans = IBM_Plex_Sans({
@@ -30,7 +31,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    // data-theme is set by THEME_SCRIPT before hydration, so React must not warn about it.
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className={`${plexSans.variable} ${plexMono.variable} min-h-screen`}>
         {children}
       </body>

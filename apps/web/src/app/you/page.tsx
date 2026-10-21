@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/shell/app-shell";
-import { PrimaryLink } from "@/components/ui/buttons";
-import { Card } from "@/components/ui/card";
+import { EdgeState } from "@/components/ui/edge-state";
 import { YouView } from "@/components/you/you-view";
 import { getYou } from "@/lib/api";
 import type { YouApi } from "@/types/chess";
@@ -21,13 +20,11 @@ export default function YouPage() {
       {data && data.games > 0 ? (
         <YouView data={data} />
       ) : data || failed ? (
-        <Card className="items-start gap-3">
-          <span className="text-[18px] font-medium">{failed ? "Sarce can't reach its analysis service" : "Your picture starts with your games"}</span>
-          <span className="text-[13px] leading-[1.55] text-ink-2">
-            {failed ? "Start the API, then reload." : "Once a few games are analysed, your style fingerprint fills in here."}
-          </span>
-          <PrimaryLink href="/">Back to Home</PrimaryLink>
-        </Card>
+        failed ? (
+          <EdgeState kind="offline" />
+        ) : (
+          <EdgeState kind="too-few" detail="Once a few games are analysed, your style fingerprint fills in here." action="Back to Home" href="/" />
+        )
       ) : (
         <div className="h-[2px] w-1/3 animate-pulse bg-accent" role="progressbar" aria-label="Loading" />
       )}

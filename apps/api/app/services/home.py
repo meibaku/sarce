@@ -12,6 +12,7 @@ from __future__ import annotations
 import math
 
 from app.db.supabase import get_supabase
+from app.services.distraction import flagged_plies
 
 WINDOW = 64
 MIN_GAMES = 5
@@ -97,8 +98,15 @@ def moment_line(glyph: str, move: dict, lenses: dict) -> str:
     return "A speculative try"
 
 
-def pick_moments(moves: list[dict], lens_by_ply: dict[int, dict], limit: int = MAX_MOMENTS) -> list[dict]:
-    """Up to `limit` moments (three on Home and Summary), the strongest by chaos score, in game order."""
+CHECKIN_LINE = "Your pace changed here"
+
+
+def pick_moments(moves: list[dict], lens_by_ply: dict[int, dict], limit: int = MAX_MOMENTS, checkin: list[int] | None = None) -> list[dict]:
+    """
+    Up to `limit` moments (three on Home and Summary), the strongest by chaos score, in game order.
+    `checkin` are distraction-flagged plies (services/distraction.py), strongest first: the top one
+    always gets a slot, as a ?! check-in unless it is already a moment.
+    """
     found = []
     for move in moves:
         lenses = lens_by_ply.get(move["ply"], {})
@@ -109,9 +117,19 @@ def pick_moments(moves: list[dict], lens_by_ply: dict[int, dict], limit: int = M
         weight += 1.0 if glyph == "!!" else 0.0
         found.append((weight, move, glyph, lenses))
     found.sort(key=lambda item: -item[0])
-    chosen = sorted(found[:limit], key=lambda item: item[1]["ply"])
+    chosen = found[:limit]
+    by_ply = {m["ply"]: m for m in moves}
+    flagged = next((p for p in (checkin or []) if p in by_ply), None)
+    if flagged is not None and limit > 0 and all(item[1]["ply"] != flagged for item in chosen):
+        chosen = chosen[: limit - 1] + [(0.0, by_ply[flagged], "?!", {})]
+    chosen.sort(key=lambda item: item[1]["ply"])
     return [
-        {"ply": move["ply"], "san": move.get("san"), "glyph": glyph, "line": moment_line(glyph, move, lenses)}
+        {
+            "ply": move["ply"],
+            "san": move.get("san"),
+            "glyph": glyph,
+            "line": CHECKIN_LINE if glyph == "?!" else moment_line(glyph, move, lenses),
+        }
         for _, move, glyph, lenses in chosen
     ]
 
@@ -174,8 +192,9 @@ class HomeService:
         def games_query():
             q = (
                 sb.table("games")
-                .select("id, played_at, opponent, result, time_control, user_color, game_analyses(brilliant_pct, total_moves)")
+                .select("id, played_at, opponent, result, time_control, user_color, clocks_ms, game_analyses(brilliant_pct, total_moves)")
                 .eq("analysis_status", "complete")
+                .neq("source", "sarce_bot")  # bot games are practice
                 .order("played_at", desc=True)
                 .limit(WINDOW)
             )
@@ -273,5 +292,5 @@ class HomeService:
             "styleRead": style_read(real, len(sacrifices), sum(1 for m in sacrifices if m.get("quality") in HELD)),
             "chaos": chaos,
             "highlight": user_plies.index(brilliant_ply) if brilliant_ply in user_plies else None,
-            "moments": pick_moments(moves, lens_by_ply),
+            "moments": pick_moments(moves, lens_by_ply, checkin=flagged_plies(game, moves, lens_rows)),
         }

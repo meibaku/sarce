@@ -12,6 +12,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from app.db.supabase import get_supabase
+from app.services.distraction import flagged_plies
 from app.services.home import format_time_control, is_calibrated, pick_moments
 from app.services.pgn_parser import mainline_positions
 from app.services.summary import clock_label, move_label
@@ -60,6 +61,8 @@ def ask_for(glyph: str, kind: str, sacrifice: bool) -> str:
         return "Calculated, intuitive or a bluff?"
     if glyph == "?":
         return "What were you going for here?"
+    if glyph == "?!":
+        return "Was something going on at this move?"
     return "Did you mean to set this problem?"
 
 
@@ -135,7 +138,7 @@ class ReviewService:
         opponent_elo = game.get("opponent_rating")
 
         moments = []
-        for m in pick_moments(moves, lens_by_ply, limit=MAX_REVIEW_MOMENTS):
+        for m in pick_moments(moves, lens_by_ply, limit=MAX_REVIEW_MOMENTS, checkin=flagged_plies(game, moves, lens_rows)):
             ply = m["ply"]
             lenses = lens_by_ply.get(ply, {})
             survival = lenses.get("survival") or {}
