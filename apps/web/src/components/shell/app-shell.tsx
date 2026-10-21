@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { AccountLine } from "@/components/shell/account-line";
+import { LaunchIntro } from "@/components/shell/launch-intro";
+import { Mascot } from "@/components/ui/mascot";
+import { Toaster } from "@/components/ui/toast";
 import { Icon, SarceMark, type IconName } from "@/components/ui/icons";
 
 /*
@@ -21,12 +25,30 @@ const NAV: { id: IconName; label: string; href: string }[] = [
 
 /** Which nav item a route belongs to: Summary sits under Review, Library and Recap under You. */
 export function activeNav(pathname: string): IconName | null {
-  if (pathname === "/" || pathname.startsWith("/onboarding") || pathname.startsWith("/preview/home")) return "home";
-  if (pathname.startsWith("/games") || pathname.startsWith("/review") || pathname.startsWith("/preview/summary") || pathname.startsWith("/preview/review")) return "review";
-  if (pathname.startsWith("/you") || pathname.startsWith("/library") || pathname.startsWith("/recap")) return "you";
-  if (pathname.startsWith("/train")) return "train";
-  if (pathname.startsWith("/play")) return "play";
+  const path = pathname.replace(/^\/preview/, "") || "/";
+  const under = (...prefixes: string[]) => prefixes.some((p) => path.startsWith(p));
+  if (path === "/" || under("/home", "/onboarding", "/states")) return "home";
+  if (under("/games", "/review", "/summary")) return "review";
+  if (under("/you", "/library", "/recap")) return "you";
+  if (under("/train")) return "train";
+  if (under("/play", "/prep")) return "play";
   return null;
+}
+
+/** The header mark tips for a second when you change screens (handoff motion table). */
+function HeaderMark({ pathname }: { pathname: string }) {
+  const [tipping, setTipping] = useState(false);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    setTipping(true);
+    const id = setTimeout(() => setTipping(false), 1000);
+    return () => clearTimeout(id);
+  }, [pathname]);
+  return <Mascot state={tipping ? "tip" : "static"} size={24} eyes={false} />;
 }
 
 function SettingsButton({ size, active }: { size: number; active: boolean }) {
@@ -61,9 +83,11 @@ export function AppShell({
 
   return (
     <div className="flex h-dvh flex-col bg-page text-ink">
+      <LaunchIntro />
+      <Toaster />
       <header className="hidden h-14 flex-none items-center gap-6 border-b border-line bg-surface px-7 md:flex">
         <Link href="/" className="flex items-center gap-2 text-ink" aria-label="Sarce home">
-          <SarceMark height={24} framed />
+          <HeaderMark pathname={pathname} />
           <span className="text-[19px] font-medium tracking-[-0.02em]">sarce</span>
         </Link>
         <nav className="flex gap-1" aria-label="Main">
@@ -84,8 +108,10 @@ export function AppShell({
             );
           })}
         </nav>
-        {account && <span className="ml-auto font-mono text-[11px] text-muted">{account}</span>}
-        <span className={account ? "" : "ml-auto"}>
+        <span className="ml-auto">
+          {account ? <span className="font-mono text-[11px] text-muted">{account}</span> : <AccountLine />}
+        </span>
+        <span>
           <SettingsButton size={34} active={onSettings} />
         </span>
       </header>

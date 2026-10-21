@@ -27,11 +27,22 @@ export function Board({
   orientation = "white",
   hot = [],
   label,
+  compact = false,
+  onSquareClick,
+  selected,
+  targets = [],
 }: {
   fen: string;
   orientation?: "white" | "black";
   hot?: string[];
   label?: string;
+  /** The Train drill board: max 300px, smaller pieces, no file letters. */
+  compact?: boolean;
+  /** Makes squares clickable, for playing against a Sarce bot. */
+  onSquareClick?: (square: string) => void;
+  selected?: string | null;
+  /** Legal destinations of the selected piece, shown as dots. */
+  targets?: string[];
 }) {
   const pieces = parseFen(fen);
   const squares: { sq: string; dark: boolean }[] = [];
@@ -45,7 +56,7 @@ export function Board({
   const files = orientation === "white" ? FILES.split("") : FILES.split("").reverse();
 
   return (
-    <div className="flex flex-col gap-[10px]">
+    <div className={`flex flex-col gap-[10px] ${compact ? "w-full max-w-[300px]" : ""}`}>
       <div
         role="img"
         aria-label={label ?? "Chess board"}
@@ -55,31 +66,38 @@ export function Board({
           const piece = pieces[sq];
           const isHot = hot.includes(sq);
           const black = piece ? piece === piece.toLowerCase() : false;
+          const Square = onSquareClick ? "button" : "div";
           return (
-            <div
+            <Square
               key={sq}
-              className="relative grid place-items-center"
+              {...(onSquareClick ? { type: "button" as const, onClick: () => onSquareClick(sq), "aria-label": sq } : {})}
+              className="relative grid place-items-center border-0 p-0"
               style={{
-                background: dark ? "var(--board-dark)" : "var(--surface)",
-                boxShadow: isHot ? "inset 0 0 0 2px var(--accent)" : "none",
+                background: selected === sq ? "var(--accent-tint)" : dark ? "var(--board-dark)" : "var(--surface)",
+                boxShadow: isHot || selected === sq ? "inset 0 0 0 2px var(--accent)" : "none",
               }}
             >
+              {targets.includes(sq) && (
+                <span className="absolute h-[22%] w-[22%] rounded-full bg-accent opacity-60" aria-hidden="true" />
+              )}
               {isHot && (
                 <span className="absolute top-[3px] right-[3px] h-[6px] w-[6px] border-t-2 border-r-2 border-accent" aria-hidden="true" />
               )}
               {piece && (
                 <span
-                  className="grid h-[64%] w-[64%] place-items-center rounded-full border-[1.5px] border-ink font-mono text-[12px] font-medium"
+                  className={`grid place-items-center rounded-full border-[1.5px] border-ink font-mono font-medium ${
+                    compact ? "h-[62%] w-[62%] text-[10px]" : "h-[64%] w-[64%] text-[12px]"
+                  }`}
                   style={{ background: black ? "var(--ink)" : "var(--surface)", color: black ? "var(--surface)" : "var(--ink)" }}
                 >
                   {piece.toUpperCase()}
                 </span>
               )}
-            </div>
+            </Square>
           );
         })}
       </div>
-      <div className="flex justify-between px-1 font-mono text-[10px] text-muted" aria-hidden="true">
+      <div className={`flex justify-between px-1 font-mono text-[10px] text-muted ${compact ? "hidden" : ""}`} aria-hidden="true">
         {files.map((f) => (
           <span key={f}>{f}</span>
         ))}

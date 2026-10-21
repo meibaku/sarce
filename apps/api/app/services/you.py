@@ -19,7 +19,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 from app.db.supabase import get_supabase
-from app.services.home import HELD, MIN_GAMES, PAGE, HomeService, format_time_control, window_brilliant
+from app.services.reference_axes import AXES, axis_values, references
+from app.services.home import MIN_GAMES, PAGE, HomeService, format_time_control, window_brilliant
 from app.services.summary import clock_label
 
 WEEKS = 12
@@ -108,8 +109,9 @@ class YouService:
 
         games = scoped(
             sb.table("games")
-            .select("id, played_at, opponent, time_control, clocks_ms, game_analyses(brilliant_pct, total_moves)")
+            .select("id, played_at, opponent, time_control, clocks_ms, game_analyses(brilliant_pct, total_moves, style_vector)")
             .eq("analysis_status", "complete")
+            .neq("source", "sarce_bot")  # bot games are practice
             .order("played_at", desc=True)
             .limit(500)
         ).execute().data or []
@@ -121,14 +123,13 @@ class YouService:
             return {"games": 0, **goal, "brilliant": None, "fingerprint": None, "axes": None, "timeControls": [], "survival": None, "sacrifices": None}
 
         ids = [g["id"] for g in games]
-        moves, lens, notes = [], [], []
+        moves, lens = [], []
         for start in range(0, len(ids), CHUNK):
             part = ids[start : start + CHUNK]
             moves += self._paged(lambda: sb.table("game_moves").select("game_id, ply, san, quality, signals, is_brilliant").in_("game_id", part).order("id"))
             lens += self._paged(
                 lambda: sb.table("move_lens_scores").select("game_id, ply, lens, score, verdict, details").in_("game_id", part).in_("lens", ["chaos", "survival"]).order("game_move_id")
             )
-            notes += sb.table("move_annotations").select("game_id, ply").in_("game_id", part).execute().data or []
 
         by_game_moves: dict[str, list[dict]] = {}
         for m in moves:
@@ -158,9 +159,11 @@ class YouService:
         weekly_pct = [window_brilliant(weekly_games[w])["pct"] if len(weekly_games[w]) else None for w in range(WEEKS)]
         brilliant_moves = sum(1 for m in moves if m.get("is_brilliant"))
         first_pct = next((p for p in weekly_pct if p is not None), None)
+        # The first week scored under the find-rate rule (ADR 0004), for the trend's "style v2" marker.
+        v2_weeks = [w for w in range(WEEKS) if any(((g.get("analysis") or {}).get("style_vector") or {}).get("version") == 2 for g in weekly_games[w])]
+        schema = 2 if any(((g.get("analysis") or {}).get("style_vector") or {}).get("version") == 2 for g in games) else 1
 
-        sacrifices = [m for m in moves if "sacrifice" in (m.get("signals") or [])]
-        noted = {(n["game_id"], n["ply"]) for n in notes}
+        mine, refs = axis_values(overall), references()
         return {
             "games": len(games),
             **goal,
@@ -171,30 +174,36 @@ class YouService:
                 "from": first_pct if enough else None,
                 "brilliantMoves": brilliant_moves,
                 "yourMoves": len(moves),
+                "ruleChangedWeek": v2_weeks[0] if v2_weeks and v2_weeks[0] > 0 else None,
+                "findRateRule": schema == 2,
             },
+            "styleSchema": schema,
             "fingerprint": {
                 "traits": TRAITS,
                 "levels": [heat_levels(rows[t]) for t in TRAITS],
                 "sentence": fingerprint_sentence(rows) if enough else "Fills in after five analysed games.",
             },
             "axes": [
-                {"name": "Sacrifice rate", "you": self._pct(overall["Sacrifice"], enough)},
-                {"name": "Chaos created", "you": self._pct(overall["Chaos"], enough)},
-                {"name": "Calm under fire", "you": self._pct(overall["Calm"], enough)},
-                {"name": "Initiative kept", "you": None if not enough or overall["Initiative"] is None else min(100, round(overall["Initiative"] * 200))},
+                {
+                    "name": name,
+                    "you": mine[name] if enough else None,
+                    "refs": {player: ref["axes"].get(name) for player, ref in refs.items()},
+                }
+                for name in AXES
             ],
+            "references": {player: {"games": ref.get("games", 0), "model": ref.get("model")} for player, ref in refs.items()},
             "timeControls": self._time_controls(games),
             "survival": self._survival(games, by_game_lens, by_game_moves, end, overall["Defence"], enough),
-            "sacrifices": {
-                "played": len(sacrifices),
-                "held": sum(1 for m in sacrifices if m.get("quality") in HELD),
-                "withNotes": sum(1 for m in sacrifices if (m["game_id"], m["ply"]) in noted),
-            },
+            "sacrifices": self._sacrifices(user_id, username),
         }
 
     @staticmethod
-    def _pct(value: float | None, enough: bool) -> int | None:
-        return None if not enough or value is None else round(value * 100)
+    def _sacrifices(user_id: str | None, username: str | None) -> dict:
+        """Same genuine-offer rule as the library, so the two screens agree."""
+        from app.services.library import LibraryService
+
+        rows = LibraryService().sacrifices(user_id, username, limit=10_000)
+        return {"played": len(rows), "held": sum(r["held"] for r in rows), "withNotes": sum(1 for r in rows if r["note"])}
 
     @staticmethod
     def _paged(build) -> list[dict]:

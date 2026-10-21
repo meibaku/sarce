@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Superseded by [ADR 0005](./0005-retire-lab-dashboard.md)
 
 ## Context
 

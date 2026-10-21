@@ -3,6 +3,10 @@ import httpx
 from app.config import settings
 
 
+# Chess.com asks API clients to identify themselves with a way to get in touch.
+USER_AGENT = "Sarce/0.1 (self-hosted chess style app; +https://github.com/meibaku/sarce)"
+
+
 def normalize_chess_com_username(username: str) -> str:
     """Chess.com public API player URLs are canonicalized to lowercase."""
     return username.strip().lower()
@@ -18,7 +22,7 @@ class ChessComClient:
         normalized_username = normalize_chess_com_username(username)
         url = f"{self.base}/player/{normalized_username}/games/archives"
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-            res = await client.get(url, headers={"User-Agent": "Sarce/0.1"})
+            res = await client.get(url, headers={"User-Agent": USER_AGENT})
             res.raise_for_status()
             data = res.json()
 
