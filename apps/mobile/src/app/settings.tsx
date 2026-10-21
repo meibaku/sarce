@@ -4,10 +4,11 @@
  */
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable, Switch, TextInput, View } from "react-native";
+import { Pressable, Share, Switch, TextInput, View } from "react-native";
 import type { SettingsApi } from "@sarce/types";
 import { Card, Choice, Edge, Gauge, Label, Link, Loading, Screen, T, s } from "@/components/ui";
-import { API_BASE, getSettings, getSync, syncNow, updateSettings } from "@/lib/api";
+import { API_BASE, getJournal, getSettings, getSync, syncNow, updateSettings } from "@/lib/api";
+import { setPrefs } from "@/lib/prefs";
 import { color, font } from "@/lib/theme";
 import { useLoad } from "@/lib/use-load";
 
@@ -43,7 +44,12 @@ export default function Settings() {
     if (!data) return;
     const previous = data;
     setData({ ...data, ...changes });
-    updateSettings(changes).then((saved) => setData((d) => ({ ...saved, kept: d?.kept }))).catch(() => {
+    updateSettings(changes)
+      .then((saved) => {
+        setData((d) => ({ ...saved, kept: d?.kept }));
+        setPrefs(saved); // mascot, motion and quiet week follow at once, everywhere
+      })
+      .catch(() => {
       setData(previous);
       setNote("That change couldn't be saved.");
     });
@@ -140,6 +146,30 @@ export default function Settings() {
       </Card>
 
       <Card>
+        <Label>Mascot and motion</Label>
+        <View style={[s.row, { justifyContent: "space-between" }]}>
+          <View style={{ flex: 1 }}>
+            <T weight="medium" size={14}>Playful mascot</T>
+            <T size={12} tone="muted">Off shows the still mark: no eyes, no animation.</T>
+          </View>
+          <Switch value={data.playfulMascot} onValueChange={(on) => change({ playfulMascot: on })} trackColor={{ true: color.accent, false: color.line2 }} thumbColor="#fff" />
+        </View>
+        <View style={{ flexDirection: "row", gap: 6 }}>
+          {(
+            [
+              ["system", "Follow system"],
+              ["full", "Full"],
+              ["reduced", "Reduced"],
+            ] as const
+          ).map(([v, label]) => (
+            <View key={v} style={{ flex: 1 }}>
+              <Choice label={label} selected={data.motion === v} onPress={() => change({ motion: v })} />
+            </View>
+          ))}
+        </View>
+      </Card>
+
+      <Card>
         <Label>How Sarce reads your games</Label>
         <T size={13} tone="ink2">
           Stockfish 18 finds the best moves; a human model estimates how often players at your opponent&apos;s rating would miss the safe
@@ -150,6 +180,14 @@ export default function Settings() {
 
       <View style={[s.row, { gap: 18 }]}>
         <Link label="Replay onboarding" onPress={() => router.push("/onboarding")} />
+        <Link
+          label="Export journal"
+          onPress={() =>
+            getJournal()
+              .then((text) => Share.share({ title: "Sarce journal", message: text }))
+              .catch(() => setNote("The journal couldn't be exported."))
+          }
+        />
       </View>
     </Screen>
   );

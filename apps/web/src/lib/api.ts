@@ -131,9 +131,52 @@ export async function getTrain(drill?: string | null) {
   return fetchApi<import("@/types/chess").TrainApi>(`/users/train${drill ? `?drill=${encodeURIComponent(drill)}` : ""}`);
 }
 
-/** Review → "Add to Train": keeps a position as a Train drill. */
-export async function savePosition(body: { fen: string; title?: string; note?: string; gameId?: string; ply?: number }) {
+/** Keeps a position as a Train drill (Review → Add to Train, or from a video / screenshot / book). */
+export async function savePosition(body: {
+  fen: string;
+  title?: string;
+  note?: string;
+  gameId?: string;
+  ply?: number;
+  sourceUrl?: string;
+  sourceTimeS?: number;
+  excerpt?: string;
+  aiSummary?: string;
+}) {
   return fetchApi<{ id: string }>(`/users/positions`, { method: "POST", body: JSON.stringify(body) });
+}
+
+/** Saved positions, optionally filtered by words in titles, notes and transcripts. */
+export async function listPositions(q?: string) {
+  return fetchApi<{ positions: import("@/types/chess").SavedPosition[] }>(`/users/positions${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+}
+
+export async function deletePosition(id: string) {
+  return fetchApi<{ deleted: string }>(`/users/positions/${id}`, { method: "DELETE" });
+}
+
+/** The captions around a moment of a YouTube video (no AI); `transcript` when YouTube blocks the fetch. */
+export async function videoExcerpt(url: string, transcript?: string) {
+  return fetchApi<{ videoId: string; at: number; text: string; start: number; end: number }>(`/videos/excerpt`, {
+    method: "POST",
+    body: JSON.stringify({ url, transcript }),
+  });
+}
+
+/** Opt-in, sent to Claude: read a board from a screenshot. The FEN comes back checked. */
+export async function fenFromImage(data: string, mediaType: string) {
+  return fetchApi<{ fen: string; confidence: "high" | "medium" | "low"; notes: string; flipped: boolean }>(`/videos/fen-from-image`, {
+    method: "POST",
+    body: JSON.stringify({ data, mediaType }),
+  });
+}
+
+/** Opt-in, sent to Claude: a short title, summary and ideas from what a commentator said. */
+export async function summarizeExcerpt(excerpt: string, fen?: string) {
+  return fetchApi<{ title: string; summary: string; ideas: string[] }>(`/videos/summary`, {
+    method: "POST",
+    body: JSON.stringify({ excerpt, fen }),
+  });
 }
 
 export async function answerDrill(drillKey: string, confidence: import("@/types/chess").Confidence) {
@@ -217,6 +260,62 @@ export async function answerCheckin(gameId: string, ply: number, answer: import(
     method: "POST",
     body: JSON.stringify({ ply, answer, flagged }),
   });
+}
+
+/** A shared link's public snapshot (GET /public/shares/{token}); no names, no notes, not live. */
+export type PublicShare =
+  | {
+      kind: "summary";
+      result: "win" | "loss" | "draw" | null;
+      userColor: string | null;
+      timeControl: string | null;
+      headline: string;
+      outcome: string | null;
+      brilliant: { pct: number | null; count: number | null; of: number | null; goalLo: number | null; goalHi: number | null };
+      moments: { label: string; glyph: string; line: string }[];
+      styleRead: number | null;
+      sharedAt: string;
+    }
+  | {
+      kind: "sacrifice";
+      fen: string;
+      label: string;
+      glyph: string;
+      type: string;
+      material: number;
+      held: boolean;
+      opening: string | null;
+      playedAt: string | null;
+      sharedAt: string;
+    };
+
+export interface SharedLink {
+  id: string;
+  token: string;
+  kind: "summary" | "sacrifice";
+  game_id: string | null;
+  ply: number | null;
+  created_at: string;
+  revoked_at: string | null;
+  snapshot: { headline?: string; label?: string };
+}
+
+/** A read-only link to one of your summaries or sacrifices. */
+export async function createShare(kind: "summary" | "sacrifice", gameId: string, ply?: number) {
+  return fetchApi<{ id: string; token: string; kind: string }>(`/shares`, { method: "POST", body: JSON.stringify({ kind, gameId, ply }) });
+}
+
+export async function listShares() {
+  return fetchApi<{ links: SharedLink[] }>(`/shares`);
+}
+
+export async function revokeShare(id: string) {
+  return fetchApi<{ revoked: string }>(`/shares/${id}`, { method: "DELETE" });
+}
+
+/** Public: anyone with the token. */
+export async function getPublicShare(token: string) {
+  return fetchApi<PublicShare>(`/public/shares/${encodeURIComponent(token)}`);
 }
 
 export async function getSyncStatus() {
