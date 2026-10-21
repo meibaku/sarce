@@ -24,11 +24,11 @@ export function SectionLabel({ children, className = "" }: { children: ReactNode
 }
 
 /** Small mono label over a mono value, as in the Home stats row. */
-export function Stat({ label, value }: { label: string; value: ReactNode }) {
+export function Stat({ label, value }: { label: string; value: ReactNode | null }) {
   return (
     <span className="flex flex-col gap-px">
       <span className="font-mono text-[10px] text-muted">{label}</span>
-      <span className="font-mono text-[15px]">{value}</span>
+      <span className="font-mono text-[15px]">{value ?? <Dashed />}</span>
     </span>
   );
 }
@@ -45,5 +45,26 @@ export function AutoGrid({
       style={{ gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, ${min}px), 1fr))` }}
       {...props}
     />
+  );
+}
+
+/** Blitz and rapid chaos numbers are not validated yet (validation covers 1+0 only). */
+export function UncalibratedBadge() {
+  return (
+    <span
+      title="Chaos numbers are validated on one-minute games only"
+      className="rounded-[4px] border border-dashed border-checkin px-[6px] py-px font-mono text-[10px] font-medium text-checkin"
+    >
+      uncalibrated
+    </span>
+  );
+}
+
+/** A metric resting on too few games: dashed and grey, never a headline (docs/DESIGN.md). */
+export function Dashed() {
+  return (
+    <span className="text-faint" aria-label="Not enough games yet">
+      –
+    </span>
   );
 }
