@@ -10,7 +10,8 @@ const SAMPLE: YouApi = {
   games: 64,
   goalLo: 6,
   goalHi: 10,
-  brilliant: { pct: 4.1, spread: 1.2, weekly: [1.67, 2, 1.33, 2.5, 3, 2.67, 3.67, 3.33, 4.17, 3.83, 4.5, 4.67], from: 2.8, brilliantMoves: 44, yourMoves: 1072 },
+  brilliant: { pct: 4.1, spread: 1.2, weekly: [1.67, 2, 1.33, 2.5, 3, 2.67, 3.67, 3.33, 4.17, 3.83, 4.5, 4.67], from: 2.8, brilliantMoves: 44, yourMoves: 1072, ruleChangedWeek: 5, findRateRule: true },
+  styleSchema: 1,
   fingerprint: {
     traits: ["Sacrifice", "Chaos", "Calm", "Initiative", "Defence"],
     levels: [
@@ -23,11 +24,12 @@ const SAMPLE: YouApi = {
     sentence: "More sacrifice and initiative, with defence holding steady.",
   },
   axes: [
-    { name: "Sacrifice rate", you: 34 },
-    { name: "Chaos created", you: 52 },
-    { name: "Calm under fire", you: 61 },
-    { name: "Initiative kept", you: 47 },
+    { name: "Sacrifice rate", you: 34, refs: { Tal: 48 } },
+    { name: "Chaos created", you: 52, refs: { Tal: 71 } },
+    { name: "Calm under fire", you: 61, refs: { Tal: 55 } },
+    { name: "Initiative kept", you: 47, refs: { Tal: 80 } },
   ],
+  references: { Tal: { games: 40, model: "heuristic" } },
   timeControls: [
     { class: "bullet", games: 64, pct: 4.1, spread: 1.2, calibrated: true },
     { class: "blitz", games: 0, pct: null, spread: null, calibrated: false },
