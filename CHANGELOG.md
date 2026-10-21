@@ -19,6 +19,13 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Background analysis no longer freezes the API: move classification runs in a worker thread
 
 ### Added
+- Multi-user sharing (M8): "Share link" on Summary and the library makes a read-only page at `/s/<token>` from a
+  snapshot taken then (no opponent name, no private notes), listed and turned off in Settings → Shared links
+  (migration `shared_links`, RLS); the background sync now serves every user who saved a username; mobile Summary
+  shares through the system share sheet (`EXPO_PUBLIC_WEB_URL`)
+
+### Fixed
+- Settings no longer loses `aiAvailable` after saving a change (the AI help switch stayed usable)
 - Shirov and Morphy as references: "<Master> in your openings" drills in Train from 1,995 Shirov and 208 Morphy
   positions (plus Tal's), rotated daily; the reference scripts take `--player` / `--key` and skip games the player
   isn't in; mobile You gains the Tal / Shirov / Morphy toggles
