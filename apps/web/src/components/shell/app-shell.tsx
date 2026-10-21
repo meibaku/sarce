@@ -31,7 +31,7 @@ export function activeNav(pathname: string): IconName | null {
   if (under("/games", "/review", "/summary")) return "review";
   if (under("/you", "/library", "/recap")) return "you";
   if (under("/train")) return "train";
-  if (under("/play")) return "play";
+  if (under("/play", "/prep")) return "play";
   return null;
 }
 

@@ -29,7 +29,7 @@ from app.services.human_model import cached_move_probs, elo_ladder, get_human_mo
 from app.services.lens_service import build_ply_contexts, keys_after_each_ply  # noqa: E402
 from app.services.move_classifier import MoveClassifier  # noqa: E402
 from app.services.position_evals import game_lines, iter_live_positions  # noqa: E402
-from app.services.reference import TAL_PLAYER_NAME, ReferenceService, infer_player_color  # noqa: E402
+from app.services.reference import TAL_PLAYER_NAME, ReferenceService, _matches_player_name  # noqa: E402
 from app.services.reference_axes import PATH, axis_values  # noqa: E402
 from app.services.stockfish import StockfishEngine  # noqa: E402
 from app.services.you import trait_values  # noqa: E402
@@ -63,13 +63,20 @@ def opponent_rating(game: chess.pgn.Game, color: str) -> int | None:
     return int(raw) if raw.isdigit() else None
 
 
-def score_game(pgn_text: str, classifier, engine, model) -> tuple[list[dict], list[dict]] | None:
-    """(moves, lens rows) for the reference player's side of one game."""
+def score_game(pgn_text: str, classifier, engine, model, player: str = TAL_PLAYER_NAME) -> tuple[list[dict], list[dict]] | None:
+    """(moves, lens rows) for the reference player's side of one game; None when they did not play in it."""
     game = chess.pgn.read_game(io.StringIO(pgn_text))
     if game is None:
         return None
     board, moves = game.board(), list(game.mainline_moves())
-    color = infer_player_color(game, TAL_PLAYER_NAME)
+    # Only games the player is in: some corpora hold games between relatives or rivals (e.g. the
+    # Morphy collection), and a fallback colour would score someone else.
+    if _matches_player_name(game.headers.get("White", ""), player):
+        color = "white"
+    elif _matches_player_name(game.headers.get("Black", ""), player):
+        color = "black"
+    else:
+        return None
     evals, probs = MemoryEvalStore(), MemoryProbStore()
     # One search per position, as in the app: classification reads the lines the lenses use.
     classified = classifier.classify_game(board, moves, color, lines=game_lines(board, moves, engine, evals))
@@ -91,15 +98,15 @@ def score_game(pgn_text: str, classifier, engine, model) -> tuple[list[dict], li
 
 def _score_one(args) -> tuple[int, tuple[list[dict], list[dict]] | None, str | None]:
     """One game with its own engine, so games run in parallel (one engine per worker)."""
-    i, pgn_text, model = args
+    i, pgn_text, model, player = args
     try:
         with StockfishEngine() as engine:
-            return i, score_game(pgn_text, MoveClassifier(), engine, model), None
+            return i, score_game(pgn_text, MoveClassifier(), engine, model, player), None
     except Exception as exc:  # one odd PGN must not stop the batch
         return i, None, str(exc)
 
 
-def main(zip_path: Path, max_games: int, workers: int | None = None) -> None:
+def main(zip_path: Path, max_games: int, workers: int | None = None, player: str = TAL_PLAYER_NAME, key: str = "Tal") -> None:
     from concurrent.futures import ThreadPoolExecutor
 
     # The corpus is in date order, so the first N games would all be the teenage Tal: take an
@@ -112,7 +119,7 @@ def main(zip_path: Path, max_games: int, workers: int | None = None) -> None:
     all_lens: list[dict] = []
     scored = 0
     with ThreadPoolExecutor(workers or settings.workers) as pool:
-        for i, result, error in pool.map(_score_one, [(i, p, model) for i, p in enumerate(pgns, 1)]):
+        for i, result, error in pool.map(_score_one, [(i, p, model, player) for i, p in enumerate(pgns, 1)]):
             if error or result is None:
                 print(f"game {i}: skipped ({error or 'unreadable'})", flush=True)
                 continue
@@ -123,21 +130,23 @@ def main(zip_path: Path, max_games: int, workers: int | None = None) -> None:
             print(f"game {i}/{len(pgns)}: {len(moves)} moves", flush=True)
     axes = axis_values(trait_values(all_moves, all_lens))
     data = json.loads(PATH.read_text(encoding="utf-8")) if PATH.exists() else {}
-    data["Tal"] = {
+    data[key] = {
         "games": scored,
         "axes": axes,
         "model": model.name,
-        "source": f"pgnmentor.com Tal corpus, every {step}th of {len(corpus)} games",
+        "source": f"pgnmentor.com {key} corpus, every {step}th of {len(corpus)} games",
         "computedAt": datetime.now(timezone.utc).date().isoformat(),
     }
     PATH.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-    print(f"Tal: {scored} games -> {axes}")
+    print(f"{key}: {scored} games -> {axes}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Score Tal's games on the You axes")
-    parser.add_argument("--zip", type=Path, required=True, help="Local copy of pgnmentor's Tal.zip")
+    parser = argparse.ArgumentParser(description="Score a reference player's games on the You axes")
+    parser.add_argument("--zip", type=Path, required=True, help="Local copy of the player's pgnmentor ZIP")
+    parser.add_argument("--player", default=TAL_PLAYER_NAME, help='Full name as "First Last", e.g. "Alexei Shirov"')
+    parser.add_argument("--key", default="Tal", help="Name shown on the You axes, e.g. Shirov")
     parser.add_argument("--max-games", type=int, default=40)
     parser.add_argument("--workers", type=int, default=None, help="Parallel engines (default: cores - 1)")
     args = parser.parse_args()
-    main(args.zip, args.max_games, args.workers)
+    main(args.zip, args.max_games, args.workers, args.player, args.key)

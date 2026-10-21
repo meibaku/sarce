@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AuthStatus } from "@/components/auth-status";
 import { Stepper, Switch, TextLink } from "@/components/ui/buttons";
 import { AutoGrid, SectionLabel } from "@/components/ui/card";
 import { Mascot } from "@/components/ui/mascot";
@@ -108,6 +109,7 @@ export function SettingsView({
               {(
                 [
                   ["light", "Light"],
+                  ["dark", "Dark"],
                   ["system", "Match system"],
                 ] as const
               ).map(([id, label]) => (
@@ -116,7 +118,6 @@ export function SettingsView({
                 </button>
               ))}
             </div>
-            <span className="text-[12px] text-muted">Dark theme is planned for v1.1; &quot;Match system&quot; stays light until then.</span>
             <div className="flex flex-col gap-2 border-t border-hair pt-[10px]">
               {(
                 [
@@ -187,6 +188,18 @@ export function SettingsView({
                 </div>
               ))}
             </div>
+            {/* The one thing that leaves your machine, and only when you use it: off by default. */}
+            <div className="flex flex-col gap-1 border-t border-hair pt-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[13px] font-medium">Video help (sent to AI)</span>
+                <Switch label="Video help (sent to AI)" on={Boolean(data.aiHelp)} onChange={(on) => data.aiAvailable && onChange({ aiHelp: on })} />
+              </div>
+              <span className="text-[12px] leading-[1.45] text-muted">
+                {data.aiAvailable
+                  ? "Reading a board from a screenshot and summarising what a video said are sent to Anthropic (Claude) when you use them. Transcripts come from YouTube's captions."
+                  : "Not set up on this server: add Claude credentials (ANTHROPIC_API_KEY) to the API to use it."}
+              </span>
+            </div>
             <div className="flex flex-wrap items-center gap-[18px]">
               <button
                 type="button"
@@ -210,6 +223,7 @@ export function SettingsView({
           <div className="flex flex-wrap gap-[18px]">
             <TextLink href="/onboarding">Replay onboarding</TextLink>
             <TextLink href="/states">Preview edge states</TextLink>
+            <AuthStatus />
           </div>
         </div>
       </AutoGrid>

@@ -31,3 +31,15 @@ def test_extract_pgns_splits_crlf_corpus(tmp_path):
     with zipfile.ZipFile(path, "w") as z:
         z.writestr("Tal.pgn", game * 3)
     assert len(ReferenceService._extract_pgns(path, 10)) == 3
+
+
+def test_player_matching_survives_transliteration():
+    import chess.pgn
+    import io
+
+    from app.services.reference import infer_player_color
+
+    game = chess.pgn.read_game(io.StringIO('[White "Klasup, Karlis"]\n[Black "Tal, Mihail"]\n\n1. e4 *\n'))
+    assert infer_player_color(game, "Mikhail Tal") == "black"
+    other = chess.pgn.read_game(io.StringIO('[White "Talbot, Mark"]\n[Black "Smith, Tom"]\n\n1. e4 *\n'))
+    assert infer_player_color(other, "Mikhail Tal") == "white"  # no match: the documented fallback

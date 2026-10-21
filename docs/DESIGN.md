@@ -4,9 +4,13 @@ The UI follows the v1.0 design handoff. The full handoff (HTML prototypes, scree
 reference) lives in the private `meibaku/sarce-private` repo under `design/handoff-v1/`; this page keeps
 the rules the code depends on.
 
-**Status:** being implemented screen by screen (see `CHANGELOG.md`). Until a screen ships, the pre-v1
-dashboard (moving to `/lab`) keeps its old dark palette; the tokens below take effect with the foundation
-change. North star: **"Did this game feel like you, not did you play like the engine?"**
+**Status:** all eleven screens, edge states, mascot and motion are implemented (see `CHANGELOG.md`). The
+pre-v1 dashboard (`/lab`) is retired (ADR 0005); opponent prep moved to `/prep`, reached from Play. North star: **"Did this game feel like you, not did you play like the engine?"**
+
+## Themes
+
+Light is the reference. Dark (`:root[data-theme="dark"]` in `globals.css`) re-points the same tokens; every text
+token keeps at least 4.5:1 on page, surface and panel. `lib/theme.ts` sets the attribute before first paint.
 
 ## Product rules the UI enforces
 

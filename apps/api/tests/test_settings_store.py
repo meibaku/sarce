@@ -19,7 +19,7 @@ def test_validate_accepts_known_values():
     assert settings_store.validate({"quietUntil": "2026-10-25"}) == {"quietUntil": "2026-10-25"}
 
 
-@pytest.mark.parametrize("bad", [{"theme": "dark"}, {"questionBudget": 3}, {"goalLo": 20}, {"goalLo": 8, "goalHi": 6}, {"nope": 1}, {"playfulMascot": "yes"}])
+@pytest.mark.parametrize("bad", [{"theme": "sepia"}, {"questionBudget": 3}, {"goalLo": 20}, {"goalLo": 8, "goalHi": 6}, {"nope": 1}, {"playfulMascot": "yes"}])
 def test_validate_rejects(bad):
     with pytest.raises(ValueError):
         settings_store.validate(bad)
@@ -34,3 +34,7 @@ def test_settings_route_validates():
         assert client.put("/users/settings", json={"theme": "dark"}).status_code == 422
     with patch("app.routers.users.settings_store.update", return_value={"theme": "system"}):
         assert client.put("/users/settings", json={"theme": "system"}).json() == {"theme": "system"}
+
+
+def test_dark_theme_is_a_choice():
+    assert settings_store.validate({"theme": "dark"}) == {"theme": "dark"}
