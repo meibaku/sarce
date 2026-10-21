@@ -4,6 +4,12 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Fixed
+- Touch targets: every control is at least 44×44 to the touch on a phone. On the web, a `.tap` hit area covers the
+  header Settings button, text links, steppers and compact toggles, and Recap's game bars fill their column. In the
+  Expo app, `hitSlop` covers the back arrow and the steppers. The drawn sizes are unchanged. The QA record is in
+  `docs/QA_V1.md`
+
 ### Added
 - All games, from Review (`/games`): newest first, or most chaotic first (highest chaos peak, with real /
   calculated / unsound chaos counts). `GET /games?chaos=true` reads the top-scoring chaos rows in score order

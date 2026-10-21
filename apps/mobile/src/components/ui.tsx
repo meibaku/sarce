@@ -41,7 +41,7 @@ export function Screen({ title, children, back }: { title: string; children: Rea
     <SafeAreaView edges={["top"]} style={s.safe}>
       <View style={s.header}>
         {back ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} hitSlop={12}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 19, right: 19 }}>
             <T size={20} tone="accentText">‹</T>
           </Pressable>
         ) : (

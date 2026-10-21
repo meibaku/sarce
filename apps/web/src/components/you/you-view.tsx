@@ -148,7 +148,7 @@ export function YouView({ data }: { data: YouApi }) {
                 type="button"
                 aria-pressed={ref === r}
                 onClick={() => setRef(r)}
-                className={`h-8 rounded-[6px] border-[1.5px] px-3 text-[12px] font-medium ${
+                className={`tap h-8 rounded-[6px] border-[1.5px] px-3 text-[12px] font-medium ${
                   ref === r ? "border-accent bg-accent-tint text-accent-text" : "border-line-2 bg-surface text-muted"
                 }`}
               >

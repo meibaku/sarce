@@ -19,6 +19,7 @@ function Stepper({ value, onChange, min, max }: { value: number; onChange: (v: n
       accessibilityLabel={label === "−" ? "Lower" : "Higher"}
       disabled={next < min || next > max}
       onPress={() => onChange(next)}
+      hitSlop={4} // 36px drawn, 44px to the touch
       style={{ width: 36, height: 36, borderRadius: 6, borderWidth: 1.5, borderColor: color.line2, alignItems: "center", justifyContent: "center", opacity: next < min || next > max ? 0.4 : 1 }}
     >
       <T size={16}>{label}</T>
