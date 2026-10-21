@@ -12,6 +12,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   every 5 games
 
 ### Changed
+- Brilliant needs a piece genuinely on offer (ADR 0007): attacked by something cheaper, or attacked and
+  undefended. A defended piece only an equal could take no longer counts. Style vectors move to version 3; run
+  `scripts/backfill_brilliant_find_rate.py` to re-apply the rules to stored games
 - Licence: GNU AGPL-3.0 (was MIT), see ADR 0006 — open source and self-hostable; a modified version run as a
   service must share its source; compatible with python-chess (GPL-3.0+)
 

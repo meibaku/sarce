@@ -84,6 +84,32 @@ def material_sacrifice(board: chess.Board, move: chess.Move) -> int:
     return max(immediate_loss, offered_loss)
 
 
+def real_offer(board: chess.Board, move: chess.Move) -> int:
+    """
+    Material genuinely offered by `move`, or 0 (ADR 0007).
+
+    Stricter than `material_sacrifice` (any piece a reply could land on): after the move the piece
+    must be attacked by something cheaper, or attacked and undefended. A defended piece that can
+    only be taken by an equal or bigger piece is not on offer.
+    """
+    piece = board.piece_at(move.from_square)
+    if piece is None or move.promotion:
+        return 0
+    captured = board.piece_at(move.to_square)
+    taken = PIECE_VALUES.get(captured.piece_type, 0) if captured else (1 if board.is_en_passant(move) else 0)
+    after = board.copy(stack=False)
+    after.push(move)
+    attackers = after.attackers(not piece.color, move.to_square)
+    if not attackers:
+        return 0
+    cheapest = min(PIECE_VALUES.get(after.piece_at(sq).piece_type, 100) for sq in attackers)
+    defended = bool(after.attackers(piece.color, move.to_square))
+    value = PIECE_VALUES.get(piece.piece_type, 0)
+    if cheapest < value or not defended:
+        return max(0, value - taken)
+    return 0
+
+
 def has_reasonable_alternatives(board: chess.Board, move: chess.Move) -> bool:
     """Move is not forced — more than one legal option existed."""
     legal = list(board.legal_moves)
@@ -100,7 +126,7 @@ def is_brilliant_move(
     """
     Tal-specific brilliant detection. ALL conditions must hold:
 
-    1. Real piece sacrifice (minor piece or larger, not a pawn)
+    1. Real piece sacrifice (minor piece or larger, not a pawn), genuinely on offer (ADR 0007)
     2. Eval after move within excellent-or-better margin of best available
     3. Position not already crushing (+3 pawns default)
     4. Not a forced-only move
@@ -111,6 +137,9 @@ def is_brilliant_move(
         return False
 
     if material_sacrifice(board, move) < MIN_BRILLIANT_SACRIFICE_VALUE:
+        return False
+    # ADR 0007: the piece must really be on offer, not just a square a reply could reach.
+    if real_offer(board, move) < MIN_BRILLIANT_SACRIFICE_VALUE:
         return False
 
     # Keep Brilliant above the normal "good move" band even if env margin is looser.

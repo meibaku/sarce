@@ -97,3 +97,16 @@ def test_why_falls_back_to_stored_candidates_without_an_engine(monkeypatch):
     titles = [ln["title"] for ln in out["lines"]]
     assert titles[:3] == ["What you played", "The engine's first choice", "Alternative 1"]
     assert all(ln["steps"] for ln in out["lines"])
+
+
+def test_real_offer_rejects_a_defended_piece_only_an_equal_can_take():
+    from app.services.brilliant import is_brilliant_move, real_offer
+
+    # 2...Nf6 in the Scandinavian-style position: the knight can be "landed on" but isn't really offered.
+    board = chess.Board("rnbqkbnr/ppp1pppp/8/3P4/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2")
+    move = chess.Move.from_uci("g8f6")
+    assert real_offer(board, move) == 0
+    assert not is_brilliant_move(board, move, -0.1, -0.1, -0.1)
+    # A knight dropped where a pawn takes it is a genuine 3-point offer.
+    offer = chess.Board("rnbqkbnr/ppppppp1/7p/8/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3")
+    assert real_offer(offer, chess.Move.from_uci("f3g5")) == 3

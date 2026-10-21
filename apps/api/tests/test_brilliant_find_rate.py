@@ -26,7 +26,7 @@ def test_apply_rule_demotes_only_easy_brilliants_with_data():
 
 def test_style_vector_v2_keeps_other_features():
     v = rule.style_vector_v2({"version": 1, "sacrificeRate": 0.1}, {"brilliant": 1, "best": 9}, 10.0)
-    assert v["version"] == 2 and v["brilliantRule"] == "find-rate-20"
+    assert v["version"] == 3 and v["brilliantRule"] == "find-rate-20+real-offer"
     assert v["sacrificeRate"] == 0.1 and v["brilliantPct"] == 10.0
 
 
