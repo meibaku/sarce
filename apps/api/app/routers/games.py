@@ -271,7 +271,7 @@ async def get_game_detail(
         game_res = game_res.eq("chess_com_username", username)
 
     game_res = game_res.maybe_single().execute()
-    if not game_res.data:
+    if not game_res or not game_res.data:
         raise HTTPException(status_code=404, detail="Game not found")
 
     game = game_res.data
