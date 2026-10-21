@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { SettingsView } from "@/components/settings/settings-view";
+import { SharedLinks } from "@/components/share/shared-links";
 import { AppShell } from "@/components/shell/app-shell";
 import { resetMotionPrefs } from "@/components/ui/mascot";
 import { showToast } from "@/components/ui/toast";
@@ -30,6 +31,7 @@ export default function SettingsPage() {
     <AppShell title="settings">
       {error && <p className="text-[13px] text-ink-2">{error}</p>}
       {data ? (
+        <>
         <SettingsView
           data={data}
           brilliant={brilliant}
@@ -47,7 +49,8 @@ export default function SettingsPage() {
             updateSettings(changes)
               .then((saved) => {
                 resetMotionPrefs();
-                setData((d) => ({ ...saved, kept: d?.kept }));
+                // The PUT answer has the stored settings only: keep the read-only facts from the GET.
+                setData((d) => ({ ...saved, kept: d?.kept, aiAvailable: d?.aiAvailable }));
                 if ("goalLo" in changes || "goalHi" in changes) showToast("Goal changed. Every gauge follows it.", "think");
                 else if ("quietUntil" in changes)
                   showToast(changes.quietUntil ? "Quiet week on. Numbers are hidden." : "Quiet week over. Numbers are back.", changes.quietUntil ? "sleep" : "stretch");
@@ -58,6 +61,8 @@ export default function SettingsPage() {
               });
           }}
         />
+        <SharedLinks />
+        </>
       ) : (
         !error && <div className="h-[2px] w-1/3 animate-pulse bg-accent" role="progressbar" aria-label="Loading" />
       )}

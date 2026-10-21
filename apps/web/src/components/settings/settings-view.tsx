@@ -188,6 +188,18 @@ export function SettingsView({
                 </div>
               ))}
             </div>
+            {/* The one thing that leaves your machine, and only when you use it: off by default. */}
+            <div className="flex flex-col gap-1 border-t border-hair pt-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[13px] font-medium">Video help (sent to AI)</span>
+                <Switch label="Video help (sent to AI)" on={Boolean(data.aiHelp)} onChange={(on) => data.aiAvailable && onChange({ aiHelp: on })} />
+              </div>
+              <span className="text-[12px] leading-[1.45] text-muted">
+                {data.aiAvailable
+                  ? "Reading a board from a screenshot and summarising what a video said are sent to Anthropic (Claude) when you use them. Transcripts come from YouTube's captions."
+                  : "Not set up on this server: add Claude credentials (ANTHROPIC_API_KEY) to the API to use it."}
+              </span>
+            </div>
             <div className="flex flex-wrap items-center gap-[18px]">
               <button
                 type="button"
