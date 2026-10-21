@@ -8,6 +8,13 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Shirov and Morphy reference values on the You axes (40 games each from the pgnmentor corpora, scored the same
   way as Tal): Shirov sacrifice 20 · chaos 36 · calm 95 · initiative 25; Morphy 22 · 31 · 90 · 22
 
+### Fixed
+- Analysis past ~300 games: the baseline recompute put every game id in one URL (HTTP 414) and failed each
+  analysis right after it was marked complete, skipping its chaos pass, find-rate rule and idea tagger; the ids
+  are now paged and looked up in chunks. The chaos backfill also catches up the idea tagger
+- Background sync drains a backlog continuously (5 s between batches) instead of sleeping `SYNC_MINUTES` after
+  every 5 games
+
 ### Changed
 - Licence: GNU AGPL-3.0 (was MIT), see ADR 0006 — open source and self-hostable; a modified version run as a
   service must share its source; compatible with python-chess (GPL-3.0+)
