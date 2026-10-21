@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FallsChart, IdeaArcs } from "@/components/review/charts";
+import { WhyPanel } from "@/components/review/why-panel";
 import { PrimaryButton, TextButton } from "@/components/ui/buttons";
 import { AutoGrid, SectionLabel, UncalibratedBadge } from "@/components/ui/card";
 import { Board } from "@/components/ui/board";
@@ -45,6 +46,7 @@ export function ReviewView({
   const [twoMove, setTwoMove] = useState(false);
   const current = moments[index];
   const [viewPly, setViewPly] = useState<number | null>(current?.ply ?? null);
+  const [whyPly, setWhyPly] = useState<number | null>(null);
   const [note, setNote] = useState<NoteState>(current?.intent ? "saved" : "closed");
   const [draftType, setDraftType] = useState<IntentType | null>(current?.intent?.type ?? null);
   const [draftText, setDraftText] = useState(current?.intent?.note ?? "");
@@ -249,6 +251,10 @@ export function ReviewView({
               <PrimaryButton className="!px-5" onClick={() => goTo((index + 1) % moments.length)}>
                 Next moment
               </PrimaryButton>
+              {/* The viewed move when it is yours, else the moment's: "why this badge / why not Brilliant?" */}
+              <TextButton onClick={() => setWhyPly(viewPly != null && viewPly % 2 === (data.userColor === "black" ? 1 : 0) ? viewPly : current.ply)}>
+                Why this move?
+              </TextButton>
               <TextButton
                 onClick={() => {
                   // The position before the moment's move: that is the decision worth drilling.
@@ -272,6 +278,9 @@ export function ReviewView({
               </TextButton>
             </div>
             <span className="hidden font-mono text-[11px] text-faint md:block">J / K moment · ← → move · N note · E engine</span>
+            {whyPly != null && (
+              <WhyPanel gameId={data.gameId} ply={whyPly} orientation={data.userColor === "black" ? "black" : "white"} onClose={() => setWhyPly(null)} />
+            )}
           </div>
         ) : (
           <section className="rounded-[8px] border border-line bg-surface px-[18px] py-4 text-[13px] text-muted">

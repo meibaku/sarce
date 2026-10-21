@@ -7,6 +7,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ### Added
 - Shirov and Morphy reference values on the You axes (40 games each from the pgnmentor corpora, scored the same
   way as Tal): Shirov sacrifice 20 · chaos 36 · calm 95 · initiative 25; Morphy 22 · 31 · 90 · 22
+- Your chaos map (You, web and phone): the opening positions you reach most often, how predictably opponents
+  steer into each, your usual move, and the one sound move that sets opponents at your level the hardest problem
+  (P_fail × stake, the Tal bot's measure). `GET`/`POST /users/chaos-map`, new `chaos_map` table (RLS). Moves that
+  clearly ask more than your usual one become a Train drill, "chaos move in your opening"
 
 ### Fixed
 - Analysis past ~300 games: the baseline recompute put every game id in one URL (HTTP 414) and failed each
@@ -16,6 +20,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   every 5 games
 
 ### Changed
+- Brilliant needs a piece genuinely on offer (ADR 0007): attacked by something cheaper, or attacked and
+  undefended. A defended piece only an equal could take no longer counts. Style vectors move to version 3; run
+  `scripts/backfill_brilliant_find_rate.py` to re-apply the rules to stored games
 - Licence: GNU AGPL-3.0 (was MIT), see ADR 0006 — open source and self-hostable; a modified version run as a
   service must share its source; compatible with python-chess (GPL-3.0+)
 
@@ -30,6 +37,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Background analysis no longer freezes the API: move classification runs in a worker thread
 
 ### Added
+- "Why this move?" in Review (web and mobile): the badge's reason, each Brilliant rule as a check with its
+  number (sacrifice size, eval gap, already decided, a real choice, find-rate at your opponent's rating), the
+  problem's P_fail ladder and safe replies, and lines to step through on a board — what you played and the reply,
+  the engine's top lines, and a sacrifice that would have counted (`GET /games/{id}/moves/{ply}/why`)
 - Multi-user sharing (M8): "Share link" on Summary and the library makes a read-only page at `/s/<token>` from a
   snapshot taken then (no opponent name, no private notes), listed and turned off in Settings → Shared links
   (migration `shared_links`, RLS); the background sync now serves every user who saved a username; mobile Summary
@@ -224,6 +235,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - `next` 15.5.19 → 15.5.27 and other in-range updates via `npm audit fix` (clears a critical advisory)
 
 ### Fixed
+- The dashboard no longer goes blank when a Tal player row exists without a benchmark: `maybe_single()`
+  lookups now handle supabase-py returning `None` for no row (Tal benchmark, baseline, game lookups)
+- Batch analysis loads the Maia-2 weights once per process instead of once per game
 - Re-importing games no longer resets `analysis_status` to `pending` (it had left all 2,644 local games
   pending with only three analysed); new games still start as `pending` through the column default
 - Chaos validation go / no-go compared a clock-adjusted model against an unadjusted heuristic baseline,
