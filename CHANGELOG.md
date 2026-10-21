@@ -5,6 +5,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- Shirov and Morphy reference values on the You axes (40 games each from the pgnmentor corpora, scored the same
+  way as Tal): Shirov sacrifice 20 · chaos 36 · calm 95 · initiative 25; Morphy 22 · 31 · 90 · 22
 - Your chaos map (You, web and phone): the opening positions you reach most often, how predictably opponents
   steer into each, your usual move, and the one sound move that sets opponents at your level the hardest problem
   (P_fail × stake, the Tal bot's measure). `GET`/`POST /users/chaos-map`, new `chaos_map` table (RLS). Moves that

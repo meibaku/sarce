@@ -58,7 +58,7 @@ This file tracks **what's built vs planned**. The phase definitions below match 
 See [PRODUCT_SPEC.md § Phase 4+](./PRODUCT_SPEC.md#phase-4--future-enhancements-not-locked) for full list.
 
 Highlights: Lichess import (✅ done, with automatic sync), reference player similarity (🟡 Tal on the You axes and
-"Tal in your openings" in Train; Shirov and Morphy need their corpora), Android/iOS (✅ `apps/mobile`, Expo), opening
+"Tal in your openings" in Train; Shirov and Morphy ✅ scored), Android/iOS (✅ `apps/mobile`, Expo), opening
 matcher, anonymized peer comparison, browser extension, GM training mode.
 
 ---
