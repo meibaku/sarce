@@ -1,6 +1,6 @@
 from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Query
 from fastapi.responses import PlainTextResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.deps import current_user_id, resolve_user_id, scoped_user_id
 
@@ -97,12 +97,79 @@ class DrillAnswer(BaseModel):
     confidence: str
 
 
+class DrillMove(BaseModel):
+    fen: str
+    uci: str = Field(..., min_length=4, max_length=5)
+    answer: str | None = None
+    source: str | None = None
+
+
+@router.post("/train/check")
+async def check_drill_move(body: DrillMove):
+    """Checks your move in a drill on the server (legality, the answer, and whether it still holds)."""
+    from app.routers.play import bot_service
+    from app.services.train import check_move
+
+    try:
+        return check_move(
+            body.fen, body.uci, body.answer, body.source == "find the sacrifice", bot_service.move_loss,
+            # "<Master> in your openings" drills: the answer is that player's move, so feedback names them.
+            reference_player=body.source.removesuffix(" in your openings") if (body.source or "").endswith(" in your openings") else None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+class SavePosition(BaseModel):
+    fen: str = Field(..., max_length=120)
+    title: str | None = Field(None, max_length=200)
+    note: str | None = Field(None, max_length=4000)
+    gameId: str | None = None
+    ply: int | None = Field(None, ge=0, le=1200)
+    sourceUrl: str | None = Field(None, max_length=500)
+    sourceTimeS: int | None = Field(None, ge=0, le=86_400)
+    excerpt: str | None = Field(None, max_length=12_000)
+    aiSummary: str | None = Field(None, max_length=4000)
+
+
+@router.get("/positions")
+async def list_positions(user_id: str | None = Query(None), q: str | None = Query(None, max_length=200)):
+    """Positions you saved to drill (Review → Add to Train, videos); `q` searches titles, notes and transcripts."""
+    from app.services.positions import PositionStore
+
+    return {"positions": PositionStore().list(resolve_user_id(user_id), q=q)}
+
+
+@router.post("/positions")
+async def save_position(body: SavePosition, user_id: str | None = Query(None)):
+    """Saves a position for Train; the engine's move from the game's analysis becomes the answer."""
+    from app.services.positions import PositionStore
+
+    try:
+        source = (
+            {"url": body.sourceUrl, "time_s": body.sourceTimeS, "excerpt": body.excerpt, "ai_summary": body.aiSummary}
+            if body.sourceUrl or body.excerpt or body.aiSummary
+            else None
+        )
+        return PositionStore().save(resolve_user_id(user_id), body.fen, body.title, body.note, body.gameId, body.ply, source)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.delete("/positions/{position_id}")
+async def delete_position(position_id: str, user_id: str | None = Query(None)):
+    from app.services.positions import PositionStore
+
+    PositionStore().delete(resolve_user_id(user_id), position_id)
+    return {"deleted": position_id}
+
+
 @router.get("/train")
-async def get_train(user_id: str | None = Query(None)):
-    """Train queue: drills from your games and the trap atlas, aimed at this week's focus."""
+async def get_train(user_id: str | None = Query(None), drill: str | None = Query(None, max_length=200)):
+    """Train queue: drills from your games, the trap atlas and saved positions, aimed at this week's focus."""
     owner = resolve_user_id(user_id)
     focus = recap_service.current_focus(owner, "weekly")
-    data = train_service.queue(scoped_user_id(user_id, None), owner, focus)
+    data = train_service.queue(scoped_user_id(user_id, None), owner, focus, first=drill)
     return {**data, "focus": FOCUSES.get(focus or "")}
 
 
@@ -118,8 +185,15 @@ async def answer_drill(body: DrillAnswer, user_id: str | None = Query(None)):
 @router.get("/settings")
 async def get_settings(user_id: str | None = Query(None)):
     """Style goal and preferences, plus what Sarce keeps."""
+    from app.services.ai import credentials_present
+
     owner = resolve_user_id(user_id)
-    return {**settings_store.get(owner), "kept": settings_store.kept(owner, scoped_user_id(user_id, None))}
+    return {
+        **settings_store.get(owner),
+        "kept": settings_store.kept(owner, scoped_user_id(user_id, None)),
+        # Whether this server can use AI help at all; the player still has to opt in (aiHelp).
+        "aiAvailable": credentials_present(),
+    }
 
 
 @router.put("/settings")

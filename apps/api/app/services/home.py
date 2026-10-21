@@ -194,6 +194,7 @@ class HomeService:
                 sb.table("games")
                 .select("id, played_at, opponent, result, time_control, user_color, clocks_ms, game_analyses(brilliant_pct, total_moves)")
                 .eq("analysis_status", "complete")
+                .neq("source", "sarce_bot")  # bot games are practice
                 .order("played_at", desc=True)
                 .limit(WINDOW)
             )

@@ -61,6 +61,7 @@ class RecapService:
             sb.table("games")
             .select("id, played_at, felt_like_you, game_analyses(brilliant_pct, total_moves)")
             .eq("analysis_status", "complete")
+            .neq("source", "sarce_bot")  # bot games are practice
             .order("played_at", desc=True)
             .limit(200)
         )
