@@ -113,7 +113,8 @@ async def check_drill_move(body: DrillMove):
     try:
         return check_move(
             body.fen, body.uci, body.answer, body.source == "find the sacrifice", bot_service.move_loss,
-            reference_drill=body.source == "Tal in your openings",
+            # "<Master> in your openings" drills: the answer is that player's move, so feedback names them.
+            reference_player=body.source.removesuffix(" in your openings") if (body.source or "").endswith(" in your openings") else None,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

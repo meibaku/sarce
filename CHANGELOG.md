@@ -19,6 +19,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Background analysis no longer freezes the API: move classification runs in a worker thread
 
 ### Added
+- Shirov and Morphy as references: "<Master> in your openings" drills in Train from 1,995 Shirov and 208 Morphy
+  positions (plus Tal's), rotated daily; the reference scripts take `--player` / `--key` and skip games the player
+  isn't in; mobile You gains the Tal / Shirov / Morphy toggles
 - `scripts/auth_smoke.py`: sign-in checked against a real Supabase Auth (throwaway user; token required, forged
   tokens refused, another user's data unreachable, settings on the right profile); passes on the local stack
 - Positions from videos (PHASES 2.2–2.4): Train → Save a position takes a YouTube link and keeps the captions

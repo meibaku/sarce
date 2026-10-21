@@ -26,6 +26,7 @@ from app.services.reference import TAL_PLAYER_NAME, ReferenceService, _matches_p
 
 OUT = Path(__file__).resolve().parents[1] / "data" / "reference_positions.json"
 FIRST, LAST, FALLBACK = 12, 30, 15
+MAX_POSITIONS = 2500
 
 
 def pick(game: chess.pgn.Game, player: str) -> dict | None:
@@ -67,9 +68,14 @@ def build(zip_path: Path, player: str = TAL_PLAYER_NAME) -> list[dict]:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Reference positions for Train")
     parser.add_argument("--zip", type=Path, required=True)
+    parser.add_argument("--player", default=TAL_PLAYER_NAME, help='Full name as "First Last", e.g. "Paul Morphy"')
+    parser.add_argument("--key", default="Tal", help="Name used in Train, e.g. Morphy")
     args = parser.parse_args()
-    positions = build(args.zip)
+    positions = build(args.zip, args.player)
+    # Keep the shipped data small: an even sample across the career when a corpus is large.
+    step = max(1, -(-len(positions) // MAX_POSITIONS))
+    positions = positions[::step][:MAX_POSITIONS]
     data = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
-    data["Tal"] = positions
+    data[args.key] = positions
     OUT.write_text(json.dumps(data, separators=(",", ":")) + "\n", encoding="utf-8")
-    print(f"Tal: {len(positions)} positions -> {OUT}")
+    print(f"{args.key}: {len(positions)} positions -> {OUT}")
