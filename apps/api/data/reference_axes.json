@@ -2,13 +2,13 @@
   "Tal": {
     "games": 40,
     "axes": {
-      "Sacrifice rate": 17,
-      "Chaos created": 40,
-      "Calm under fire": 95,
-      "Initiative kept": 26
+      "Sacrifice rate": 18,
+      "Chaos created": 36,
+      "Calm under fire": 96,
+      "Initiative kept": 24
     },
     "model": "heuristic",
     "source": "pgnmentor.com Tal corpus, every 60th of 2431 games",
-    "computedAt": "2026-10-18"
+    "computedAt": "2026-10-20"
   }
 }

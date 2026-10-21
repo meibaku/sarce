@@ -33,6 +33,34 @@ def axis_values(traits: dict[str, float | None]) -> dict[str, int | None]:
     }
 
 
+POSITIONS_PATH = PATH.with_name("reference_positions.json")
+
+
+@lru_cache(maxsize=1)
+def reference_positions() -> dict[str, list[dict]]:
+    """{player: [{fen, san, uci, eco, year, opponent, event}]} from scripts/build_reference_positions.py."""
+    try:
+        return json.loads(POSITIONS_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def in_your_openings(positions: list[dict], ecos: list[str], seed: int, count: int = 3) -> list[dict]:
+    """
+    Up to `count` reference positions from your openings: exact ECO codes first (most played first),
+    then the same ECO family (C4x), rotated by `seed` so the queue changes from day to day.
+    """
+    chosen: list[dict] = []
+    for match in (lambda p, e: p["eco"] == e, lambda p, e: p["eco"][:2] == e[:2]):
+        for eco in ecos:
+            pool = [p for p in positions if match(p, eco) and p not in chosen]
+            if pool:
+                chosen.append(pool[seed % len(pool)])
+            if len(chosen) >= count:
+                return chosen
+    return chosen
+
+
 @lru_cache(maxsize=1)
 def references() -> dict[str, dict]:
     """{player: {"games": n, "axes": {axis: value}, ...}}; empty when nothing is scored yet."""

@@ -434,6 +434,9 @@ export interface SacrificeRow {
   playedAt: string | null;
   held: boolean;
   note: string | null;
+  /** The game's opening (games.eco / games.opening); null for games imported before ECO extraction. */
+  eco?: string | null;
+  opening?: string | null;
 }
 
 /** GET /users/recap (app/services/recap.py). */
@@ -505,12 +508,32 @@ export interface SettingsApi {
   questionBudget: 0 | 1 | 2;
   quietUntil: string | null;
   sources: "chess_com" | "lichess" | "both";
-  theme: "light" | "system";
+  theme: "light" | "dark" | "system";
   playfulMascot: boolean;
   motion: "system" | "full" | "reduced";
   chessComUsername?: string | null;
   lichessUsername?: string | null;
+  /** Opt-in: screenshot reading and video summaries are sent to Anthropic (apps/api/app/services/ai.py). */
+  aiHelp?: boolean;
+  /** Whether the server has Claude credentials at all (read-only). */
+  aiAvailable?: boolean;
   kept?: { games: number; notes: number };
+}
+
+/** A saved position (GET /users/positions); `source_*`, `excerpt` and `ai_summary` when it came from a video. */
+export interface SavedPosition {
+  id: string;
+  fen: string;
+  title: string;
+  note: string;
+  best_san: string | null;
+  game_id: string | null;
+  ply: number | null;
+  source_url: string | null;
+  source_time_s: number | null;
+  excerpt: string;
+  ai_summary: string;
+  created_at: string;
 }
 
 /** GET /users/sync (app/services/sync.py). */
