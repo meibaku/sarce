@@ -8,7 +8,8 @@ Sources available today:
 - trap at your band: a trap atlas position near your opponents' ratings;
 - play the other side: a sacrifice you played, to defend from the other chair;
 - a saved position: one you kept from Review ("Add to Train"), services/positions.py;
-- Tal in your openings: a position from a Tal game with an ECO you play, where you guess his move
+- <Master> in your openings: a position from a Tal, Shirov or Morphy game with an ECO you play, where
+  you guess the master's move
   (data/reference_positions.json). Traps from your own openings are also put first.
 """
 
@@ -32,7 +33,7 @@ def _bare(san: str | None) -> str:
     return (san or "").rstrip("+#!?")
 
 
-def check_move(fen: str, uci: str, answer: str | None, sacrifice_drill: bool, loss=None, reference_drill: bool = False) -> dict:
+def check_move(fen: str, uci: str, answer: str | None, sacrifice_drill: bool, loss=None, reference_player: str | None = None) -> dict:
     """
     Your move in a drill, checked on the server: its SAN, whether it is the drill's answer and,
     when it isn't, whether it still holds (within SAFE_TOL expected points of best, via `loss`).
@@ -55,16 +56,16 @@ def check_move(fen: str, uci: str, answer: str | None, sacrifice_drill: bool, lo
             sound = loss(board, move) <= SAFE_TOL
         except Exception:
             sound = None  # no engine: say only whether it matched
-    if reference_drill:
-        # The answer is what Tal played, not the engine's choice: say so.
+    if reference_player:
+        # The answer is what the master played, not the engine's choice: say so.
         line = (
-            "That's what Tal played."
+            f"That's what {reference_player} played."
             if matched
-            else f"That holds too. Tal played {answer}."
+            else f"That holds too. {reference_player} played {answer}."
             if sound
-            else f"That one lets the problem through. Tal played {answer}."
+            else f"That one lets the problem through. {reference_player} played {answer}."
             if sound is False
-            else f"Tal played {answer}."
+            else f"{reference_player} played {answer}."
         )
     elif matched:
         line = "That's the move." if not sacrifice_drill else "That's the sacrifice."
@@ -98,25 +99,43 @@ def your_openings(user_id: str | None, top: int = 5) -> list[str]:
     return sorted(counts, key=lambda e: -counts[e])[:top]
 
 
-def reference_items(ecos: list[str], seed: int) -> list[dict]:
-    """ "Tal in your openings": guess Tal's move in a position from a Tal game in an opening you play."""
+REFERENCE_SUFFIX = " in your openings"
+
+
+def reference_items(ecos: list[str], seed: int, count: int = 3) -> list[dict]:
+    """
+    "<Master> in your openings": guess the move a reference player (Tal, Shirov, Morphy) made in a position
+    from one of their games in an opening you play. One master per drill, rotated daily so the queue mixes
+    them; positions come from data/reference_positions.json.
+    """
     from app.services.reference_axes import in_your_openings, reference_positions
 
-    picks = in_your_openings(reference_positions().get("Tal", []), ecos, seed)
-    return [
-        {
-            "key": f"tal:{p['eco']}:{p['fen']}",
-            "source": "Tal in your openings",
-            "meta": f"{p.get('year') or 'Tal'} · {p['eco']}",
-            "title": "What did Tal play here?",
-            "detail": f"Tal vs {p.get('opponent') or 'opponent'}{', ' + p['event'] if p.get('event') else ''}, from the {p['eco']} family you play. Find his move.",
+    library = reference_positions()
+    players = sorted(library)
+    if not players:
+        return []
+    start = seed % len(players)
+    order = players[start:] + players[:start]
+    items: list[dict] = []
+    for i in range(count):
+        player = order[i % len(order)]
+        taken = {it["fen"] for it in items}
+        picks = [p for p in in_your_openings(library[player], ecos, seed + i, count=count) if p["fen"] not in taken]
+        if not picks:
+            continue
+        p = picks[0]
+        items.append({
+            "key": f"{player.lower()}:{p['eco']}:{p['fen']}",
+            "source": f"{player}{REFERENCE_SUFFIX}",
+            "meta": f"{p.get('year') or player} · {p['eco']}",
+            "title": f"What did {player} play here?",
+            "detail": f"{player} vs {p.get('opponent') or 'opponent'}{', ' + p['event'] if p.get('event') else ''}, from the {p['eco']} family you play. Find the move.",
             "fen": p["fen"],
             "answer": p["san"],
             "gameId": None,
             "ply": None,
-        }
-        for p in picks
-    ]
+        })
+    return items
 
 
 def band_for(ratings: list[int]) -> int:

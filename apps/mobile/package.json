@@ -1,6 +1,7 @@
 {
   "name": "sarce-mobile",
   "version": "1.0.0",
+  "license": "AGPL-3.0-only",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo-google-fonts/ibm-plex-mono": "^0.4.1",

@@ -4,11 +4,11 @@
  */
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { View } from "react-native";
+import { Share, View } from "react-native";
 import type { CheckinAnswer, FeltAnswer, SummaryQuestion } from "@sarce/types";
 import { Badge, Card, Choice, Edge, Gauge, Label, Link, Loading, Primary, Screen, T, Uncalibrated, s } from "@/components/ui";
 import { Mascot } from "@/components/mascot";
-import { answerCheckin, getSummary, setFelt } from "@/lib/api";
+import { WEB_BASE, answerCheckin, createShare, getSummary, setFelt } from "@/lib/api";
 import { useLoad } from "@/lib/use-load";
 
 const FELT: [FeltAnswer, string][] = [
@@ -111,6 +111,15 @@ export default function Summary() {
           ))}
 
           <Primary label="Review the moments" onPress={() => router.push(`/games/${data.gameId}/review`)} />
+          {/* A read-only snapshot page: no opponent name, no notes; turn links off in the web app's Settings. */}
+          <Link
+            label="Share link"
+            onPress={() =>
+              createShare("summary", data.gameId)
+                .then((l) => Share.share({ message: `${WEB_BASE}/s/${l.token}` }))
+                .catch(() => null)
+            }
+          />
           <T mono size={11} tone="faint">{`style read ${data.styleRead}% you · ${data.styleReadVersion}`}</T>
         </>
       )}
