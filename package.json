@@ -1,8 +1,9 @@
 {
   "name": "sarce",
   "version": "0.1.0",
+  "license": "AGPL-3.0-only",
   "private": true,
-  "description": "Chess style analysis — track how your games match your preferred playing style",
+  "description": "Chess style analysis \u2014 track how your games match your preferred playing style",
   "workspaces": [
     "apps/web"
   ],
