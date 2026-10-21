@@ -334,7 +334,13 @@ class AnalysisService:
                 game["id"], game["pgn"], board, moves,
                 game.get("user_color") or "white", moves_res.data, game.get("opponent_rating"),
             )
+            # Games that stopped after Phase 1 also missed the idea tagger: catch it up too.
+            if settings.idea_tagger_enabled:
+                await asyncio.to_thread(self._tag_ideas, game["id"])
             done["attempted"] += 1
+        if done["attempted"]:
+            # The find-rate rule may have changed Brilliant % for these games.
+            await self.baseline.recompute_baseline(user_id=settings.local_user_id or None)
         return done
 
     @staticmethod
