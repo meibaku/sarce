@@ -13,7 +13,8 @@ import type { YouApi } from "@/types/chess";
  * show only you and say so, rather than drawing invented reference dots.
  */
 
-const FP = ["#f5f7fa", "#e6edf6", "#d3e0f0", "#b9cde6", "#97b4d8", "#7096c4", "#4f7ab0", "#2f5f9e"];
+// The fingerprint ramp as theme variables (globals.css), so the dark theme re-points it.
+const FP = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => `var(--fp-${i})`);
 const REFS = ["Tal", "Shirov", "Morphy"];
 
 function TrendChart({

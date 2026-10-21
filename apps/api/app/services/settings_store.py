@@ -23,6 +23,8 @@ DEFAULTS = {
     "motion": "system",
     "chessComUsername": None,
     "lichessUsername": None,
+    # Opt-in: screenshot reading and video summaries are sent to Anthropic (services/ai.py).
+    "aiHelp": False,
 }
 # Written by the sync, never by the player.
 INTERNAL = {"lastSyncedAt": None, "lastSyncErrors": []}
@@ -30,7 +32,7 @@ USERNAME = re.compile(r"^[A-Za-z0-9_-]{2,30}$")
 CHOICES = {
     "questionBudget": {0, 1, 2},
     "sources": {"chess_com", "lichess", "both"},
-    "theme": {"light", "system"},
+    "theme": {"light", "dark", "system"},
     "motion": {"system", "full", "reduced"},
 }
 GOAL_MIN, GOAL_MAX = 0, 15
@@ -56,9 +58,9 @@ def validate(changes: dict) -> dict:
             if value is not None and (not isinstance(value, str) or not USERNAME.match(value.strip())):
                 raise ValueError(f"{key} must be a username (letters, digits, - and _)")
             clean[key] = value.strip() if isinstance(value, str) else None
-        elif key == "playfulMascot":
+        elif key in ("playfulMascot", "aiHelp"):
             if not isinstance(value, bool):
-                raise ValueError("playfulMascot must be true or false")
+                raise ValueError(f"{key} must be true or false")
             clean[key] = value
         else:
             raise ValueError(f"Unknown setting {key!r}")

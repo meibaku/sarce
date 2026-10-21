@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ShareButton } from "@/components/share/share-button";
 import { PrimaryLink, TextButton, TextLink } from "@/components/ui/buttons";
 import { AutoGrid } from "@/components/ui/card";
 import { MoveBadge } from "@/components/ui/move-badge";
@@ -179,6 +180,7 @@ export function LibraryView({ rows }: { rows: SacrificeRow[] }) {
                 Defend it yourself
               </TextLink>
               <TextButton onClick={() => downloadShareCard(sel)}>Share card</TextButton>
+              <ShareButton kind="sacrifice" gameId={sel.gameId} ply={sel.ply} />
             </div>
           </section>
         )}
