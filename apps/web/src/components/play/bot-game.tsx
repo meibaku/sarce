@@ -2,16 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BOTS } from "@/components/play/play-view";
-import { PrimaryLink, TextButton } from "@/components/ui/buttons";
+import { PrimaryLink, TextButton, TextLink } from "@/components/ui/buttons";
 import { AutoGrid, SectionLabel } from "@/components/ui/card";
 import { Board } from "@/components/ui/board";
-import { playBotMove, startBotGame } from "@/lib/api";
+import { playBotMove, saveBotGame, startBotGame } from "@/lib/api";
 import type { BotId, BotPosition } from "@/types/chess";
 
 /*
  * A 3+0 game against a Sarce bot. You play White. The server is stateless: each move sends the
  * position and gets back the bot's reply with the new legal moves. The bot's thinking time comes
- * off its own clock. Click a piece, then a highlighted square.
+ * off its own clock. Click a piece, then a highlighted square. A finished game is saved (moves
+ * and clocks) and analysed like any other, so it opens in Summary and Review; bot games stay out
+ * of your style metrics.
  */
 
 const START_MS = 180_000;
@@ -21,7 +23,7 @@ function clock(ms: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
-type Result = { text: string; detail: string } | null;
+type Result = { text: string; detail: string; outcome: "win" | "loss" | "draw" } | null;
 
 export function BotGame({ bot }: { bot: BotId }) {
   const label = BOTS.find((b) => b.id === bot)?.label ?? "Sarce bot";
@@ -35,6 +37,15 @@ export function BotGame({ bot }: { bot: BotId }) {
   const [started, setStarted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const last = useRef(Date.now());
+  // What gets saved: every move as UCI and the mover's clock after it.
+  const ucis = useRef<string[]>([]);
+  const clocks = useRef<number[]>([]);
+  const mineRef = useRef(START_MS);
+  const theirsRef = useRef(START_MS);
+  const [saved, setSaved] = useState<string | null>(null);
+  const [saveFailed, setSaveFailed] = useState(false);
+  mineRef.current = mine;
+  theirsRef.current = theirs;
 
   useEffect(() => {
     startBotGame().then(setPos).catch(() => setError("Sarce can't reach its analysis service."));
@@ -56,15 +67,27 @@ export function BotGame({ bot }: { bot: BotId }) {
 
   useEffect(() => {
     if (result) return;
-    if (mine <= 0) setResult({ text: "Flagged", detail: "Your clock ran out. The position still goes to your review." });
-    else if (theirs <= 0) setResult({ text: "You won on time", detail: `${label} ran out of clock.` });
+    if (mine <= 0) setResult({ text: "Flagged", detail: "Your clock ran out. The position still goes to your review.", outcome: "loss" });
+    else if (theirs <= 0) setResult({ text: "You won on time", detail: `${label} ran out of clock.`, outcome: "win" });
   }, [mine, theirs, result, label]);
+
+  // Save once the game ends, if a move was played.
+  useEffect(() => {
+    if (!result || saved || ucis.current.length === 0) return;
+    saveBotGame({ bot, moves: ucis.current, result: result.outcome, clocks_ms: clocks.current })
+      .then((r) => setSaved(r.gameId))
+      .catch(() => setSaveFailed(true));
+  }, [result, saved, bot]);
 
   const finish = useCallback(
     (p: BotPosition, movedLast: "you" | "bot") => {
       if (p.status === "checkmate")
-        setResult(movedLast === "you" ? { text: "Checkmate. You won", detail: `Against ${label}.` } : { text: "Checkmated", detail: "Worth a look in your review." });
-      else if (p.status !== "ongoing") setResult({ text: "Draw", detail: p.status === "stalemate" ? "Stalemate." : "Drawn position." });
+        setResult(
+          movedLast === "you"
+            ? { text: "Checkmate. You won", detail: `Against ${label}.`, outcome: "win" }
+            : { text: "Checkmated", detail: "Worth a look in your review.", outcome: "loss" },
+        );
+      else if (p.status !== "ongoing") setResult({ text: "Draw", detail: p.status === "stalemate" ? "Stalemate." : "Drawn position.", outcome: "draw" });
     },
     [label],
   );
@@ -81,6 +104,8 @@ export function BotGame({ bot }: { bot: BotId }) {
         // Your move first, so the board updates at once; then the bot's reply.
         const after = await playBotMove(pos.fen, uci, bot, { reply: false });
         setMoves((ms) => [...ms, after.playerSan ?? uci]);
+        ucis.current.push(uci);
+        clocks.current.push(Math.max(0, Math.round(mineRef.current)));
         setPos(after);
         if (after.status !== "ongoing") {
           finish(after, "you");
@@ -88,6 +113,10 @@ export function BotGame({ bot }: { bot: BotId }) {
         }
         const next = await playBotMove(after.fen, null, bot);
         if (next.botSan) setMoves((ms) => [...ms, next.botSan as string]);
+        if (next.botUci) {
+          ucis.current.push(next.botUci);
+          clocks.current.push(Math.max(0, Math.round(theirsRef.current)));
+        }
         setPos(next);
         finish(next, "bot");
       } catch {
@@ -127,7 +156,20 @@ export function BotGame({ bot }: { bot: BotId }) {
             <section className="flex flex-col items-start gap-3 rounded-[8px] border-[1.5px] border-ink bg-surface p-[18px]">
               <span className="text-[18px] font-medium">{result.text}</span>
               <span className="text-[13px] leading-[1.5] text-ink-2">{result.detail}</span>
-              <PrimaryLink href="/play">Back to Play</PrimaryLink>
+              {saved ? (
+                <>
+                  <span className="font-mono text-[11px] text-muted">Saved · analysing in the background</span>
+                  <PrimaryLink href={`/games/${saved}`}>See the game</PrimaryLink>
+                  <TextLink href="/play">Back to Play</TextLink>
+                </>
+              ) : saveFailed || ucis.current.length === 0 ? (
+                <>
+                  {saveFailed && <span className="text-[12px] text-muted">This game couldn&apos;t be saved.</span>}
+                  <PrimaryLink href="/play">Back to Play</PrimaryLink>
+                </>
+              ) : (
+                <span className="font-mono text-[11px] text-muted">Saving the game…</span>
+              )}
             </section>
           ) : (
             <section className="flex flex-col gap-2 rounded-[8px] border border-line bg-surface p-[18px]">
@@ -137,7 +179,7 @@ export function BotGame({ bot }: { bot: BotId }) {
                   ? "Your move."
                   : moves.map((m, i) => (i % 2 === 0 ? `${i / 2 + 1}. ${m} ` : `${m} `)).join("")}
               </span>
-              <TextButton className="self-start !text-muted" onClick={() => setResult({ text: "Resigned", detail: "No harm done. Another one when you're ready." })}>
+              <TextButton className="self-start !text-muted" onClick={() => setResult({ text: "Resigned", detail: "No harm done. Another one when you're ready.", outcome: "loss" })}>
                 Resign
               </TextButton>
             </section>

@@ -76,3 +76,26 @@ def test_player_move_without_reply_skips_the_engine():
         res = client.post("/play/move", json={"fen": chess.STARTING_FEN, "uci": "e2e4", "reply": False})
     assert res.json()["turn"] == "black" and res.json()["botSan"] is None
     engine_cls.assert_not_called()
+
+
+def test_bot_game_pgn_replays_with_clocks():
+    from datetime import datetime, timezone
+
+    import chess.pgn
+    import io
+    from app.services.bots import bot_game_pgn
+
+    pgn = bot_game_pgn(["e2e4", "e7e5", "d1h5"], "draw", "tal", [179000, 178000, 170500], datetime(2026, 10, 19, tzinfo=timezone.utc))
+    game = chess.pgn.read_game(io.StringIO(pgn))
+    assert game.headers["Result"] == "1/2-1/2" and game.headers["Black"] == "Tal-style attacker"
+    assert [n.clock() for n in game.mainline()] == [179.0, 178.0, 170.5]
+
+
+def test_bot_game_pgn_rejects_illegal_moves():
+    from datetime import datetime, timezone
+
+    import pytest
+    from app.services.bots import bot_game_pgn
+
+    with pytest.raises(ValueError):
+        bot_game_pgn(["e2e5"], "win", "tal", None, datetime.now(timezone.utc))
