@@ -159,6 +159,27 @@ def per_game_chaos(rows: list[dict]) -> list[dict]:
     return sorted(games.values(), key=lambda g: g["playedAt"] or "")
 
 
+def rank_chaos_games(peaks: list[dict], verdicts: list[dict], limit: int) -> list[dict]:
+    """
+    Games by their peak chaos score, highest first, with verdict counts.
+
+    `peaks` are chaos-lens rows (`game_id`, `score`) in descending score order, so the first row seen per game is
+    its peak; `verdicts` are those games' rows (`game_id`, `verdict`). Ties keep more real chaos first.
+    """
+    games: dict[str, dict] = {}
+    for row in peaks:
+        if row["game_id"] not in games:
+            games[row["game_id"]] = {"gameId": row["game_id"], "chaosPeak": float(row.get("score") or 0.0), "realChaos": 0, "cheapChaos": 0, "calculatedRisk": 0}
+    for row in verdicts:
+        point = games.get(row["game_id"])
+        if point:
+            verdict = row.get("verdict")
+            point["realChaos"] += verdict == "real_chaos"
+            point["cheapChaos"] += verdict == "cheap_chaos"
+            point["calculatedRisk"] += verdict == "calculated_risk"
+    return sorted(games.values(), key=lambda g: (-g["chaosPeak"], -g["realChaos"], g["gameId"]))[:limit]
+
+
 class LensService:
     """Supabase-backed loading, scoring and reading of lens results."""
 
@@ -246,6 +267,33 @@ class LensService:
         except Exception:
             return None
         return res.data[0].get("clocks_ms") if res.data else None
+
+    def most_chaotic_games(self, user_id: str | None = None, username: str | None = None, limit: int = 20) -> list[dict]:
+        """
+        A player's chaos-analysed games, most chaotic first. Reads the highest-scoring chaos rows in score order
+        (so the first row per game is its peak) until `limit` games are found, instead of every row of a full
+        history, then counts verdicts for just those games.
+        """
+        sb = get_supabase()
+        peaks: list[dict] = []
+        seen: set[str] = set()
+        page = 1000  # PostgREST's response cap
+        while len(seen) < limit:
+            query = sb.table(TABLE).select("game_id, score, games!inner(user_id, chess_com_username)").eq("lens", "chaos")
+            if user_id:
+                query = query.eq("games.user_id", user_id)
+            if username:
+                query = query.eq("games.chess_com_username", username)
+            batch = query.order("score", desc=True).order("game_move_id").range(len(peaks), len(peaks) + page - 1).execute().data or []
+            peaks.extend(batch)
+            seen.update(r["game_id"] for r in batch)
+            if len(batch) < page:
+                break
+        top = list(dict.fromkeys(r["game_id"] for r in peaks))[:limit]
+        verdicts: list[dict] = []
+        for start in range(0, len(top), 10):  # ~40 chaos rows a game: stays under the 1000-row cap
+            verdicts += sb.table(TABLE).select("game_id, verdict").in_("game_id", top[start : start + 10]).eq("lens", "chaos").limit(page).execute().data or []
+        return rank_chaos_games([r for r in peaks if r["game_id"] in set(top)], verdicts, limit)
 
     def chaos_summary(self, username: str, user_id: str | None = None) -> dict:
         """Chaos counts for a username; `user_id` (the signed-in caller) narrows it to their games."""

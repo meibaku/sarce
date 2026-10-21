@@ -313,6 +313,26 @@ export async function revokeShare(id: string) {
   return fetchApi<{ revoked: string }>(`/shares/${id}`, { method: "DELETE" });
 }
 
+/** GET /games: newest first, or (chaos) the chaos-analysed games with the highest peak first. */
+export interface GameListItem {
+  id: string;
+  playedAt: string | null;
+  opponent: string | null;
+  opponentRating: number | null;
+  result: string | null;
+  timeControl: string | null;
+  analysisStatus: string | null;
+  brilliantPct: number | null;
+  chaosPeak?: number;
+  realChaos?: number;
+  cheapChaos?: number;
+  calculatedRisk?: number;
+}
+
+export async function listGames(chaos: boolean, limit = 30) {
+  return fetchApi<{ games: GameListItem[] }>(`/games?limit=${limit}${chaos ? "&chaos=true" : ""}`);
+}
+
 /** Public: anyone with the token. */
 export async function getPublicShare(token: string) {
   return fetchApi<PublicShare>(`/public/shares/${encodeURIComponent(token)}`);
