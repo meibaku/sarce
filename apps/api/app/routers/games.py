@@ -390,7 +390,7 @@ class FeltRequest(BaseModel):
 async def get_game_summary(game_id: str):
     """After-game Summary: headline, outcome, this game's Brilliant %, moments and the one question."""
     require_game_access(game_id)
-    data = summary_service.summary(game_id, current_user_id())
+    data = summary_service.summary(game_id, current_user_id(), resolve_user_id(None))
     if data is None:
         raise HTTPException(status_code=404, detail="Game not found")
     return data
@@ -428,3 +428,20 @@ async def save_move_intent(game_id: str, ply: int, body: IntentRequest):
     if body.type is not None and body.type not in INTENTS:
         raise HTTPException(status_code=422, detail=f"type must be one of {list(INTENTS)}")
     return review_service.save_intent(game_id, ply, body.type, body.note, current_user_id())
+
+
+class CheckinRequest(BaseModel):
+    ply: int
+    answer: str
+    flagged: bool = False
+
+
+@router.post("/{game_id}/checkin")
+async def answer_checkin(game_id: str, body: CheckinRequest):
+    """Records the answer to "Was something going on here?" (and whether the move had been flagged)."""
+    require_game_access(game_id)
+    try:
+        summary_service.set_checkin(game_id, body.ply, body.answer, body.flagged)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"gameId": game_id, "ply": body.ply, "answer": body.answer}

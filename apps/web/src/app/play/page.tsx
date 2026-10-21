@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { PlayView } from "@/components/play/play-view";
 import { AppShell } from "@/components/shell/app-shell";
+import { showToast } from "@/components/ui/toast";
 import { getFocus, setFocus } from "@/lib/api";
 
 export default function PlayPage() {
@@ -20,7 +21,9 @@ export default function PlayPage() {
         intent={intent}
         onIntent={(id) => {
           setIntent(id);
-          setFocus("today", id).catch(() => undefined);
+          setFocus("today", id)
+            .then(() => showToast("Intention set. Your next summary looks for it first.", "hop"))
+            .catch(() => undefined);
         }}
       />
     </AppShell>

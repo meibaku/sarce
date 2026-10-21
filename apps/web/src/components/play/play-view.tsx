@@ -78,6 +78,15 @@ export function PlayView({
         </section>
 
         <section className="flex flex-col gap-[10px] rounded-[8px] border border-line bg-surface p-[18px]">
+          <SectionLabel>Opponent prep · private</SectionLabel>
+          <span className="text-[15px] font-medium">Playing someone you know?</span>
+          <span className="text-[13px] leading-[1.5] text-ink-2">Their openings and tendencies from finished games only. Only you see it.</span>
+          <TextLink href="/prep" className="self-start">
+            Prep for an opponent
+          </TextLink>
+        </section>
+
+        <section className="flex flex-col gap-[10px] rounded-[8px] border border-line bg-surface p-[18px]">
           <SectionLabel>Sarce bot</SectionLabel>
           <div className="flex flex-wrap gap-[6px]" role="radiogroup" aria-label="Sarce bot">
             {BOTS.map((b) => (
