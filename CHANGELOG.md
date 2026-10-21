@@ -4,6 +4,11 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Fixed
+- Games could stay "processing" forever: a database timeout while storing results, or an API restart mid-analysis,
+  left them where nothing picked them up again. A transient storage error now sends the game back to pending (a
+  real error marks it failed), and the API requeues interrupted games when it starts
+
 ### Changed
 - Licence: GNU AGPL-3.0 (was MIT), see ADR 0006 — open source and self-hostable; a modified version run as a
   service must share its source; compatible with python-chess (GPL-3.0+)

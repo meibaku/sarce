@@ -14,6 +14,12 @@ from app.services.job_queue import JobQueue, analysis_handlers, worker_loop
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """Run the analysis job worker alongside the API when the queue is enabled."""
+    if settings.job_queue_enabled or settings.auto_sync_enabled:
+        # This process analyses games: anything a previous run left half-done goes back in the queue.
+        try:
+            await asyncio.to_thread(games.analysis_service.requeue_interrupted)
+        except Exception:
+            pass  # no database yet: the API still starts
     worker = None
     if settings.job_queue_enabled:
         handlers = analysis_handlers(games.analysis_service.analyze_pending)
