@@ -14,14 +14,14 @@ import logging
 from app.config import settings
 from app.db.supabase import get_supabase
 from app.services.baseline import BaselineService
-from app.services.brilliant import hard_to_find
+from app.services.brilliant import MIN_BRILLIANT_SACRIFICE_VALUE, hard_to_find, real_offer
 from app.services.human_model import ELO_LADDER, SupabaseProbStore, cached_move_probs, get_human_model
 from app.services.library import boards_before
 
 logger = logging.getLogger(__name__)
 
-RULE = "find-rate-20"
-VERSION = 2
+RULE = "find-rate-20+real-offer"
+VERSION = 3  # ADR 0007: a Brilliant move must genuinely offer the piece
 
 
 def rung_for(opponent_rating: int | None) -> int:
@@ -31,7 +31,7 @@ def rung_for(opponent_rating: int | None) -> int:
     return min(ELO_LADDER, key=lambda r: abs(r - opponent_rating))
 
 
-def apply_rule(moves: list[dict], probs_for) -> tuple[list[dict], int]:
+def apply_rule(moves: list[dict], probs_for, offered_for=lambda m: None) -> tuple[list[dict], int]:
     """
     Re-classify Brilliant moves that are easy to find. `probs_for(ply)` returns the human-model
     probabilities before that move, or None. Returns (updated moves, number demoted). Moves with no
@@ -42,7 +42,7 @@ def apply_rule(moves: list[dict], probs_for) -> tuple[list[dict], int]:
     for m in moves:
         if m.get("is_brilliant"):
             verdict = hard_to_find(probs_for(m["ply"]), m.get("uci") or "")
-            if verdict is False:
+            if verdict is False or offered_for(m) is False:
                 m = {**m, "is_brilliant": False, "quality": "best"}
                 demoted += 1
         out.append(m)
@@ -77,7 +77,14 @@ class BrilliantFindRate:
                 logger.exception("Human-model probabilities failed for %s ply %s", game_id, ply)
                 return None
 
-        updated, demoted = apply_rule(moves, probs_for)
+        def offered_for(m: dict):
+            """False when the 'sacrificed' piece was never really on offer (ADR 0007)."""
+            if m["ply"] >= len(plies):
+                return None
+            board, move = plies[m["ply"]]
+            return real_offer(board, move) >= MIN_BRILLIANT_SACRIFICE_VALUE
+
+        updated, demoted = apply_rule(moves, probs_for, offered_for)
         for before, after in zip(moves, updated):
             if before != after:
                 sb.table("game_moves").update({"is_brilliant": False, "quality": "best"}).eq("id", after["id"]).execute()

@@ -54,7 +54,7 @@ function TrendChart({
             strokeDasharray="3 3"
           />
           <text x={(changedWeek / Math.max(1, weekly.length - 1)) * 300 + 4} y="8" fontFamily="var(--font-plex-mono)" fontSize="9" fill="var(--muted)">
-            style v2
+            new Brilliant rule
           </text>
         </>
       )}

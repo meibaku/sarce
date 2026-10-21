@@ -96,6 +96,10 @@ def fingerprint_sentence(rows: dict[str, list[float | None]]) -> str:
     return sentence + "."
 
 
+DETAIL_KEYS = ("faced_chaos", "elo", "p_fail")
+LENS_COLUMNS = "game_id, ply, lens, score, verdict, " + ", ".join(f"{k}:details->{k}" for k in DETAIL_KEYS)
+
+
 class YouService:
     def you(self, user_id: str | None, username: str | None) -> dict:
         sb = get_supabase()
@@ -128,8 +132,12 @@ class YouService:
             part = ids[start : start + CHUNK]
             moves += self._paged(lambda: sb.table("game_moves").select("game_id, ply, san, quality, signals, is_brilliant").in_("game_id", part).order("id"))
             lens += self._paged(
-                lambda: sb.table("move_lens_scores").select("game_id, ply, lens, score, verdict, details").in_("game_id", part).in_("lens", ["chaos", "survival"]).order("game_move_id")
+                lambda: sb.table("move_lens_scores").select(LENS_COLUMNS).in_("game_id", part).in_("lens", ["chaos", "survival"]).order("game_move_id")
             )
+        for r in lens:
+            # Only three keys of `details` are read; selecting them alone keeps the blob off the wire.
+            if "details" not in r:
+                r["details"] = {k: r.pop(k, None) for k in DETAIL_KEYS}
 
         by_game_moves: dict[str, list[dict]] = {}
         for m in moves:
@@ -160,8 +168,12 @@ class YouService:
         brilliant_moves = sum(1 for m in moves if m.get("is_brilliant"))
         first_pct = next((p for p in weekly_pct if p is not None), None)
         # The first week scored under the find-rate rule (ADR 0004), for the trend's "style v2" marker.
-        v2_weeks = [w for w in range(WEEKS) if any(((g.get("analysis") or {}).get("style_vector") or {}).get("version") == 2 for g in weekly_games[w])]
-        schema = 2 if any(((g.get("analysis") or {}).get("style_vector") or {}).get("version") == 2 for g in games) else 1
+        def version(g: dict) -> int:
+            return int(((g.get("analysis") or {}).get("style_vector") or {}).get("version") or 1)
+
+        # Version 2 added the find-rate rule (ADR 0004), version 3 the real-offer rule (ADR 0007).
+        v2_weeks = [w for w in range(WEEKS) if any(version(g) >= 2 for g in weekly_games[w])]
+        schema = max((version(g) for g in games), default=1)
 
         mine, refs = axis_values(overall), references()
         return {
@@ -175,7 +187,7 @@ class YouService:
                 "brilliantMoves": brilliant_moves,
                 "yourMoves": len(moves),
                 "ruleChangedWeek": v2_weeks[0] if v2_weeks and v2_weeks[0] > 0 else None,
-                "findRateRule": schema == 2,
+                "findRateRule": schema >= 2,
             },
             "styleSchema": schema,
             "fingerprint": {

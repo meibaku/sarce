@@ -1,9 +1,12 @@
+import asyncio
+
 from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
 from app.deps import current_user_id, resolve_user_id, scoped_user_id
 
+from app.services.chaos_map import CHAOS_DRILL, ChaosMapService
 from app.services.chess_com import normalize_chess_com_username
 from app.services.home import HomeService
 from app.services.lens_service import LensService
@@ -23,6 +26,8 @@ recap_service = RecapService()
 train_service = TrainService()
 settings_store = SettingsStore()
 sync_service = SyncService()
+chaos_map_service = ChaosMapService()
+_chaos_map_building: set[str] = set()  # owners whose map is being rebuilt right now
 
 
 @router.get("/home")
@@ -30,7 +35,8 @@ async def get_home(username: str | None = Query(None), user_id: str | None = Que
     """Home screen: the latest game's style read and moments, and the Brilliant card."""
     name = normalize_chess_com_username(username) if username else None
     try:
-        return home_service.home(scoped_user_id(user_id, username), name)
+        # Heavy, synchronous database work: run it off the event loop so other requests keep flowing.
+        return await asyncio.to_thread(home_service.home, scoped_user_id(user_id, username), name)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -40,7 +46,7 @@ async def get_you(username: str | None = Query(None), user_id: str | None = Quer
     """You: Brilliant trend and formula, style fingerprint, reference axes, time controls, survival."""
     name = normalize_chess_com_username(username) if username else None
     try:
-        return you_service.you(scoped_user_id(user_id, username), name)
+        return await asyncio.to_thread(you_service.you, scoped_user_id(user_id, username), name)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -50,7 +56,7 @@ async def get_sacrifices(username: str | None = Query(None), user_id: str | None
     """Sacrifice library: every sacrifice played, newest first, with what was offered and the note."""
     name = normalize_chess_com_username(username) if username else None
     try:
-        return {"sacrifices": library_service.sacrifices(scoped_user_id(user_id, username), name)}
+        return {"sacrifices": await asyncio.to_thread(library_service.sacrifices, scoped_user_id(user_id, username), name)}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -63,7 +69,7 @@ class FocusRequest(BaseModel):
 @router.get("/recap")
 async def get_recap(user_id: str | None = Query(None)):
     """Weekly recap: the week's games, Brilliant, best moment, last focus and next week's options."""
-    data = recap_service.recap(scoped_user_id(user_id, None), resolve_user_id(user_id))
+    data = await asyncio.to_thread(recap_service.recap, scoped_user_id(user_id, None), resolve_user_id(user_id))
     if data is None:
         raise HTTPException(status_code=404, detail="No analysed games yet")
     return data
@@ -115,6 +121,7 @@ async def check_drill_move(body: DrillMove):
             body.fen, body.uci, body.answer, body.source == "find the sacrifice", bot_service.move_loss,
             # "<Master> in your openings" drills: the answer is that player's move, so feedback names them.
             reference_player=body.source.removesuffix(" in your openings") if (body.source or "").endswith(" in your openings") else None,
+            chaos_drill=body.source == CHAOS_DRILL,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -169,7 +176,7 @@ async def get_train(user_id: str | None = Query(None), drill: str | None = Query
     """Train queue: drills from your games, the trap atlas and saved positions, aimed at this week's focus."""
     owner = resolve_user_id(user_id)
     focus = recap_service.current_focus(owner, "weekly")
-    data = train_service.queue(scoped_user_id(user_id, None), owner, focus, first=drill)
+    data = await asyncio.to_thread(train_service.queue, scoped_user_id(user_id, None), owner, focus, first=drill)
     return {**data, "focus": FOCUSES.get(focus or "")}
 
 
@@ -230,6 +237,30 @@ async def sync_now(background_tasks: BackgroundTasks, user_id: str | None = Quer
     owner = resolve_user_id(user_id)
     background_tasks.add_task(sync_service.sync, owner, analysis_service.analyze_pending)
     return {"started": True}
+
+
+@router.get("/chaos-map")
+async def get_chaos_map(user_id: str | None = Query(None)):
+    """Your chaos map: frequent opening positions and the sound move that asks the most of your opponents."""
+    owner = resolve_user_id(user_id)
+    return {"positions": chaos_map_service.get(owner), "building": owner in _chaos_map_building}
+
+
+def _build_chaos_map(owner: str) -> None:
+    try:
+        chaos_map_service.build(owner)
+    finally:
+        _chaos_map_building.discard(owner)
+
+
+@router.post("/chaos-map")
+async def rebuild_chaos_map(background_tasks: BackgroundTasks, user_id: str | None = Query(None)):
+    """Rebuilds the map in the background (a minute or two of engine work); GET shows it when done."""
+    owner = resolve_user_id(user_id)
+    if owner not in _chaos_map_building:
+        _chaos_map_building.add(owner)
+        background_tasks.add_task(_build_chaos_map, owner)
+    return {"building": True}
 
 
 @router.get("/{username}/chaos-summary")

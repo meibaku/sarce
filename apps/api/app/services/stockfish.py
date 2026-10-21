@@ -141,6 +141,25 @@ class StockfishEngine:
             )
         return lines
 
+    def pv_lines(self, board: chess.Board, nodes: int, multipv: int, length: int = 8) -> list[dict]:
+        """
+        The engine's top lines with their continuations (for "Why this move?"): one dict per line, best
+        first, `{"uci": [...], "cp": int|None, "mate": int|None}` from the side to move's point of view.
+        """
+        if not self._engine:
+            raise RuntimeError("StockfishEngine must be used as a context manager")
+        infos = self._engine.analyse(board, chess.engine.Limit(nodes=nodes), multipv=multipv, game=object())
+        if isinstance(infos, dict):
+            infos = [infos]
+        out = []
+        for info in infos:
+            pv, score = info.get("pv") or [], info.get("score")
+            if not pv or score is None:
+                continue
+            pov = score.pov(board.turn)
+            out.append({"uci": [m.uci() for m in pv[:length]], "cp": pov.score(), "mate": pov.mate()})
+        return out
+
     def eval_after_move(
         self, board: chess.Board, move: chess.Move
     ) -> tuple[float | None, chess.Move | None]:

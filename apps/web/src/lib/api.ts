@@ -318,6 +318,51 @@ export async function getPublicShare(token: string) {
   return fetchApi<PublicShare>(`/public/shares/${encodeURIComponent(token)}`);
 }
 
+/** GET /games/{id}/moves/{ply}/why (app/services/explain.py). */
+export interface WhyApi {
+  gameId: string;
+  ply: number;
+  label: string;
+  fenBefore: string;
+  orientation: "white" | "black";
+  badge: string;
+  isBrilliant: boolean;
+  brilliant: { rule: string; passed: boolean; detail: string }[];
+  evalBefore: number | null;
+  evalAfter: number | null;
+  best: string | null;
+  chaos: { verdict: string | null; faced: boolean; pFail: number[] | null; rungs: number[]; safeReplies: string[] };
+  lines: { title: string; note: string; eval: string; kind: "played" | "engine" | "brilliant"; steps: { san: string; uci: string; fen: string }[] }[];
+}
+
+/** "Why this move?": the badge's reason, the Brilliant checks with numbers, and playable lines. */
+export async function getWhy(gameId: string, ply: number) {
+  return fetchApi<WhyApi>(`/games/${gameId}/moves/${ply}/why`);
+}
+
+/** One position on the chaos map (app/services/chaos_map.py). `problem` = P_fail × stake. */
+export interface ChaosMapPosition {
+  fen: string;
+  line: string;
+  seen: number;
+  predictability: number | null;
+  usual: { san: string; pFail: number | null; stake: number | null; problem: number | null };
+  chaos: { san: string; uci: string; pFail: number | null; stake: number | null; epLoss: number | null; problem: number | null };
+  same: boolean;
+  elo: number;
+  computedAt: string;
+}
+
+/** Your chaos map: frequent opening positions and the sound move that asks the most of opponents. */
+export async function getChaosMap() {
+  return fetchApi<{ positions: ChaosMapPosition[]; building: boolean }>(`/users/chaos-map`);
+}
+
+/** Rebuilds the map in the background; poll getChaosMap until `building` is false. */
+export async function rebuildChaosMap() {
+  return fetchApi<{ building: boolean }>(`/users/chaos-map`, { method: "POST" });
+}
+
 export async function getSyncStatus() {
   return fetchApi<import("@/types/chess").SyncStatus>(`/users/sync`);
 }
