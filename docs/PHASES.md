@@ -27,16 +27,16 @@ This file tracks **what's built vs planned**. The phase definitions below match 
 
 ---
 
-## Phase 2 — Video & Transcript Context 🟡 Started
+## Phase 2 — Video & Transcript Context ✅ Complete
 
 **Goal:** Capture positions from videos; attach commentary; searchable position library.
 
 | Stage | Feature | Status |
 |-------|---------|--------|
 | 2.1 | Manual position setter (FEN + preview, saved positions in Train) | ✅ |
-| 2.2 | Screenshot → FEN recognition | 🔲 |
-| 2.3 | YouTube transcript capture | 🔲 |
-| 2.4 | AI-summarized annotations | 🔲 |
+| 2.2 | Screenshot → FEN recognition (Claude vision, opt-in; FEN checked by python-chess) | ✅ |
+| 2.3 | YouTube transcript capture (captions around the moment; paste fallback when YouTube blocks) | ✅ |
+| 2.4 | AI-summarized annotations (Claude, opt-in) + searchable position library | ✅ |
 
 ---
 

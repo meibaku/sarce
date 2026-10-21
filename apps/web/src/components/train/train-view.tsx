@@ -6,6 +6,7 @@ import { AutoGrid } from "@/components/ui/card";
 import { Board } from "@/components/ui/board";
 import { Mascot } from "@/components/ui/mascot";
 import { PositionSetter } from "@/components/train/position-setter";
+import { SavedPositions } from "@/components/train/saved-positions";
 import { checkDrillMove } from "@/lib/api";
 import type { Confidence, DrillCheck, DrillItem, TrainApi } from "@/types/chess";
 
@@ -22,7 +23,8 @@ const CONFIDENCE: [Confidence, string, string][] = [
   ["sure", "Sure", "Back in 9 days. That one is sticking."],
 ];
 
-export function TrainView({ data, onAnswer }: { data: TrainApi; onAnswer: (key: string, c: Confidence) => Promise<unknown> }) {
+export function TrainView({ data, onAnswer, aiHelp = false }: { data: TrainApi; onAnswer: (key: string, c: Confidence) => Promise<unknown>; aiHelp?: boolean }) {
+  const [saved, setSaved] = useState(0);
   const [selected, setSelected] = useState(0);
   const [running, setRunning] = useState(false);
   const [revealed, setRevealed] = useState(false);
@@ -72,7 +74,7 @@ export function TrainView({ data, onAnswer }: { data: TrainApi; onAnswer: (key: 
         </span>
       </div>
 
-      <PositionSetter />
+      <PositionSetter aiHelp={aiHelp} onSaved={() => setSaved((n) => n + 1)} />
 
       <AutoGrid min={380} className="items-start">
         <section className="overflow-hidden rounded-[8px] border border-line bg-surface">
@@ -177,6 +179,7 @@ export function TrainView({ data, onAnswer }: { data: TrainApi; onAnswer: (key: 
           </section>
         )}
       </AutoGrid>
+      <SavedPositions refresh={saved} />
     </>
   );
 }
