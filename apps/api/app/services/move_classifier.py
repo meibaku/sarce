@@ -103,6 +103,7 @@ class MoveClassifier:
         board: chess.Board,
         moves: list[chess.Move],
         user_color: str,
+        lines: list[list[dict] | None] | None = None,
     ) -> list[dict]:
         """
         Classify user moves. Returns list of dicts with ply, uci, quality, evals.
@@ -111,85 +112,143 @@ class MoveClassifier:
             board: Starting position from PGN headers.
             moves: Mainline moves.
             user_color: 'white' or 'black'.
+            lines: Optional engine lines per mainline position (position_evals.game_lines,
+                index i = after i plies). When given, no engine is started: the evals come
+                from that one shared search instead of three depth-limited searches per move.
         """
-        results: list[dict] = []
-
+        if lines is not None:
+            return self._classify(board, moves, user_color, _LinesSource(lines))
         with StockfishEngine() as engine:
-            temp = board.copy()
-            previous_user_eval_after: float | None = None
-            for ply, move in enumerate(moves):
-                if not is_user_ply(ply, user_color):
-                    temp.push(move)
-                    continue
+            return self._classify(board, moves, user_color, _EngineSource(engine))
 
-                phase = game_phase(temp, ply)
-                san = temp.san(move)
-                pv_candidates = engine.analyze_position_multipv(temp, multipv=3)
-                best_before = pv_candidates[0]["move"] if pv_candidates else None
-                eval_before = pv_candidates[0]["eval"] if pv_candidates else None
-                eval_after, _ = engine.eval_after_move(temp, move)
-                best_eval_after = eval_before
-                if best_before:
-                    best_eval_after, _ = engine.eval_after_move(temp, best_before)
+    def _classify(self, board: chess.Board, moves: list[chess.Move], user_color: str, source) -> list[dict]:
+        results: list[dict] = []
+        temp = board.copy()
+        previous_user_eval_after: float | None = None
+        for ply, move in enumerate(moves):
+            if not is_user_ply(ply, user_color):
+                temp.push(move)
+                continue
 
-                cp_loss = 0.0
-                if best_eval_after is not None and eval_after is not None:
-                    cp_loss = max(0.0, (best_eval_after - eval_after) * 100)
+            phase = game_phase(temp, ply)
+            san = temp.san(move)
+            pv_candidates, eval_after, best_eval_after = source.evals(temp, ply, move)
+            best_before = pv_candidates[0]["move"] if pv_candidates else None
+            eval_before = pv_candidates[0]["eval"] if pv_candidates else None
 
-                quality = classify_move_quality(cp_loss, eval_before, eval_after)
-                brilliant = False
+            cp_loss = 0.0
+            if best_eval_after is not None and eval_after is not None:
+                cp_loss = max(0.0, (best_eval_after - eval_after) * 100)
 
-                if best_before:
-                    brilliant = is_brilliant_move(
-                        board=temp,
-                        move=move,
-                        eval_before=eval_before,
-                        eval_after=eval_after,
-                        best_eval=best_eval_after,
-                    )
-                    if brilliant:
-                        quality = MoveQuality.BRILLIANT
+            quality = classify_move_quality(cp_loss, eval_before, eval_after)
+            brilliant = False
 
-                pv = [
-                    {
-                        "rank": index + 1,
-                        "uci": candidate["move"].uci() if candidate.get("move") else None,
-                        "san": move_san(temp, candidate.get("move")),
-                        "eval": candidate.get("eval"),
-                    }
-                    for index, candidate in enumerate(pv_candidates)
-                ]
-                signals, highlight = build_move_signals(
+            if best_before:
+                brilliant = is_brilliant_move(
                     board=temp,
                     move=move,
-                    quality=quality,
-                    cp_loss=cp_loss,
                     eval_before=eval_before,
                     eval_after=eval_after,
-                    best_move=best_before,
-                    pv=pv_candidates,
-                    previous_user_eval_after=previous_user_eval_after,
+                    best_eval=best_eval_after,
                 )
+                if brilliant:
+                    quality = MoveQuality.BRILLIANT
 
-                results.append(
-                    {
-                        "ply": ply,
-                        "uci": move.uci(),
-                        "san": san,
-                        "quality": quality.value,
-                        "cp_loss": round(cp_loss, 1),
-                        "eval_before": eval_before,
-                        "eval_after": eval_after,
-                        "is_brilliant": brilliant,
-                        "phase": phase,
-                        "signals": signals,
-                        "highlight": highlight,
-                        "best_uci": best_before.uci() if best_before else None,
-                        "best_san": move_san(temp, best_before),
-                        "pv": pv,
-                    }
-                )
-                previous_user_eval_after = eval_after
-                temp.push(move)
+            pv = [
+                {
+                    "rank": index + 1,
+                    "uci": candidate["move"].uci() if candidate.get("move") else None,
+                    "san": move_san(temp, candidate.get("move")),
+                    "eval": candidate.get("eval"),
+                }
+                for index, candidate in enumerate(pv_candidates)
+            ]
+            signals, highlight = build_move_signals(
+                board=temp,
+                move=move,
+                quality=quality,
+                cp_loss=cp_loss,
+                eval_before=eval_before,
+                eval_after=eval_after,
+                best_move=best_before,
+                pv=pv_candidates,
+                previous_user_eval_after=previous_user_eval_after,
+            )
+
+            results.append(
+                {
+                    "ply": ply,
+                    "uci": move.uci(),
+                    "san": san,
+                    "quality": quality.value,
+                    "cp_loss": round(cp_loss, 1),
+                    "eval_before": eval_before,
+                    "eval_after": eval_after,
+                    "is_brilliant": brilliant,
+                    "phase": phase,
+                    "signals": signals,
+                    "highlight": highlight,
+                    "best_uci": best_before.uci() if best_before else None,
+                    "best_san": move_san(temp, best_before),
+                    "pv": pv,
+                }
+            )
+            previous_user_eval_after = eval_after
+            temp.push(move)
 
         return results
+
+
+class _EngineSource:
+    """Phase 1's own searches: MultiPV before the move, then the positions after it and after best."""
+
+    def __init__(self, engine: StockfishEngine) -> None:
+        self.engine = engine
+
+    def evals(self, board: chess.Board, ply: int, move: chess.Move):
+        candidates = self.engine.analyze_position_multipv(board, multipv=3)
+        best = candidates[0]["move"] if candidates else None
+        eval_after, _ = self.engine.eval_after_move(board, move)
+        best_eval_after = candidates[0]["eval"] if candidates else None
+        if best:
+            best_eval_after, _ = self.engine.eval_after_move(board, best)
+        return candidates, eval_after, best_eval_after
+
+
+def line_pawns(line: dict) -> float | None:
+    """A stored engine line's score in pawns for the side to move (mate as ±100, like score_to_pawns)."""
+    mate, cp = line.get("mate"), line.get("cp")
+    if mate is not None:
+        return (10000 - mate) / 100 if mate > 0 else (-10000 - mate) / 100
+    return None if cp is None else cp / 100
+
+
+class _LinesSource:
+    """
+    Evals from the shared per-position search. eval_after is the position after the played move
+    (searched anyway for the lenses); the best move's result is the best line's score before the
+    move, so a move that is the engine's choice loses nothing by construction.
+    """
+
+    def __init__(self, lines: list[list[dict] | None]) -> None:
+        self.lines = lines
+
+    def evals(self, board: chess.Board, ply: int, move: chess.Move):
+        before = self.lines[ply] if ply < len(self.lines) else None
+        candidates = [
+            {"move": chess.Move.from_uci(line["move_uci"]), "eval": line_pawns(line)} for line in (before or [])[:3]
+        ]
+        after = self.lines[ply + 1] if ply + 1 < len(self.lines) else None
+        if after == []:  # no legal moves after the move: mate delivered, or stalemate
+            board.push(move)
+            eval_after = 100.0 if board.is_checkmate() else 0.0
+            board.pop()
+        elif after:
+            score = line_pawns(after[0])
+            eval_after = None if score is None else -score
+        else:
+            eval_after = None
+        best_eval_after = candidates[0]["eval"] if candidates else None
+        if candidates and candidates[0]["move"] == move:
+            best_eval_after = eval_after
+        return candidates, eval_after, best_eval_after

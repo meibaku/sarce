@@ -6,9 +6,11 @@ days, Sure → 9 days).
 Sources available today:
 - find the sacrifice: the engine's best move genuinely offered material and you played another;
 - trap at your band: a trap atlas position near your opponents' ratings;
-- play the other side: a sacrifice you played, to defend from the other chair.
-The handoff's reference-game guess and saved video positions need data Sarce does not have yet,
-so they are not invented here.
+- play the other side: a sacrifice you played, to defend from the other chair;
+- a saved position: one you kept from Review ("Add to Train"), services/positions.py;
+- <Master> in your openings: a position from a Tal, Shirov or Morphy game with an ECO you play, where
+  you guess the master's move
+  (data/reference_positions.json). Traps from your own openings are also put first.
 """
 
 from __future__ import annotations
@@ -31,7 +33,7 @@ def _bare(san: str | None) -> str:
     return (san or "").rstrip("+#!?")
 
 
-def check_move(fen: str, uci: str, answer: str | None, sacrifice_drill: bool, loss=None) -> dict:
+def check_move(fen: str, uci: str, answer: str | None, sacrifice_drill: bool, loss=None, reference_player: str | None = None) -> dict:
     """
     Your move in a drill, checked on the server: its SAN, whether it is the drill's answer and,
     when it isn't, whether it still holds (within SAFE_TOL expected points of best, via `loss`).
@@ -54,7 +56,18 @@ def check_move(fen: str, uci: str, answer: str | None, sacrifice_drill: bool, lo
             sound = loss(board, move) <= SAFE_TOL
         except Exception:
             sound = None  # no engine: say only whether it matched
-    if matched:
+    if reference_player:
+        # The answer is what the master played, not the engine's choice: say so.
+        line = (
+            f"That's what {reference_player} played."
+            if matched
+            else f"That holds too. {reference_player} played {answer}."
+            if sound
+            else f"That one lets the problem through. {reference_player} played {answer}."
+            if sound is False
+            else f"{reference_player} played {answer}."
+        )
+    elif matched:
         line = "That's the move." if not sacrifice_drill else "That's the sacrifice."
     elif sound and sacrifice_drill:
         line = f"Sound, but not the sacrifice. {answer} was there."
@@ -72,6 +85,57 @@ def _after(board: chess.Board, move: chess.Move) -> str:
     fen = board.fen()
     board.pop()
     return fen
+
+
+def your_openings(user_id: str | None, top: int = 5) -> list[str]:
+    """Your most played ECO codes, most played first (games.eco, migration game_openings)."""
+    q = get_supabase().table("games").select("eco").neq("source", "sarce_bot").order("played_at", desc=True).limit(500)
+    if user_id:
+        q = q.eq("user_id", user_id)
+    counts: dict[str, int] = {}
+    for row in q.execute().data or []:
+        if row.get("eco"):
+            counts[row["eco"]] = counts.get(row["eco"], 0) + 1
+    return sorted(counts, key=lambda e: -counts[e])[:top]
+
+
+REFERENCE_SUFFIX = " in your openings"
+
+
+def reference_items(ecos: list[str], seed: int, count: int = 3) -> list[dict]:
+    """
+    "<Master> in your openings": guess the move a reference player (Tal, Shirov, Morphy) made in a position
+    from one of their games in an opening you play. One master per drill, rotated daily so the queue mixes
+    them; positions come from data/reference_positions.json.
+    """
+    from app.services.reference_axes import in_your_openings, reference_positions
+
+    library = reference_positions()
+    players = sorted(library)
+    if not players:
+        return []
+    start = seed % len(players)
+    order = players[start:] + players[:start]
+    items: list[dict] = []
+    for i in range(count):
+        player = order[i % len(order)]
+        taken = {it["fen"] for it in items}
+        picks = [p for p in in_your_openings(library[player], ecos, seed + i, count=count) if p["fen"] not in taken]
+        if not picks:
+            continue
+        p = picks[0]
+        items.append({
+            "key": f"{player.lower()}:{p['eco']}:{p['fen']}",
+            "source": f"{player}{REFERENCE_SUFFIX}",
+            "meta": f"{p.get('year') or player} · {p['eco']}",
+            "title": f"What did {player} play here?",
+            "detail": f"{player} vs {p.get('opponent') or 'opponent'}{', ' + p['event'] if p.get('event') else ''}, from the {p['eco']} family you play. Find the move.",
+            "fen": p["fen"],
+            "answer": p["san"],
+            "gameId": None,
+            "ply": None,
+        })
+    return items
 
 
 def band_for(ratings: list[int]) -> int:
@@ -103,7 +167,8 @@ def missed_sacrifice(board: chess.Board, played: chess.Move, best_uci: str | Non
 
 
 class TrainService:
-    def queue(self, user_id: str | None, owner_id: str, focus: str | None) -> dict:
+    def queue(self, user_id: str | None, owner_id: str, focus: str | None, first: str | None = None) -> dict:
+        """The queue; `first` (a drill key, e.g. from the library's "Defend it yourself") goes to the front."""
         sb = get_supabase()
         q = (
             sb.table("games")
@@ -178,7 +243,11 @@ class TrainService:
                     })
 
         band = band_for([g.get("opponent_rating") for g in games])
-        traps = sb.table("trap_atlas").select("fen_key, fen, band, eco, common_reply_uci, common_reply_share, best_reply_uci, frequency").eq("band", band).order("frequency", desc=True).limit(10).execute().data or []
+        ecos = your_openings(user_id)
+        traps = sb.table("trap_atlas").select("fen_key, fen, band, eco, common_reply_uci, common_reply_share, best_reply_uci, frequency").eq("band", band).order("frequency", desc=True).limit(40).execute().data or []
+        # Traps in your own openings first (exact ECO, then family), then the band's most common.
+        rank = {eco: i for i, eco in enumerate(ecos)}
+        traps = sorted(traps, key=lambda t: (rank.get(t.get("eco"), len(rank) + (0 if any((t.get("eco") or "")[:2] == e[:2] for e in ecos) else 1)), -(t.get("frequency") or 0)))[:10]
         trap_items = []
         for t in traps:
             board = chess.Board(t["fen"])
@@ -199,11 +268,18 @@ class TrainService:
                 "ply": None,
             })
 
+        from app.services.positions import PositionStore, drill_items
+
+        saved = drill_items(PositionStore().list(owner_id))
+        tal = reference_items(ecos, datetime.now(timezone.utc).date().toordinal())
         # Interleave, putting the week's focus first, and skip drills not yet due.
-        order = {"safe_reply": [trap_items, missed, other_side], "calm_after_sacrifice": [other_side, missed, trap_items]}.get(
-            focus or "", [missed, trap_items, other_side]
+        order = {"safe_reply": [trap_items, missed, other_side, tal, saved], "calm_after_sacrifice": [other_side, missed, trap_items, tal, saved]}.get(
+            focus or "", [missed, trap_items, tal, other_side, saved]
         )
-        pools = [[i for i in pool if i["key"] not in due] for pool in order]
+        wanted = next((i for pool in order for i in pool if i["key"] == first), None) if first else None
+        pools = [[i for i in pool if i["key"] not in due and i is not wanted] for pool in order]
+        if wanted:
+            items.append(wanted)
         while len(items) < QUEUE and any(pools):
             for pool in pools:
                 if pool and len(items) < QUEUE:

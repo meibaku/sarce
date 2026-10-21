@@ -19,6 +19,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 from app.db.supabase import get_supabase
+from app.services.reference_axes import AXES, axis_values, references
 from app.services.home import MIN_GAMES, PAGE, HomeService, format_time_control, window_brilliant
 from app.services.summary import clock_label
 
@@ -162,6 +163,7 @@ class YouService:
         v2_weeks = [w for w in range(WEEKS) if any(((g.get("analysis") or {}).get("style_vector") or {}).get("version") == 2 for g in weekly_games[w])]
         schema = 2 if any(((g.get("analysis") or {}).get("style_vector") or {}).get("version") == 2 for g in games) else 1
 
+        mine, refs = axis_values(overall), references()
         return {
             "games": len(games),
             **goal,
@@ -182,11 +184,14 @@ class YouService:
                 "sentence": fingerprint_sentence(rows) if enough else "Fills in after five analysed games.",
             },
             "axes": [
-                {"name": "Sacrifice rate", "you": self._pct(overall["Sacrifice"], enough)},
-                {"name": "Chaos created", "you": self._pct(overall["Chaos"], enough)},
-                {"name": "Calm under fire", "you": self._pct(overall["Calm"], enough)},
-                {"name": "Initiative kept", "you": None if not enough or overall["Initiative"] is None else min(100, round(overall["Initiative"] * 200))},
+                {
+                    "name": name,
+                    "you": mine[name] if enough else None,
+                    "refs": {player: ref["axes"].get(name) for player, ref in refs.items()},
+                }
+                for name in AXES
             ],
+            "references": {player: {"games": ref.get("games", 0), "model": ref.get("model")} for player, ref in refs.items()},
             "timeControls": self._time_controls(games),
             "survival": self._survival(games, by_game_lens, by_game_moves, end, overall["Defence"], enough),
             "sacrifices": self._sacrifices(user_id, username),
@@ -199,10 +204,6 @@ class YouService:
 
         rows = LibraryService().sacrifices(user_id, username, limit=10_000)
         return {"played": len(rows), "held": sum(r["held"] for r in rows), "withNotes": sum(1 for r in rows if r["note"])}
-
-    @staticmethod
-    def _pct(value: float | None, enough: bool) -> int | None:
-        return None if not enough or value is None else round(value * 100)
 
     @staticmethod
     def _paged(build) -> list[dict]:
