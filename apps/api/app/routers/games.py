@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from pydantic import BaseModel, Field
 
@@ -418,6 +420,22 @@ async def get_game_review(game_id: str):
     data = review_service.review(game_id)
     if data is None:
         raise HTTPException(status_code=404, detail="Game not found")
+    return data
+
+
+@router.get("/{game_id}/moves/{ply}/why")
+async def why_this_move(game_id: str, ply: int):
+    """
+    "Why this move?": the badge's reason, each Brilliant rule as a check with its numbers, the chaos
+    numbers, and playable lines (your move and the reply, the engine's top lines, a sacrifice that would count).
+    """
+    from app.routers.play import bot_service
+    from app.services.explain import ExplainService
+
+    require_game_access(game_id)
+    data = await asyncio.to_thread(ExplainService(bot_service).why, game_id, ply)  # live lines use the engine
+    if data is None:
+        raise HTTPException(status_code=404, detail="Not one of your analysed moves.")
     return data
 
 

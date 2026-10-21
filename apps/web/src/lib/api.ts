@@ -318,6 +318,28 @@ export async function getPublicShare(token: string) {
   return fetchApi<PublicShare>(`/public/shares/${encodeURIComponent(token)}`);
 }
 
+/** GET /games/{id}/moves/{ply}/why (app/services/explain.py). */
+export interface WhyApi {
+  gameId: string;
+  ply: number;
+  label: string;
+  fenBefore: string;
+  orientation: "white" | "black";
+  badge: string;
+  isBrilliant: boolean;
+  brilliant: { rule: string; passed: boolean; detail: string }[];
+  evalBefore: number | null;
+  evalAfter: number | null;
+  best: string | null;
+  chaos: { verdict: string | null; faced: boolean; pFail: number[] | null; rungs: number[]; safeReplies: string[] };
+  lines: { title: string; note: string; eval: string; kind: "played" | "engine" | "brilliant"; steps: { san: string; uci: string; fen: string }[] }[];
+}
+
+/** "Why this move?": the badge's reason, the Brilliant checks with numbers, and playable lines. */
+export async function getWhy(gameId: string, ply: number) {
+  return fetchApi<WhyApi>(`/games/${gameId}/moves/${ply}/why`);
+}
+
 export async function getSyncStatus() {
   return fetchApi<import("@/types/chess").SyncStatus>(`/users/sync`);
 }

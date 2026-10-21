@@ -172,6 +172,17 @@ class BotService:
                 raise
         return max(0.0, (best[0]["ep"] if best else after) - after)
 
+    def pv_lines(self, board: chess.Board, multipv: int = 3, nodes: int = 400_000) -> list[dict]:
+        """Top lines with continuations, on the shared engine (StockfishEngine.pv_lines)."""
+        with self._lock:
+            try:
+                if self._engine is None:
+                    self._engine = StockfishEngine().__enter__()
+                return self._engine.pv_lines(board, nodes=nodes, multipv=multipv)
+            except Exception:
+                self._engine = None  # replaced on the next call
+                raise
+
     def close(self) -> None:
         """Stops the shared engine (called when the API shuts down)."""
         with self._lock:
