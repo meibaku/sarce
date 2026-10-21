@@ -343,7 +343,18 @@ export interface SummaryApi {
   styleRead: number;
   styleReadVersion: string;
   lichessUrl: string | null;
+  /** This game's questions, already rotated and cut to the question budget. */
+  questions?: SummaryQuestion[];
+  /** How the game went against "Today I want to…", graded after the game. */
+  intention?: { intent: string; label: string; met: boolean | null; line: string } | null;
 }
+
+export type CheckinAnswer = "distracted" | "time_pressure" | "on_purpose" | "nothing";
+
+export type SummaryQuestion =
+  | { kind: "felt"; answer: FeltAnswer | null }
+  | { kind: "intent"; ply: number; label: string; ask: string; answered: boolean }
+  | { kind: "checkin"; ply: number; label: string; flagged: boolean; answer: CheckinAnswer | null };
 
 export type IntentType = "calculated" | "intuitive" | "bluff";
 
@@ -386,9 +397,15 @@ export interface YouApi {
     from: number | null;
     brilliantMoves: number;
     yourMoves: number;
+    /** Week index (0–11) where the find-rate rule starts, for the "style v2" marker. */
+    ruleChangedWeek?: number | null;
+    findRateRule?: boolean;
   } | null;
+  styleSchema?: number;
   fingerprint: { traits: string[]; levels: number[][]; sentence: string } | null;
-  axes: { name: string; you: number | null }[] | null;
+  /** `refs` holds each scored reference player's value on the axis (data/reference_axes.json). */
+  axes: { name: string; you: number | null; refs?: Record<string, number | null> }[] | null;
+  references?: Record<string, { games: number; model: string | null }>;
   timeControls: { class: "bullet" | "blitz" | "rapid"; games: number; pct: number | null; spread: number | null; calibrated: boolean }[];
   survival: {
     gameId: string;
@@ -417,6 +434,9 @@ export interface SacrificeRow {
   playedAt: string | null;
   held: boolean;
   note: string | null;
+  /** The game's opening (games.eco / games.opening); null for games imported before ECO extraction. */
+  eco?: string | null;
+  opening?: string | null;
 }
 
 /** GET /users/recap (app/services/recap.py). */
@@ -445,6 +465,18 @@ export interface DrillItem {
   answer: string | null;
   gameId: string | null;
   ply: number | null;
+  /** Legal moves in `fen`, as UCI, so the board can offer targets. */
+  legal?: string[];
+}
+
+/** Your move in a drill, checked on the server. `sound` is null when the engine couldn't say. */
+export interface DrillCheck {
+  san: string;
+  uci: string;
+  matched: boolean;
+  sound: boolean | null;
+  line: string;
+  fen: string;
 }
 
 export interface TrainApi {
@@ -476,8 +508,43 @@ export interface SettingsApi {
   questionBudget: 0 | 1 | 2;
   quietUntil: string | null;
   sources: "chess_com" | "lichess" | "both";
-  theme: "light" | "system";
+  theme: "light" | "dark" | "system";
   playfulMascot: boolean;
   motion: "system" | "full" | "reduced";
+  chessComUsername?: string | null;
+  lichessUsername?: string | null;
+  /** Opt-in: screenshot reading and video summaries are sent to Anthropic (apps/api/app/services/ai.py). */
+  aiHelp?: boolean;
+  /** Whether the server has Claude credentials at all (read-only). */
+  aiAvailable?: boolean;
   kept?: { games: number; notes: number };
+}
+
+/** A saved position (GET /users/positions); `source_*`, `excerpt` and `ai_summary` when it came from a video. */
+export interface SavedPosition {
+  id: string;
+  fen: string;
+  title: string;
+  note: string;
+  best_san: string | null;
+  game_id: string | null;
+  ply: number | null;
+  source_url: string | null;
+  source_time_s: number | null;
+  excerpt: string;
+  ai_summary: string;
+  created_at: string;
+}
+
+/** GET /users/sync (app/services/sync.py). */
+export interface SyncStatus {
+  chessComUsername: string | null;
+  lichessUsername: string | null;
+  sources: "chess_com" | "lichess" | "both";
+  lastSyncedAt: string | null;
+  lastSyncErrors: string[];
+  pending: number;
+  processing: number;
+  autoSync: boolean;
+  chaosPass: boolean;
 }

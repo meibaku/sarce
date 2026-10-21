@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FallsChart, IdeaArcs } from "@/components/review/charts";
-import { PrimaryButton, TextButton, TextLink } from "@/components/ui/buttons";
+import { PrimaryButton, TextButton } from "@/components/ui/buttons";
 import { AutoGrid, SectionLabel, UncalibratedBadge } from "@/components/ui/card";
 import { Board } from "@/components/ui/board";
 import { Mascot } from "@/components/ui/mascot";
+import { showToast } from "@/components/ui/toast";
 import { MoveBadge } from "@/components/ui/move-badge";
+import { savePosition } from "@/lib/api";
 import type { IntentType, ReviewApi, ReviewMoment } from "@/types/chess";
 
 /*
@@ -98,6 +100,7 @@ export function ReviewView({
     await onSaveIntent(current.ply, intent);
     setMoments((ms) => ms.map((m, i) => (i === index ? { ...m, intent } : m)));
     setNote("saved");
+    showToast("Note saved. The engine's view is open now.", "nod");
   }
 
   const meta = [data.timeControl, data.result ? RESULT[data.result] : null, current ? `moment ${index + 1} of ${moments.length}` : null]
@@ -246,7 +249,18 @@ export function ReviewView({
               <PrimaryButton className="!px-5" onClick={() => goTo((index + 1) % moments.length)}>
                 Next moment
               </PrimaryButton>
-              <TextLink href="/train">Add to Train</TextLink>
+              <TextButton
+                onClick={() => {
+                  // The position before the moment's move: that is the decision worth drilling.
+                  const before = current.ply > 0 ? data.positions[current.ply - 1]?.fen : data.initialFen;
+                  if (!before) return;
+                  savePosition({ fen: before, title: `vs ${data.opponent ?? "opponent"}, ${current.label}`, gameId: data.gameId, ply: current.ply })
+                    .then(() => showToast("Added to Train. It comes up in your queue.", "nod"))
+                    .catch(() => showToast("Couldn't add it. Try again.", "think"));
+                }}
+              >
+                Add to Train
+              </TextButton>
               <TextButton
                 onClick={() =>
                   navigator.clipboard?.writeText(

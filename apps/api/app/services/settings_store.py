@@ -7,6 +7,7 @@ Validation lives here so the jsonb column only ever holds known keys and values.
 
 from __future__ import annotations
 
+import re
 from datetime import date, datetime, timedelta, timezone
 
 from app.db.supabase import get_supabase
@@ -20,11 +21,18 @@ DEFAULTS = {
     "theme": "light",
     "playfulMascot": True,
     "motion": "system",
+    "chessComUsername": None,
+    "lichessUsername": None,
+    # Opt-in: screenshot reading and video summaries are sent to Anthropic (services/ai.py).
+    "aiHelp": False,
 }
+# Written by the sync, never by the player.
+INTERNAL = {"lastSyncedAt": None, "lastSyncErrors": []}
+USERNAME = re.compile(r"^[A-Za-z0-9_-]{2,30}$")
 CHOICES = {
     "questionBudget": {0, 1, 2},
     "sources": {"chess_com", "lichess", "both"},
-    "theme": {"light", "system"},
+    "theme": {"light", "dark", "system"},
     "motion": {"system", "full", "reduced"},
 }
 GOAL_MIN, GOAL_MAX = 0, 15
@@ -46,9 +54,13 @@ def validate(changes: dict) -> dict:
             if value is not None:
                 date.fromisoformat(str(value))
             clean[key] = value
-        elif key == "playfulMascot":
+        elif key in ("chessComUsername", "lichessUsername"):
+            if value is not None and (not isinstance(value, str) or not USERNAME.match(value.strip())):
+                raise ValueError(f"{key} must be a username (letters, digits, - and _)")
+            clean[key] = value.strip() if isinstance(value, str) else None
+        elif key in ("playfulMascot", "aiHelp"):
             if not isinstance(value, bool):
-                raise ValueError("playfulMascot must be true or false")
+                raise ValueError(f"{key} must be true or false")
             clean[key] = value
         else:
             raise ValueError(f"Unknown setting {key!r}")
@@ -71,6 +83,7 @@ class SettingsStore:
             quiet = None  # an expired quiet week is simply over
         return {
             **DEFAULTS,
+            **INTERNAL,
             **(row.get("settings") or {}),
             "quietUntil": quiet,
             "goalLo": goal.get("target_brilliant_min", 6),
@@ -83,7 +96,7 @@ class SettingsStore:
         lo, hi = clean.get("goalLo", current["goalLo"]), clean.get("goalHi", current["goalHi"])
         if lo >= hi:
             raise ValueError("goalLo must be below goalHi")
-        prefs = {k: v for k, v in {**current, **clean}.items() if k in DEFAULTS}
+        prefs = {k: v for k, v in {**current, **clean}.items() if k in DEFAULTS or k in INTERNAL}
         get_supabase().table("profiles").update(
             {
                 "settings": prefs,
@@ -92,6 +105,12 @@ class SettingsStore:
             }
         ).eq("id", owner_id).execute()
         return self.get(owner_id)
+
+    def record_sync(self, owner_id: str, at: str, errors: list[str]) -> None:
+        """Stores when the last sync ran and what went wrong, beside the preferences."""
+        rows = get_supabase().table("profiles").select("settings").eq("id", owner_id).limit(1).execute().data or []
+        prefs = {**((rows[0].get("settings") if rows else None) or {}), "lastSyncedAt": at, "lastSyncErrors": errors[:3]}
+        get_supabase().table("profiles").update({"settings": prefs}).eq("id", owner_id).execute()
 
     def kept(self, owner_id: str, user_id: str | None) -> dict:
         sb = get_supabase()

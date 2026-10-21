@@ -15,8 +15,11 @@ from __future__ import annotations
 
 import random
 import threading
+import uuid
+from datetime import datetime, timezone
 
 import chess
+import chess.pgn
 
 from app.lenses import config as lens_config
 from app.services.human_model import get_human_model
@@ -90,6 +93,40 @@ def choose(bot: str, board: chess.Board, elo: int, engine, model, rng: random.Ra
     return max(scored, key=lambda s: s[0])[1] if scored else chess.Move.from_uci(lines[0]["move_uci"])
 
 
+RESULT_TAG = {"win": "1-0", "loss": "0-1", "draw": "1/2-1/2"}
+BOT_TIME_CONTROL = "180"
+
+
+def bot_game_pgn(moves: list[str], result: str, bot: str, clocks_ms: list[int] | None, played_at: datetime) -> str:
+    """
+    The PGN of a finished game against a Sarce bot (you play White), with %clk comments when the
+    clocks were sent so the distraction check-ins can read your pace. Raises ValueError on an
+    illegal move or an unknown result.
+    """
+    if result not in RESULT_TAG or bot not in BOTS:
+        raise ValueError("unknown result or bot")
+    game = chess.pgn.Game()
+    game.headers.update({
+        "Event": "Sarce bot game",
+        "Site": "Sarce",
+        "Date": played_at.strftime("%Y.%m.%d"),
+        "White": "You",
+        "Black": BOTS[bot],
+        "Result": RESULT_TAG[result],
+        "TimeControl": BOT_TIME_CONTROL,
+    })
+    node, board = game, chess.Board()
+    for i, uci in enumerate(moves):
+        move = chess.Move.from_uci(uci)
+        if move not in board.legal_moves:
+            raise ValueError(f"illegal move {uci} at ply {i}")
+        board.push(move)
+        node = node.add_variation(move)
+        if clocks_ms and i < len(clocks_ms) and clocks_ms[i] is not None:
+            node.set_clock(max(0, clocks_ms[i]) / 1000)
+    return str(game)
+
+
 class BotService:
     """Keeps one engine open across moves: starting Stockfish per move cost seconds of bot clock."""
 
@@ -117,6 +154,24 @@ class BotService:
                         raise
         raise RuntimeError("unreachable")
 
+    def move_loss(self, board: chess.Board, move: chess.Move) -> float:
+        """Expected points `move` gives up against the best move, for the side to move."""
+        with self._lock:
+            if self._engine is None:
+                self._engine = StockfishEngine().__enter__()
+            try:
+                best = self._engine.analyse(board, nodes=NODES, multipv=1)
+                board.push(move)
+                try:
+                    reply = self._engine.analyse(board, nodes=NODES, multipv=1) if not board.is_game_over() else []
+                    after = 1 - reply[0]["ep"] if reply else (1.0 if board.is_checkmate() else 0.5)
+                finally:
+                    board.pop()
+            except Exception:
+                self._engine = None  # a crashed engine is replaced on the next call
+                raise
+        return max(0.0, (best[0]["ep"] if best else after) - after)
+
     def close(self) -> None:
         """Stops the shared engine (called when the API shuts down)."""
         with self._lock:
@@ -125,6 +180,27 @@ class BotService:
                     self._engine.__exit__(None, None, None)
                 finally:
                     self._engine = None
+
+    def save(self, owner_id: str | None, bot: str, moves: list[str], result: str, clocks_ms: list[int] | None, elo: int) -> str:
+        """Stores a finished bot game as a pending game (source sarce_bot) and returns its id."""
+        from app.db.supabase import get_supabase
+
+        now = datetime.now(timezone.utc)
+        pgn = bot_game_pgn(moves, result, bot, clocks_ms, now)
+        row = {
+            "user_id": owner_id,
+            "chess_com_username": "you",
+            "external_id": f"sarce-bot:{uuid.uuid4()}",
+            "source": "sarce_bot",
+            "pgn": pgn,
+            "played_at": now.isoformat(),
+            "opponent": BOTS[bot],
+            "opponent_rating": elo,
+            "time_control": BOT_TIME_CONTROL,
+            "result": result,
+            "user_color": "white",
+        }
+        return get_supabase().table("games").insert(row).execute().data[0]["id"]
 
     def start(self, color: str) -> dict:
         return position_payload(chess.Board())
