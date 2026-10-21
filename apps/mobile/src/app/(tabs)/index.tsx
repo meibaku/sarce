@@ -4,6 +4,8 @@ import { View } from "react-native";
 import { Badge, Card, ChaosStrip, Edge, Gauge, Label, Link, Loading, Primary, Screen, T, Uncalibrated, s } from "@/components/ui";
 import { Mascot } from "@/components/mascot";
 import { getHome } from "@/lib/api";
+import { usePrefs } from "@/lib/prefs";
+import { color } from "@/lib/theme";
 import { useLoad } from "@/lib/use-load";
 
 const RESULT = { win: "Won", loss: "Lost", draw: "Drew" } as const;
@@ -19,6 +21,7 @@ function Stat({ label, value }: { label: string; value: string | number | null }
 
 export default function Home() {
   const { data, failed, reload } = useLoad(getHome);
+  const quiet = Boolean(usePrefs().quietUntil);
   return (
     <Screen title="home">
       {failed ? (
@@ -29,6 +32,12 @@ export default function Home() {
         <Edge kind="no-games" action="Connect an account" onAction={() => router.push("/onboarding")} />
       ) : (
         <>
+          {quiet && (
+            <View style={[s.row, { borderWidth: 1.5, borderStyle: "dashed", borderColor: color.line3, borderRadius: 8, padding: 12 }]}>
+              <T size={13} tone="ink2" style={{ flex: 1 }}>Quiet week · numbers are hidden, moments and notes stay.</T>
+              <Link label="End early" onPress={() => router.push("/settings")} />
+            </View>
+          )}
           <Card lead>
             <View style={s.row}>
               <Label accent>Latest game</Label>
@@ -39,7 +48,7 @@ export default function Home() {
             </View>
             <View style={[s.row, { alignItems: "flex-start" }]}>
               <T weight="medium" size={18} style={{ flex: 1 }}>{data.latest.styleRead}</T>
-              <Mascot state="idle" size={40} />
+              <Mascot state={quiet ? "sleep" : "idle"} size={40} />
             </View>
             {data.latest.chaos.length > 0 && <ChaosStrip chaos={data.latest.chaos} highlight={data.latest.highlight} />}
             {data.latest.moments.map((m) => (
@@ -59,12 +68,16 @@ export default function Home() {
 
           <Card>
             <Label>{`Brilliant · last ${data.brilliant.games}`}</Label>
-            <T mono weight="medium" size={30} tone={data.brilliant.pct == null ? "faint" : "accentText"}>
-              {data.brilliant.pct == null ? "—" : `${data.brilliant.pct.toFixed(1)}%`}
-            </T>
-            <Gauge value={data.brilliant.pct} lo={data.brilliant.goalLo} hi={data.brilliant.goalHi} />
-            {data.brilliant.gapLine && <T size={13} tone="ink2">{data.brilliant.gapLine}</T>}
-            {data.stats && (
+            {quiet ? (
+              <T mono size={20} tone="faint">hidden this week</T>
+            ) : (
+              <T mono weight="medium" size={30} tone={data.brilliant.pct == null ? "faint" : "accentText"}>
+                {data.brilliant.pct == null ? "—" : `${data.brilliant.pct.toFixed(1)}%`}
+              </T>
+            )}
+            <Gauge value={quiet ? null : data.brilliant.pct} lo={data.brilliant.goalLo} hi={data.brilliant.goalHi} />
+            {!quiet && data.brilliant.gapLine && <T size={13} tone="ink2">{data.brilliant.gapLine}</T>}
+            {!quiet && data.stats && (
               <View style={[s.row, { marginTop: 4 }]}>
                 <Stat label="style streak" value={data.stats.streak == null ? null : `${data.stats.streak} game${data.stats.streak === 1 ? "" : "s"}`} />
                 <Stat label="sound : unsound" value={data.stats.soundRatio == null ? null : `${data.stats.soundRatio.toFixed(1)} : 1`} />
