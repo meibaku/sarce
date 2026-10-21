@@ -54,6 +54,8 @@ export function OnboardingFlow() {
       setStatus(null);
       try {
         const res = site === "lichess" ? await importLichessGames(name, true) : await importChessComGames(name, true);
+        // Saved so new games keep arriving by themselves (automatic sync).
+        await updateSettings(site === "lichess" ? { lichessUsername: name } : { chessComUsername: name }).catch(() => undefined);
         setStatus(res.message);
         setStep(1);
       } catch (err) {

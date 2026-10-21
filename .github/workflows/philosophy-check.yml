@@ -18,10 +18,10 @@ jobs:
             apps/web/src/components/ apps/web/src/app/ 2>/dev/null || \
             (echo "Punitive copy detected — see docs/PHILOSOPHY.md" && exit 1)
 
-      - name: Brilliant gauge must remain in dashboard
+      - name: Brilliant gauge must remain on Home (ADR 0005)
         run: |
-          grep -q "BrilliantGauge" apps/web/src/components/dashboard.tsx
-          grep -q "brilliantPct" apps/web/src/components/dashboard.tsx
+          grep -q "StyleGauge" apps/web/src/components/home/home-view.tsx
+          grep -q "Brilliant" apps/web/src/components/home/home-view.tsx
 
       - name: Philosophy doc anchors present
         run: |

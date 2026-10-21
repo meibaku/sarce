@@ -4,7 +4,91 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Changed
+- Licence: GNU AGPL-3.0 (was MIT), see ADR 0006 — open source and self-hostable; a modified version run as a
+  service must share its source; compatible with python-chess (GPL-3.0+)
+
+### Removed
+- The pre-v1 dashboard at `/lab` and the components only it used (ADR 0005); the Brilliant headline contract now
+  checks Home; sign-in status moved to Settings
+
+### Fixed
+- Reference players: pgnmentor spells Tal "Mihail", so name matching failed and every Tal game counted him as
+  White; matching now accepts surname plus first initial. The Tal axis values from the earlier run mixed in his
+  opponents and were removed until the rerun
+- Background analysis no longer freezes the API: move classification runs in a worker thread
+
 ### Added
+- Multi-user sharing (M8): "Share link" on Summary and the library makes a read-only page at `/s/<token>` from a
+  snapshot taken then (no opponent name, no private notes), listed and turned off in Settings → Shared links
+  (migration `shared_links`, RLS); the background sync now serves every user who saved a username; mobile Summary
+  shares through the system share sheet (`EXPO_PUBLIC_WEB_URL`)
+
+### Fixed
+- Settings no longer loses `aiAvailable` after saving a change (the AI help switch stayed usable)
+- Shirov and Morphy as references: "<Master> in your openings" drills in Train from 1,995 Shirov and 208 Morphy
+  positions (plus Tal's), rotated daily; the reference scripts take `--player` / `--key` and skip games the player
+  isn't in; mobile You gains the Tal / Shirov / Morphy toggles
+- `scripts/auth_smoke.py`: sign-in checked against a real Supabase Auth (throwaway user; token required, forged
+  tokens refused, another user's data unreachable, settings on the right profile); passes on the local stack
+- Positions from videos (PHASES 2.2–2.4): Train → Save a position takes a YouTube link and keeps the captions
+  around that moment (or a pasted transcript when YouTube blocks the request); with Settings → "Video help (sent
+  to AI)" on and Claude credentials on the server, Claude reads a board from a screenshot (FEN checked by
+  python-chess) and summarises what was said. Saved positions are searchable (titles, notes, transcripts,
+  summaries). Migration `position_sources`; new dependencies `anthropic`, `youtube-transcript-api`
+
+### Fixed
+- Background analysis no longer fails games when engines are starved: a 60 s engine protocol timeout (was 10 s),
+  and the default `ANALYSIS_WORKERS` is half the CPU threads so the app and database stay responsive
+- Tal's axis values from 40 games across his career, scored with him on the right side of the board (sacrifice
+  18, chaos 36, calm 96, initiative 24; heuristic human model)
+- Mobile: opponent prep (from Play) and Settings → Export journal through the system share sheet
+- Mobile: Settings → Mascot and motion (Playful mascot, Motion: follow system / full / reduced), the quiet-week
+  Home (numbers hidden, sleeping mascot, "End early") and the "Tracking paused" edge state, as on the web
+- Dark theme (the v1.1 item Settings promised): Settings → Theme → Light / Dark / Match system; dark tokens keep
+  every text colour at 4.5:1 or better, the fingerprint ramp follows, and the choice is applied before first
+  paint (no flash)
+- Manual position setter (PHASES 2.1): Train → "Save a position from a video or book" takes a FEN with a live
+  board preview and saves it as a drill
+- The Expo app (`apps/mobile`, SDK 58, own lockfile): Home, Review, You, Train and Play tabs plus Summary with its
+  questions, Review with intent notes and "Add to Train", the library, the weekly recap, Settings with sync,
+  onboarding and games against Sarce bots, on the same API (`EXPO_PUBLIC_API_URL`); the handoff's app icons and
+  splash; the rook mascot (the handoff's motion maths drawn with react-native-svg, still under Reduce Motion);
+  CI job `mobile-check` (typecheck + lint); the API allows the Expo web dev origin
+- Opponent prep at `/prep` (from Play): private reports from an opponent's finished games, in the v1 design
+- Openings (ECO extraction, PHASES 1.8): `games.eco` and `games.opening` from the PGN headers (migration
+  `game_openings` backfills stored games); Train adds "Tal in your openings" (guess Tal's move in a position
+  from a Tal game in an opening you play, `data/reference_positions.json` from
+  `scripts/build_reference_positions.py`) and puts traps from your openings first; the library filters by opening
+- Saved positions: Review → "Add to Train" keeps the moment's position (migration `saved_positions`, with the
+  engine's move as the answer when the game was analysed) and Train drills it as "a saved position"; the
+  library's "Defend it yourself" opens that sacrifice's defence drill (`/train?drill=`); Settings → "Export
+  journal (PDF)" opens a print-styled journal (`/journal`) for the browser's Save as PDF
+- Faster analysis: several games are analysed at once, one single-threaded Stockfish each (`ANALYSIS_WORKERS`,
+  default one per core minus one; results stay deterministic); with the chaos pass on, Phase 1 reads the same
+  per-position search as the lenses instead of three depth-18 searches per move; a Stockfish folder with
+  several builds uses the fastest one the CPU can run
+- Tal on the You axes in chaos terms: `scripts/process_tal_chaos.py` runs a local copy of the Tal corpus through
+  the same classification and Chaos Lens as your games, in memory, and writes the four axis values to
+  `data/reference_axes.json`; You draws a T dot per axis once that file exists, and says Tal isn't scored yet
+  until then
+- Train move input: drills are played on the board (click a piece, then a highlighted square) and checked on the
+  server (`POST /users/train/check`): the answer, another move that still holds, or one that lets the problem
+  through; "find the sacrifice" drills want the sacrifice itself
+- Bot games are saved for review: a finished game against a Sarce bot (`POST /play/save`, migration
+  `sarce_bot_games`) is stored with its clocks, analysed in the background and opens in Summary and Review;
+  bot games stay out of Brilliant %, the fingerprint, the recap and the library
+- Distraction check-ins: a detector reads move times from the PGN clocks and flags a costly move played far
+  faster than your own pace, a fast reply to a real problem, or a long pause in a quiet position (skipping the
+  opening, premoves, time trouble and daily games); the strongest flag becomes a ?! "Your pace changed here"
+  moment on Home, Summary and Review and the target of the Summary check-in
+- Automatic game sync: with `AUTO_SYNC_ENABLED` on, the API fetches new finished games every `SYNC_MINUTES` for
+  the Chess.com / Lichess usernames saved in Settings (or at onboarding) and analyses up to five pending games,
+  newest first; `GET/POST /users/sync` report and start a sync, the header shows the account line and Settings
+  gains the username fields and "Sync now"
+- After-game question rotation and intention grading: Summary asks up to the question budget, rotating between
+  "Did this game feel like you?", the intent prompt on a moment and a random check-in ("Was something going on
+  here?", migration `game_answers`), and grades the game against today's intention first
 - v1.0 motion, finished: the launch intro (trace then hello, once per session; a still for reduced motion), the
   header mark tipping on navigation, and mascot toasts for a saved note, a set intention, the felt-like-you
   answer, a changed goal and the quiet week

@@ -49,6 +49,31 @@ jobs:
       - name: Lint
         run: npm run lint:web
 
+  mobile-check:
+    name: mobile-check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # The Expo app has its own lockfile, outside the npm workspace (React Native's tree stays apart).
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
   web-build:
     name: web-build
     runs-on: ubuntu-latest
