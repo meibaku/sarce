@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FallsChart, IdeaArcs } from "@/components/review/charts";
 import { WhyPanel } from "@/components/review/why-panel";
-import { PrimaryButton, TextButton } from "@/components/ui/buttons";
+import { PrimaryButton, TextButton, TextLink } from "@/components/ui/buttons";
 import { AutoGrid, SectionLabel, UncalibratedBadge } from "@/components/ui/card";
 import { Board } from "@/components/ui/board";
 import { Mascot } from "@/components/ui/mascot";
@@ -124,10 +124,13 @@ export function ReviewView({
           {meta}
           {!data.calibrated && <UncalibratedBadge />}
         </span>
+        <TextLink href="/games" className="ml-auto !text-[12px]">
+          All games
+        </TextLink>
         <button
           type="button"
           onClick={() => setTwoMove((v) => !v)}
-          className="ml-auto h-8 rounded-[6px] border-[1.5px] border-line-2 bg-surface px-3 text-[12px] font-medium hover:bg-panel active:bg-press"
+          className="h-8 rounded-[6px] border-[1.5px] border-line-2 bg-surface px-3 text-[12px] font-medium hover:bg-panel active:bg-press"
         >
           {twoMove ? "Two-move review" : "Full review"} ▾
         </button>

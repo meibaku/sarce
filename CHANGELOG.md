@@ -5,6 +5,11 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- All games, from Review (`/games`): newest first, or most chaotic first (highest chaos peak, with real /
+  calculated / unsound chaos counts). `GET /games?chaos=true` reads the top-scoring chaos rows in score order
+  instead of a full history, so it stays fast as the library grows. Replaces PR #89, written for the removed `/lab`
+
+### Added
 - Shirov and Morphy reference values on the You axes (40 games each from the pgnmentor corpora, scored the same
   way as Tal): Shirov sacrifice 20 · chaos 36 · calm 95 · initiative 25; Morphy 22 · 31 · 90 · 22
 - Your chaos map (You, web and phone): the opening positions you reach most often, how predictably opponents

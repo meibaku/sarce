@@ -130,8 +130,9 @@ async def list_games(
     username: str | None = Query(None),
     user_id: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
+    chaos: bool = Query(False, description="Only chaos-analysed games, most chaotic first"),
 ):
-    """List imported games with analysis status."""
+    """List imported games with analysis status: newest first, or most chaotic first (`chaos=true`)."""
     from app.db.supabase import get_supabase
 
     sb = get_supabase()
@@ -142,12 +143,20 @@ async def list_games(
         .limit(limit)
     )
     uid = scoped_user_id(user_id, username)
+    name = normalize_chess_com_username(username) if username else None
     if uid:
         query = query.eq("user_id", uid)
-    if username:
-        query = query.eq("chess_com_username", normalize_chess_com_username(username))
+    if name:
+        query = query.eq("chess_com_username", name)
 
-    res = query.execute()
+    ranked: dict[str, dict] = {}
+    if chaos:
+        ranked = {g["gameId"]: g for g in await asyncio.to_thread(lens_service.most_chaotic_games, uid, name, limit)}
+        if not ranked:
+            return {"games": []}
+        query = query.in_("id", list(ranked))
+
+    res = await asyncio.to_thread(query.execute)
     games = []
     for row in res.data or []:
         analysis = row.pop("game_analyses", None)
@@ -163,8 +172,11 @@ async def list_games(
                 "analysisStatus": row.get("analysis_status"),
                 "brilliantPct": summary.get("brilliant_pct") if summary else None,
                 "totalMoves": summary.get("total_moves") if summary else None,
+                **({k: v for k, v in ranked[row["id"]].items() if k != "gameId"} if row["id"] in ranked else {}),
             }
         )
+    if chaos:
+        games.sort(key=lambda g: (-g["chaosPeak"], -g["realChaos"], g["id"]))
     return {"games": games}
 
 
