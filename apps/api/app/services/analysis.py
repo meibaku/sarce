@@ -38,6 +38,18 @@ from app.services.tagger import TaggerService
 
 logger = logging.getLogger(__name__)
 
+TRANSIENT_DB_CODES = {"57014", "40001", "40P01", "53300", "08006"}  # statement timeout, serialization, deadlock, too many connections, connection lost
+
+
+def is_transient(exc: BaseException) -> bool:
+    """Worth retrying later: a database timeout or dropped connection, not a bad game."""
+    import httpx
+
+    if isinstance(exc, (httpx.TransportError, TimeoutError, ConnectionError)):
+        return True
+    code = getattr(exc, "code", None)
+    return code in TRANSIENT_DB_CODES or any(c in str(exc) for c in TRANSIENT_DB_CODES)
+
 
 def build_style_vector_v1(
     distribution: dict,
@@ -331,6 +343,26 @@ class AnalysisService:
             await self.baseline.recompute_baseline(user_id=settings.local_user_id or None)
         return done
 
+    @staticmethod
+    def _release(game_id: str, exc: BaseException) -> None:
+        """A game still 'processing' after an error: back to 'pending' if the error was transient, else 'failed'."""
+        status = "pending" if is_transient(exc) else "failed"
+        try:
+            get_supabase().table("games").update({"analysis_status": status}).eq("id", game_id).eq("analysis_status", "processing").execute()
+        except Exception:
+            logger.exception("Could not release game %s", game_id)
+
+    @staticmethod
+    def requeue_interrupted() -> int:
+        """
+        On startup: games left 'processing' by a stopped or crashed API go back to 'pending'. Only the process that
+        runs analysis calls this, before it starts, so nothing is genuinely in progress yet.
+        """
+        rows = get_supabase().table("games").update({"analysis_status": "pending"}).eq("analysis_status", "processing").execute().data or []
+        if rows:
+            logger.info("Requeued %d games interrupted mid-analysis", len(rows))
+        return len(rows)
+
     async def analyze_pending(
         self,
         user_id: str | None = None,
@@ -369,8 +401,10 @@ class AnalysisService:
         results = []
         for row, outcome in zip(res.data or [], outcomes):
             if isinstance(outcome, BaseException):
-                # analyze_game already marked the game failed; one bad game must not stop the batch.
+                # One bad game must not stop the batch. An engine failure already marked it failed; a failure
+                # while storing results left it 'processing', where nothing would ever pick it up again.
                 logger.error("Analysis failed for game %s: %s", row["id"], outcome)
+                self._release(row["id"], outcome)
             elif outcome:
                 results.append(outcome)
         return results

@@ -13,6 +13,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   clearly ask more than your usual one become a Train drill, "chaos move in your opening"
 
 ### Fixed
+- Games could stay "processing" forever: a database timeout while storing results, or an API restart mid-analysis,
+  left them where nothing picked them up again. A transient storage error now sends the game back to pending (a
+  real error marks it failed), and the API requeues interrupted games when it starts
 - You took ~33 s (and sometimes hit the database statement timeout) on a 3,000-game library: sacrifice offers are
   parsed once per finished game and cached, the lens query reads only the three `details` keys it uses, and the
   heavy screens (Home, You, Library, Recap, Train) run off the event loop so one slow request no longer stalls
