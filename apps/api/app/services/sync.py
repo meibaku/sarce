@@ -23,6 +23,7 @@ from app.services.lichess import LichessClient, normalize_lichess_username, pars
 logger = logging.getLogger(__name__)
 
 ANALYSE_PER_SYNC = 5
+BACKLOG_PAUSE_S = 5  # between batches while games are still pending
 LICHESS_PER_SYNC = 20
 
 
@@ -121,10 +122,13 @@ async def sync_loop(service: SyncService, owner_id: str | None, analyse, minutes
     """
     while True:
         owners = [owner_id] if owner_id else owners_to_sync(settings.local_user_id or None)
+        busy = False
         for owner in owners:
             try:
                 result = await service.sync(owner, analyse)
                 logger.info("Sync %s: %s", owner, result)
+                busy = busy or bool(result.get("analysed"))
             except Exception:
                 logger.exception("Sync failed for %s", owner)
-        await asyncio.sleep(minutes * 60)
+        # A backlog drains continuously; the full wait only applies once nothing is left to analyse.
+        await asyncio.sleep(BACKLOG_PAUSE_S if busy else minutes * 60)
