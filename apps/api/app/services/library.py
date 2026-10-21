@@ -12,6 +12,8 @@ from __future__ import annotations
 import io
 
 import chess
+
+from app.services.brilliant import real_offer  # noqa: F401  (re-exported for existing imports)
 import chess.pgn
 
 from app.db.supabase import get_supabase
@@ -20,32 +22,6 @@ from app.services.summary import move_label
 
 VALUE = {chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3, chess.ROOK: 5, chess.QUEEN: 9, chess.KING: 0}
 CHUNK = 100
-
-
-def real_offer(board: chess.Board, move: chess.Move) -> int:
-    """
-    Material genuinely offered by `move`, or 0.
-
-    Stricter than Phase 1's `sacrifice` signal (any capturable piece): after the move the piece
-    must be attacked by something cheaper, or attacked and undefended. A defended piece that can
-    only be taken by an equal or bigger piece is not on offer.
-    """
-    piece = board.piece_at(move.from_square)
-    if piece is None or move.promotion:
-        return 0
-    captured = board.piece_at(move.to_square)
-    taken = VALUE[captured.piece_type] if captured else (1 if board.is_en_passant(move) else 0)
-    after = board.copy(stack=False)
-    after.push(move)
-    attackers = after.attackers(not piece.color, move.to_square)
-    if not attackers:
-        return 0
-    cheapest = min(VALUE[after.piece_at(sq).piece_type] or 100 for sq in attackers)
-    defended = bool(after.attackers(piece.color, move.to_square))
-    value = VALUE[piece.piece_type]
-    if cheapest < value or not defended:
-        return max(0, value - taken)
-    return 0
 
 
 def real_sacrifice_plies(pgn_text: str, plies: list[int]) -> set[int]:

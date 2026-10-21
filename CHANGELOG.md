@@ -4,6 +4,12 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Added
+- Your chaos map (You, web and phone): the opening positions you reach most often, how predictably opponents
+  steer into each, your usual move, and the one sound move that sets opponents at your level the hardest problem
+  (P_fail × stake, the Tal bot's measure). `GET`/`POST /users/chaos-map`, new `chaos_map` table (RLS). Moves that
+  clearly ask more than your usual one become a Train drill, "chaos move in your opening"
+
 ### Fixed
 - Analysis past ~300 games: the baseline recompute put every game id in one URL (HTTP 414) and failed each
   analysis right after it was marked complete, skipping its chaos pass, find-rate rule and idea tagger; the ids
@@ -12,6 +18,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   every 5 games
 
 ### Changed
+- Brilliant needs a piece genuinely on offer (ADR 0007): attacked by something cheaper, or attacked and
+  undefended. A defended piece only an equal could take no longer counts. Style vectors move to version 3; run
+  `scripts/backfill_brilliant_find_rate.py` to re-apply the rules to stored games
 - Licence: GNU AGPL-3.0 (was MIT), see ADR 0006 — open source and self-hostable; a modified version run as a
   service must share its source; compatible with python-chess (GPL-3.0+)
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/shell/app-shell";
 import { EdgeState } from "@/components/ui/edge-state";
+import { ChaosMapCard } from "@/components/you/chaos-map";
 import { YouView } from "@/components/you/you-view";
 import { getYou } from "@/lib/api";
 import type { YouApi } from "@/types/chess";
@@ -28,6 +29,8 @@ export default function YouPage() {
       ) : (
         <div className="h-[2px] w-1/3 animate-pulse bg-accent" role="progressbar" aria-label="Loading" />
       )}
+      {/* Its own request: the map shows even while the heavier You data is still loading. */}
+      <ChaosMapCard />
     </AppShell>
   );
 }

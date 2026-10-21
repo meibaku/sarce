@@ -2,6 +2,7 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
+import { ChaosMapCard } from "@/components/chaos-map";
 import { Card, Choice, Edge, Label, Link, Loading, Screen, T, Uncalibrated, s } from "@/components/ui";
 import { getYou } from "@/lib/api";
 import { color, ramp } from "@/lib/theme";
@@ -14,7 +15,14 @@ export default function You() {
   const { data, failed, reload } = useLoad(getYou);
   const [tc, setTc] = useState(0);
   const [ref, setRef] = useState<(typeof REFS)[number]>("Tal");
-  if (failed || !data) return <Screen title="you">{failed ? <Edge kind="offline" action="Try again" onAction={reload} /> : <Loading />}</Screen>;
+  // The chaos map has its own request, so it shows even when the heavier You data is slow or fails.
+  if (failed || !data)
+    return (
+      <Screen title="you">
+        {failed ? <Edge kind="offline" action="Try again" onAction={reload} /> : <Loading />}
+        <ChaosMapCard />
+      </Screen>
+    );
   if (data.games === 0) return <Screen title="you"><Edge kind="no-games" action="Connect an account" onAction={() => router.push("/onboarding")} /></Screen>;
   const weekly = data.brilliant?.weekly ?? [];
   const max = Math.max(15, ...weekly.map((w) => w ?? 0));
@@ -134,6 +142,8 @@ export default function You() {
           <Link label="Open the library →" onPress={() => router.push("/library")} />
         </Card>
       )}
+
+      <ChaosMapCard />
     </Screen>
   );
 }

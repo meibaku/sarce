@@ -33,12 +33,13 @@ def _bare(san: str | None) -> str:
     return (san or "").rstrip("+#!?")
 
 
-def check_move(fen: str, uci: str, answer: str | None, sacrifice_drill: bool, loss=None, reference_player: str | None = None) -> dict:
+def check_move(fen: str, uci: str, answer: str | None, sacrifice_drill: bool, loss=None, reference_player: str | None = None, chaos_drill: bool = False) -> dict:
     """
     Your move in a drill, checked on the server: its SAN, whether it is the drill's answer and,
     when it isn't, whether it still holds (within SAFE_TOL expected points of best, via `loss`).
     A "find the sacrifice" drill wants the sacrifice itself, so another sound move is "sound,
-    but not the sacrifice". Raises ValueError on an illegal move.
+    but not the sacrifice"; a chaos-map drill wants the move that asks the most, so another sound
+    move "holds, but sets an easier problem". Raises ValueError on an illegal move.
     """
     from app.lenses.config import SAFE_TOL
 
@@ -67,8 +68,12 @@ def check_move(fen: str, uci: str, answer: str | None, sacrifice_drill: bool, lo
             if sound is False
             else f"{reference_player} played {answer}."
         )
+    elif matched and chaos_drill:
+        line = "That's the one. Now your opponent has to find the answer."
     elif matched:
         line = "That's the move." if not sacrifice_drill else "That's the sacrifice."
+    elif sound and chaos_drill:
+        line = f"That holds, and it's a calmer problem for them. {answer} asks more."
     elif sound and sacrifice_drill:
         line = f"Sound, but not the sacrifice. {answer} was there."
     elif sound:
@@ -272,10 +277,15 @@ class TrainService:
 
         saved = drill_items(PositionStore().list(owner_id))
         tal = reference_items(ecos, datetime.now(timezone.utc).date().toordinal())
+        from app.services.chaos_map import ChaosMapService
+        from app.services.chaos_map import drill_items as chaos_drills
+
+        chaos = chaos_drills(ChaosMapService().get(owner_id))
         # Interleave, putting the week's focus first, and skip drills not yet due.
-        order = {"safe_reply": [trap_items, missed, other_side, tal, saved], "calm_after_sacrifice": [other_side, missed, trap_items, tal, saved]}.get(
-            focus or "", [missed, trap_items, tal, other_side, saved]
-        )
+        order = {
+            "safe_reply": [trap_items, missed, other_side, chaos, tal, saved],
+            "calm_after_sacrifice": [other_side, missed, trap_items, chaos, tal, saved],
+        }.get(focus or "", [missed, chaos, trap_items, tal, other_side, saved])
         wanted = next((i for pool in order for i in pool if i["key"] == first), None) if first else None
         pools = [[i for i in pool if i["key"] not in due and i is not wanted] for pool in order]
         if wanted:

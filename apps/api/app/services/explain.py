@@ -22,7 +22,7 @@ import chess.pgn
 
 from app.config import settings
 from app.db.supabase import get_supabase
-from app.services.brilliant import FIND_RATE_MAX, MAX_BRILLIANT_EVAL_LOSS, MIN_BRILLIANT_SACRIFICE_VALUE, material_sacrifice
+from app.services.brilliant import FIND_RATE_MAX, MAX_BRILLIANT_EVAL_LOSS, MIN_BRILLIANT_SACRIFICE_VALUE
 from app.services.library import real_offer
 from app.services.position_evals import fen_key
 from app.services.review import LADDER, ladder_p_fail, nearest_rung
@@ -60,7 +60,8 @@ def steps(board: chess.Board, ucis: list[str]) -> list[dict]:
 
 def brilliant_checks(board: chess.Board, move: chess.Move, eval_before: float | None, eval_after: float | None, find_prob: float | None, rung: int) -> list[dict]:
     """Each Brilliant rule, with whether it held and the number behind it."""
-    offered = material_sacrifice(board, move)
+    # The strict test (ADR 0007): the number the Brilliant verdict actually uses.
+    offered = real_offer(board, move)
     allowed = min(settings.brilliant_eval_margin, MAX_BRILLIANT_EVAL_LOSS)
     gap = None if eval_before is None or eval_after is None else round(max(0.0, eval_before - eval_after), 2)
     legal = board.legal_moves.count()
@@ -70,7 +71,7 @@ def brilliant_checks(board: chess.Board, move: chess.Move, eval_before: float | 
             "passed": offered >= MIN_BRILLIANT_SACRIFICE_VALUE,
             "detail": f"You offered {offered} point{'s' if offered != 1 else ''} of material; Brilliant needs at least {MIN_BRILLIANT_SACRIFICE_VALUE} (a minor piece). Pawns alone don't count."
             if offered
-            else f"Nothing was offered; Brilliant needs at least {MIN_BRILLIANT_SACRIFICE_VALUE} points (a minor piece) put en prise.",
+            else f"Nothing was really on offer (a piece counts when something cheaper attacks it, or it is undefended); Brilliant needs at least {MIN_BRILLIANT_SACRIFICE_VALUE} points.",
         },
         {
             "rule": "It holds up",
