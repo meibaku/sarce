@@ -54,7 +54,7 @@ class BaselineService:
     ) -> dict:
         """Compute baseline directly from completed game analyses."""
         sb = get_supabase()
-        games_query = sb.table("games").select("id").eq("analysis_status", "complete")
+        games_query = sb.table("games").select("id").eq("analysis_status", "complete").neq("source", "sarce_bot")
         if user_id:
             games_query = games_query.eq("user_id", user_id)
         if chess_com_username:
@@ -124,6 +124,7 @@ class BaselineService:
             sb.table("games")
             .select("id, played_at, opponent, game_analyses(brilliant_pct)")
             .eq("analysis_status", "complete")
+            .neq("source", "sarce_bot")  # bot games are practice
             .order("played_at")
         )
         if user_id:

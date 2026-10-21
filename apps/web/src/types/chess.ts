@@ -322,3 +322,229 @@ export interface HomeApi {
     trapsSurvived: number | null;
   } | null;
 }
+
+export type FeltAnswer = "yes" | "partly" | "no";
+
+/** GET /games/{id}/summary (app/services/summary.py). */
+export interface SummaryApi {
+  gameId: string;
+  opponent: string | null;
+  result: "win" | "loss" | "draw" | null;
+  userColor: "white" | "black" | null;
+  timeControl: string | null;
+  calibrated: boolean;
+  moves: number;
+  headline: string;
+  outcome: { kicker: string; accent: boolean; text: string };
+  brilliant: { pct: number; count: number; of: number; rolling: number | null; goalLo: number; goalHi: number };
+  moments: (HomeMoment & { clock: string | null })[];
+  analysing: boolean;
+  felt: FeltAnswer | null;
+  styleRead: number;
+  styleReadVersion: string;
+  lichessUrl: string | null;
+  /** This game's questions, already rotated and cut to the question budget. */
+  questions?: SummaryQuestion[];
+  /** How the game went against "Today I want to…", graded after the game. */
+  intention?: { intent: string; label: string; met: boolean | null; line: string } | null;
+}
+
+export type CheckinAnswer = "distracted" | "time_pressure" | "on_purpose" | "nothing";
+
+export type SummaryQuestion =
+  | { kind: "felt"; answer: FeltAnswer | null }
+  | { kind: "intent"; ply: number; label: string; ask: string; answered: boolean }
+  | { kind: "checkin"; ply: number; label: string; flagged: boolean; answer: CheckinAnswer | null };
+
+export type IntentType = "calculated" | "intuitive" | "bluff";
+
+/** GET /games/{id}/review (app/services/review.py). */
+export interface ReviewMoment extends HomeMoment {
+  label: string;
+  clock: string | null;
+  kind: "set" | "survived" | "missed";
+  ask: string;
+  hot: string[];
+  pFail: number[] | null;
+  fallsLine: string;
+  mirror: string;
+  plan: string | null;
+  intent: { type: IntentType | null; note: string } | null;
+}
+
+export interface ReviewApi {
+  gameId: string;
+  opponent: string | null;
+  result: "win" | "loss" | "draw" | null;
+  userColor: "white" | "black" | null;
+  timeControl: string | null;
+  calibrated: boolean;
+  initialFen: string;
+  positions: { ply: number; san: string; uci: string; fen: string }[];
+  moments: ReviewMoment[];
+  ideas: { family: string; startPly: number; endPly: number; verdict: "worked" | "refuted" | "fizzled"; isPivot: boolean }[];
+}
+
+/** GET /users/you (app/services/you.py). Nulls rest on fewer than 5 games. */
+export interface YouApi {
+  games: number;
+  goalLo: number;
+  goalHi: number;
+  brilliant: {
+    pct: number | null;
+    spread: number | null;
+    weekly: (number | null)[];
+    from: number | null;
+    brilliantMoves: number;
+    yourMoves: number;
+    /** Week index (0–11) where the find-rate rule starts, for the "style v2" marker. */
+    ruleChangedWeek?: number | null;
+    findRateRule?: boolean;
+  } | null;
+  styleSchema?: number;
+  fingerprint: { traits: string[]; levels: number[][]; sentence: string } | null;
+  /** `refs` holds each scored reference player's value on the axis (data/reference_axes.json). */
+  axes: { name: string; you: number | null; refs?: Record<string, number | null> }[] | null;
+  references?: Record<string, { games: number; model: string | null }>;
+  timeControls: { class: "bullet" | "blitz" | "rapid"; games: number; pct: number | null; spread: number | null; calibrated: boolean }[];
+  survival: {
+    gameId: string;
+    ply: number;
+    opponent: string | null;
+    moveNumber: number;
+    survived: boolean;
+    reply: string | null;
+    pFail: number | null;
+    clock: string | null;
+    timeControl: string | null;
+    trapsSurvived: number | null;
+  } | null;
+  sacrifices: { played: number; held: number; withNotes: number } | null;
+}
+
+/** GET /users/sacrifices (app/services/library.py). */
+export interface SacrificeRow {
+  gameId: string;
+  ply: number;
+  label: string;
+  glyph: "!!" | "!?" | "✓" | "?!" | "?";
+  type: string;
+  material: number;
+  opponent: string | null;
+  playedAt: string | null;
+  held: boolean;
+  note: string | null;
+  /** The game's opening (games.eco / games.opening); null for games imported before ECO extraction. */
+  eco?: string | null;
+  opening?: string | null;
+}
+
+/** GET /users/recap (app/services/recap.py). */
+export interface RecapApi {
+  week: string;
+  games: number;
+  feltLikeYou: number;
+  bars: { gameId: string; styleRead: number; you: boolean }[];
+  brilliant: { pct: number | null; spread: number | null; games: number; change: number | null };
+  best: { gameId: string; ply: number; label: string } | null;
+  lastFocus: { id: string; label: string | null; line: string | null } | null;
+  streakWeeks: number;
+  focuses: { id: string; label: string }[];
+}
+
+export type FocusKind = "weekly" | "today";
+
+/** GET /users/train (app/services/train.py). */
+export interface DrillItem {
+  key: string;
+  source: string;
+  meta: string;
+  title: string;
+  detail: string;
+  fen: string;
+  answer: string | null;
+  gameId: string | null;
+  ply: number | null;
+  /** Legal moves in `fen`, as UCI, so the board can offer targets. */
+  legal?: string[];
+}
+
+/** Your move in a drill, checked on the server. `sound` is null when the engine couldn't say. */
+export interface DrillCheck {
+  san: string;
+  uci: string;
+  matched: boolean;
+  sound: boolean | null;
+  line: string;
+  fen: string;
+}
+
+export interface TrainApi {
+  band: number;
+  items: DrillItem[];
+  waiting: number;
+  focus: string | null;
+}
+
+export type Confidence = "guessed" | "unsure" | "sure";
+
+/** Sarce bots (app/services/bots.py): stateless positions with their legal moves. */
+export type BotId = "defender" | "tal" | "swindler";
+
+export interface BotPosition {
+  fen: string;
+  legal: string[];
+  status: "ongoing" | "checkmate" | "stalemate" | "draw";
+  turn: "white" | "black";
+  playerSan?: string | null;
+  botUci?: string | null;
+  botSan?: string | null;
+}
+
+/** GET/PUT /users/settings (app/services/settings_store.py). */
+export interface SettingsApi {
+  goalLo: number;
+  goalHi: number;
+  questionBudget: 0 | 1 | 2;
+  quietUntil: string | null;
+  sources: "chess_com" | "lichess" | "both";
+  theme: "light" | "dark" | "system";
+  playfulMascot: boolean;
+  motion: "system" | "full" | "reduced";
+  chessComUsername?: string | null;
+  lichessUsername?: string | null;
+  /** Opt-in: screenshot reading and video summaries are sent to Anthropic (apps/api/app/services/ai.py). */
+  aiHelp?: boolean;
+  /** Whether the server has Claude credentials at all (read-only). */
+  aiAvailable?: boolean;
+  kept?: { games: number; notes: number };
+}
+
+/** A saved position (GET /users/positions); `source_*`, `excerpt` and `ai_summary` when it came from a video. */
+export interface SavedPosition {
+  id: string;
+  fen: string;
+  title: string;
+  note: string;
+  best_san: string | null;
+  game_id: string | null;
+  ply: number | null;
+  source_url: string | null;
+  source_time_s: number | null;
+  excerpt: string;
+  ai_summary: string;
+  created_at: string;
+}
+
+/** GET /users/sync (app/services/sync.py). */
+export interface SyncStatus {
+  chessComUsername: string | null;
+  lichessUsername: string | null;
+  sources: "chess_com" | "lichess" | "both";
+  lastSyncedAt: string | null;
+  lastSyncErrors: string[];
+  pending: number;
+  processing: number;
+  autoSync: boolean;
+  chaosPass: boolean;
+}
