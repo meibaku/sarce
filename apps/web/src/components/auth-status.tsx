@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { authConfigured } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/client";
 
-/** Header control: who is signed in, with sign in / sign out. Hidden when auth is not configured. */
+/** Settings row: who is signed in, with sign in / sign out. Hidden when auth is not configured (local-first). */
 export function AuthStatus() {
   const [email, setEmail] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -29,7 +29,7 @@ export function AuthStatus() {
     return (
       <Link
         href="/login"
-        className="rounded-md border border-accent/40 px-3 py-1.5 text-sm text-accent transition hover:border-accent"
+        className="text-[13px] font-medium text-accent-text"
       >
         Sign in
       </Link>
@@ -37,15 +37,15 @@ export function AuthStatus() {
   }
 
   return (
-    <div className="flex items-center gap-2 text-sm">
-      <span className="text-foreground/60">{email}</span>
+    <div className="flex flex-wrap items-center gap-3 text-[13px]">
+      <span className="text-ink-2">Signed in as {email}</span>
       <button
         type="button"
         onClick={async () => {
           await createClient().auth.signOut();
           window.location.reload();
         }}
-        className="rounded-md border border-white/15 px-3 py-1.5 text-foreground/70 transition hover:border-white/30"
+        className="text-[13px] font-medium text-accent-text"
       >
         Sign out
       </button>

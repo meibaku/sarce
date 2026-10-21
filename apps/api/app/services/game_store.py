@@ -5,7 +5,7 @@ import chess
 import chess.pgn
 
 from app.db.supabase import get_supabase
-from app.services.pgn_parser import parse_chess_com_game
+from app.services.pgn_parser import opening_from_pgn, parse_chess_com_game
 
 
 class GameStore:
@@ -34,6 +34,7 @@ class GameStore:
                 "time_control": parsed["time_control"],
                 "result": parsed["result"],
                 "user_color": parsed["user_color"],
+                **dict(zip(("eco", "opening"), opening_from_pgn(parsed["pgn"]))),
                 # No analysis_status here: new rows default to 'pending', and re-importing
                 # a game must not reset one that has already been analysed.
             }
@@ -58,6 +59,7 @@ class GameStore:
                 "user_id": user_id,
                 "chess_com_username": username,
                 "source": source,
+                **dict(zip(("eco", "opening"), opening_from_pgn(parsed.get("pgn")))),
                 # analysis_status is left to the column default; see store_imported_games.
             }
             sb.table("games").upsert(row, on_conflict="external_id").execute()

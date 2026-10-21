@@ -23,7 +23,7 @@
 | [../SECURITY.md](../SECURITY.md) | Vulnerability reporting |
 | [../CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) | Community standards |
 | [../CHANGELOG.md](../CHANGELOG.md) | Version history |
-| [../LICENSE](../LICENSE) | MIT license |
+| [../LICENSE](../LICENSE) | GNU AGPL-3.0 (ADR 0006) |
 
 ## API
 
