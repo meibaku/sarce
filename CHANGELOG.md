@@ -13,6 +13,12 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   clearly ask more than your usual one become a Train drill, "chaos move in your opening"
 
 ### Fixed
+- You took ~33 s (and sometimes hit the database statement timeout) on a 3,000-game library: sacrifice offers are
+  parsed once per finished game and cached, the lens query reads only the three `details` keys it uses, and the
+  heavy screens (Home, You, Library, Recap, Train) run off the event loop so one slow request no longer stalls
+  the rest. Warm You load: ~2 s
+- Library sacrifice glyphs: chaos verdicts were looked up per game and hit PostgREST's 1000-row cap, dropping
+  most of them; they are now fetched for the tagged moves only
 - Analysis past ~300 games: the baseline recompute put every game id in one URL (HTTP 414) and failed each
   analysis right after it was marked complete, skipping its chaos pass, find-rate rule and idea tagger; the ids
   are now paged and looked up in chunks. The chaos backfill also catches up the idea tagger

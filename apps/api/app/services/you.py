@@ -96,6 +96,10 @@ def fingerprint_sentence(rows: dict[str, list[float | None]]) -> str:
     return sentence + "."
 
 
+DETAIL_KEYS = ("faced_chaos", "elo", "p_fail")
+LENS_COLUMNS = "game_id, ply, lens, score, verdict, " + ", ".join(f"{k}:details->{k}" for k in DETAIL_KEYS)
+
+
 class YouService:
     def you(self, user_id: str | None, username: str | None) -> dict:
         sb = get_supabase()
@@ -128,8 +132,12 @@ class YouService:
             part = ids[start : start + CHUNK]
             moves += self._paged(lambda: sb.table("game_moves").select("game_id, ply, san, quality, signals, is_brilliant").in_("game_id", part).order("id"))
             lens += self._paged(
-                lambda: sb.table("move_lens_scores").select("game_id, ply, lens, score, verdict, details").in_("game_id", part).in_("lens", ["chaos", "survival"]).order("game_move_id")
+                lambda: sb.table("move_lens_scores").select(LENS_COLUMNS).in_("game_id", part).in_("lens", ["chaos", "survival"]).order("game_move_id")
             )
+        for r in lens:
+            # Only three keys of `details` are read; selecting them alone keeps the blob off the wire.
+            if "details" not in r:
+                r["details"] = {k: r.pop(k, None) for k in DETAIL_KEYS}
 
         by_game_moves: dict[str, list[dict]] = {}
         for m in moves:

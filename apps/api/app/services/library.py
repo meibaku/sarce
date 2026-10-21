@@ -30,6 +30,23 @@ def real_sacrifice_plies(pgn_text: str, plies: list[int]) -> set[int]:
     return {p for p in plies if p < len(positions) and real_offer(*positions[p]) > 0}
 
 
+# What each tagged ply of a finished game really offered: {game_id: {ply: (kind, given) or None}}. A finished
+# game's moves never change, so its PGN is parsed once per process, not on every Library/You load (the parse was
+# most of a multi-second request on a large library).
+_OFFERS: dict[str, dict[int, tuple[str, int] | None]] = {}
+
+
+def offers_in(game_id: str, pgn_text: str, plies: list[int]) -> dict[int, tuple[str, int] | None]:
+    """`offered(...)` for each of `plies` that genuinely offered material (real_offer > 0), else None; cached."""
+    cached = _OFFERS.setdefault(game_id, {})
+    missing = [p for p in plies if p not in cached]
+    if missing:
+        positions = boards_before(pgn_text)
+        for p in missing:
+            cached[p] = offered(*positions[p]) if p < len(positions) and real_offer(*positions[p]) > 0 else None
+    return cached
+
+
 def offered(board: chess.Board, move: chess.Move) -> tuple[str, int]:
     """("Exchange", 2) for Rxe5 taking a knight; ("Piece", 3) for a bishop left en prise."""
     piece = board.piece_at(move.from_square)
@@ -96,28 +113,34 @@ class LibraryService:
             part = ids[start : start + CHUNK]
             moves += (
                 sb.table("game_moves")
-                .select("game_id, ply, san, uci, quality, is_brilliant, signals")
+                .select("id, game_id, ply, san, uci, quality, is_brilliant, signals")
                 .in_("game_id", part)
                 .filter("signals", "cs", '["sacrifice"]')  # signals is jsonb
                 .execute()
                 .data
                 or []
             )
-            for r in sb.table("move_lens_scores").select("game_id, ply, verdict").in_("game_id", part).eq("lens", "chaos").execute().data or []:
-                chaos[(r["game_id"], r["ply"])] = r["verdict"]
             for n in sb.table("move_annotations").select("game_id, ply, note").in_("game_id", part).execute().data or []:
                 notes[(n["game_id"], n["ply"])] = n["note"]
 
-        boards: dict[str, list] = {}
+        # Chaos verdicts for just these moves. Asking per game returned every ply's row and hit PostgREST's
+        # 1000-row cap, silently dropping verdicts (and so glyphs) for most games.
+        move_ids = [m["id"] for m in moves]
+        for start in range(0, len(move_ids), CHUNK):
+            for r in sb.table("move_lens_scores").select("game_id, ply, verdict").in_("game_move_id", move_ids[start : start + CHUNK]).eq("lens", "chaos").execute().data or []:
+                chaos[(r["game_id"], r["ply"])] = r["verdict"]
+
+        tagged: dict[str, list[int]] = {}
+        for m in moves:
+            tagged.setdefault(m["game_id"], []).append(m["ply"])
+        offers = {gid: offers_in(gid, games[gid].get("pgn") or "", plies) for gid, plies in tagged.items()}
         rows = []
         for m in moves:
             game = games[m["game_id"]]
-            if m["game_id"] not in boards:
-                boards[m["game_id"]] = boards_before(game.get("pgn") or "")
-            plies = boards[m["game_id"]]
-            if m["ply"] >= len(plies) or real_offer(*plies[m["ply"]]) <= 0:
+            offer = offers[m["game_id"]].get(m["ply"])
+            if offer is None:
                 continue  # Phase 1 tagged it, but nothing was really on offer
-            kind, given = offered(*plies[m["ply"]])
+            kind, given = offer
             held = m.get("quality") in HELD
             rows.append({
                 "gameId": m["game_id"],
