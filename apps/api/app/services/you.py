@@ -168,8 +168,12 @@ class YouService:
         brilliant_moves = sum(1 for m in moves if m.get("is_brilliant"))
         first_pct = next((p for p in weekly_pct if p is not None), None)
         # The first week scored under the find-rate rule (ADR 0004), for the trend's "style v2" marker.
-        v2_weeks = [w for w in range(WEEKS) if any(((g.get("analysis") or {}).get("style_vector") or {}).get("version") == 2 for g in weekly_games[w])]
-        schema = 2 if any(((g.get("analysis") or {}).get("style_vector") or {}).get("version") == 2 for g in games) else 1
+        def version(g: dict) -> int:
+            return int(((g.get("analysis") or {}).get("style_vector") or {}).get("version") or 1)
+
+        # Version 2 added the find-rate rule (ADR 0004), version 3 the real-offer rule (ADR 0007).
+        v2_weeks = [w for w in range(WEEKS) if any(version(g) >= 2 for g in weekly_games[w])]
+        schema = max((version(g) for g in games), default=1)
 
         mine, refs = axis_values(overall), references()
         return {
@@ -183,7 +187,7 @@ class YouService:
                 "brilliantMoves": brilliant_moves,
                 "yourMoves": len(moves),
                 "ruleChangedWeek": v2_weeks[0] if v2_weeks and v2_weeks[0] > 0 else None,
-                "findRateRule": schema == 2,
+                "findRateRule": schema >= 2,
             },
             "styleSchema": schema,
             "fingerprint": {

@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from app.deps import current_user_id, resolve_user_id, scoped_user_id
 
+from app.services.chaos_map import CHAOS_DRILL, ChaosMapService
 from app.services.chess_com import normalize_chess_com_username
 from app.services.home import HomeService
 from app.services.lens_service import LensService
@@ -25,6 +26,8 @@ recap_service = RecapService()
 train_service = TrainService()
 settings_store = SettingsStore()
 sync_service = SyncService()
+chaos_map_service = ChaosMapService()
+_chaos_map_building: set[str] = set()  # owners whose map is being rebuilt right now
 
 
 @router.get("/home")
@@ -118,6 +121,7 @@ async def check_drill_move(body: DrillMove):
             body.fen, body.uci, body.answer, body.source == "find the sacrifice", bot_service.move_loss,
             # "<Master> in your openings" drills: the answer is that player's move, so feedback names them.
             reference_player=body.source.removesuffix(" in your openings") if (body.source or "").endswith(" in your openings") else None,
+            chaos_drill=body.source == CHAOS_DRILL,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -233,6 +237,30 @@ async def sync_now(background_tasks: BackgroundTasks, user_id: str | None = Quer
     owner = resolve_user_id(user_id)
     background_tasks.add_task(sync_service.sync, owner, analysis_service.analyze_pending)
     return {"started": True}
+
+
+@router.get("/chaos-map")
+async def get_chaos_map(user_id: str | None = Query(None)):
+    """Your chaos map: frequent opening positions and the sound move that asks the most of your opponents."""
+    owner = resolve_user_id(user_id)
+    return {"positions": chaos_map_service.get(owner), "building": owner in _chaos_map_building}
+
+
+def _build_chaos_map(owner: str) -> None:
+    try:
+        chaos_map_service.build(owner)
+    finally:
+        _chaos_map_building.discard(owner)
+
+
+@router.post("/chaos-map")
+async def rebuild_chaos_map(background_tasks: BackgroundTasks, user_id: str | None = Query(None)):
+    """Rebuilds the map in the background (a minute or two of engine work); GET shows it when done."""
+    owner = resolve_user_id(user_id)
+    if owner not in _chaos_map_building:
+        _chaos_map_building.add(owner)
+        background_tasks.add_task(_build_chaos_map, owner)
+    return {"building": True}
 
 
 @router.get("/{username}/chaos-summary")

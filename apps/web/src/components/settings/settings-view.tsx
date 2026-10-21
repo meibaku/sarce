@@ -168,7 +168,7 @@ export function SettingsView({
               <span className="text-muted">Human model</span>
               <span className="font-mono">Maia-2 · validated on 1+0</span>
               <span className="text-muted">Style schema</span>
-              <span className="font-mono">v2 · Brilliant needs ≤20% find-rate</span>
+              <span className="font-mono">v3 · Brilliant: a piece truly on offer, found by ≤20%</span>
               <span className="text-muted">Thresholds</span>
               <span className="font-mono">v0 · provisional</span>
             </div>
