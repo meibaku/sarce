@@ -4,8 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { RecapView } from "@/components/recap/recap-view";
 import { AppShell } from "@/components/shell/app-shell";
-import { PrimaryLink } from "@/components/ui/buttons";
-import { Card } from "@/components/ui/card";
+import { EdgeState } from "@/components/ui/edge-state";
 import { getRecap, setFocus } from "@/lib/api";
 import type { RecapApi } from "@/types/chess";
 
@@ -29,11 +28,7 @@ export default function RecapPage() {
           }}
         />
       ) : empty ? (
-        <Card className="items-start gap-3">
-          <span className="text-[18px] font-medium">Your first recap comes after a few games</span>
-          <span className="text-[13px] leading-[1.55] text-ink-2">Once games are analysed, each week gets a short recap and a focus.</span>
-          <PrimaryLink href="/">Back to Home</PrimaryLink>
-        </Card>
+        <EdgeState kind="too-few" detail="Once games are analysed, each week gets a short recap and a focus." action="Back to Home" href="/" />
       ) : (
         <div className="h-[2px] w-1/3 animate-pulse bg-accent" role="progressbar" aria-label="Loading" />
       )}

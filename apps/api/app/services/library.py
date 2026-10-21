@@ -103,8 +103,9 @@ class LibraryService:
         sb = get_supabase()
         q = (
             sb.table("games")
-            .select("id, played_at, opponent, pgn")
+            .select("id, played_at, opponent, pgn, eco, opening")
             .eq("analysis_status", "complete")
+            .neq("source", "sarce_bot")  # bot games are practice
             .order("played_at", desc=True)
             .limit(500)
         )
@@ -153,6 +154,8 @@ class LibraryService:
                 "playedAt": game.get("played_at"),
                 "held": held,
                 "note": notes.get((m["game_id"], m["ply"])),
+                "eco": game.get("eco"),
+                "opening": game.get("opening"),
             })
         rows.sort(key=lambda r: (r["playedAt"] or "", r["ply"]), reverse=True)
         return rows[:limit]
