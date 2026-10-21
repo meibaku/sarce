@@ -11,5 +11,5 @@ anthropic>=1.17.0
 youtube-transcript-api>=1.2.4
 
 # Testing
-pytest>=8.3.0
+pytest>=9.1.1
 pytest-asyncio>=1.4.0
