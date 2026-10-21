@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Sarce",
+    "slug": "sarce",
+    "scheme": "sarce",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#fafbfc"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.sarce.mobile"
+    },
+    "android": {
+      "package": "app.sarce.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#2f5f9e",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

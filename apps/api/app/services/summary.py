@@ -12,8 +12,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from app.db.supabase import get_supabase
+from app.services.distraction import flagged_plies
 from app.services.home import HELD, HomeService, _count, format_time_control, is_calibrated, pick_moments, window_brilliant
 from app.services.pgn_parser import mainline_positions
+from app.services.questions import CHECKIN_ANSWERS, checkin_target, grade_intention, intention_for, rotation
 
 FELT = ("yes", "partly", "no")
 STYLE_READ_VERSION = "v0"
@@ -80,11 +82,11 @@ def lichess_analysis_url(sans: list[str]) -> str:
 
 
 class SummaryService:
-    def summary(self, game_id: str, rolling_user_id: str | None) -> dict | None:
+    def summary(self, game_id: str, rolling_user_id: str | None, owner_id: str | None = None) -> dict | None:
         sb = get_supabase()
         rows = (
             sb.table("games")
-            .select("id, user_id, pgn, opponent, result, time_control, user_color, clocks_ms, chaos_data_status, felt_like_you, game_analyses(brilliant_pct, total_moves)")
+            .select("id, user_id, pgn, played_at, opponent, result, time_control, user_color, clocks_ms, chaos_data_status, felt_like_you, game_analyses(brilliant_pct, total_moves)")
             .eq("id", game_id)
             .limit(1)
             .execute()
@@ -103,10 +105,13 @@ class SummaryService:
 
         verdicts = [r["verdict"] for r in lens_rows if r["lens"] == "chaos"]
         real, calculated, cheap = (verdicts.count(v) for v in ("real_chaos", "calculated_risk", "cheap_chaos"))
-        sacrifices = [m for m in moves if "sacrifice" in (m.get("signals") or [])]
+        from app.services.library import real_sacrifice_plies
+
+        offered = real_sacrifice_plies(game.get("pgn") or "", [m["ply"] for m in moves if "sacrifice" in (m.get("signals") or [])])
+        sacrifices = [m for m in moves if m["ply"] in offered]
         held = sum(1 for m in sacrifices if m.get("quality") in HELD)
         clocks = game.get("clocks_ms") or []
-        moments = pick_moments(moves, lens_by_ply)
+        moments = pick_moments(moves, lens_by_ply, checkin=flagged_plies(game, moves, lens_rows))
         for m in moments:
             # Plies are 0-based over the whole game; clocks_ms has one entry per ply.
             m["clock"] = clock_label(clocks[m["ply"]] if m["ply"] < len(clocks) else None)
@@ -139,8 +144,53 @@ class SummaryService:
             "felt": game.get("felt_like_you"),
             "styleRead": style_read(pct, goal["goalLo"], real, calculated, cheap),
             "styleReadVersion": STYLE_READ_VERSION,
+            **self._questions(game, moves, lens_rows, sacrifices, moments, owner_id),
             "lichessUrl": lichess_analysis_url([p["san"] for p in line]) if line else None,
         }
+
+    def _questions(self, game: dict, moves: list[dict], lens_rows: list[dict], sacrifices: list[dict], moments: list[dict], owner_id: str | None) -> dict:
+        """This game's questions (rotation within the budget) and how today's intention went."""
+        from app.services.review import ask_for
+        from app.services.settings_store import SettingsStore
+
+        sb = get_supabase()
+        owner = owner_id or game.get("user_id")
+        budget = SettingsStore().get(owner)["questionBudget"] if owner else 1
+        notes = {n["ply"] for n in sb.table("move_annotations").select("ply").eq("game_id", game["id"]).execute().data or []}
+        answers = {a["ply"]: a["answer"] for a in sb.table("game_answers").select("ply, answer").eq("game_id", game["id"]).eq("kind", "checkin").execute().data or []}
+        questions = []
+        for kind in rotation(game["id"], budget):
+            if kind == "felt":
+                questions.append({"kind": "felt", "answer": game.get("felt_like_you")})
+            elif kind == "intent":
+                asked = [m for m in moments if m["glyph"] != "?!"]  # a check-in moment gets the check-in question
+                target = next((m for m in asked if m["ply"] not in notes), asked[0] if asked else None)
+                if target:
+                    questions.append({"kind": "intent", "ply": target["ply"], "label": move_label(target["ply"], target.get("san")), "ask": ask_for(target["glyph"], "set", False), "answered": target["ply"] in notes})
+            else:
+                ply, flagged = checkin_target(game["id"], flagged_plies(game, moves, lens_rows), [m["ply"] for m in moves])
+                if ply is not None:
+                    san = next((m.get("san") for m in moves if m["ply"] == ply), None)
+                    questions.append({"kind": "checkin", "ply": ply, "label": move_label(ply, san), "flagged": flagged, "answer": answers.get(ply)})
+
+        intents = sb.table("user_focus").select("value, set_at").eq("owner_id", owner).eq("kind", "today").execute().data or [] if owner else []
+        survival = [r["verdict"] for r in lens_rows if r["lens"] == "survival"]
+        intention = grade_intention(
+            intention_for(intents, game.get("played_at")),
+            [move_label(m["ply"], m.get("san")) for m in sacrifices],
+            survival.count("survived"),
+            survival.count("missed"),
+            sum(1 for r in lens_rows if r["lens"] == "chaos" and r["verdict"] == "cheap_chaos"),
+            sum(1 for m in moves if m.get("quality") in ("mistake", "blunder", "miss")),
+        )
+        return {"questions": questions, "intention": intention}
+
+    def set_checkin(self, game_id: str, ply: int, answer: str, flagged: bool) -> None:
+        if answer not in CHECKIN_ANSWERS:
+            raise ValueError(f"answer must be one of {CHECKIN_ANSWERS}")
+        get_supabase().table("game_answers").upsert(
+            {"game_id": game_id, "kind": "checkin", "ply": ply, "answer": answer, "flagged": flagged}, on_conflict="game_id,kind,ply"
+        ).execute()
 
     def set_felt(self, game_id: str, answer: str) -> None:
         if answer not in FELT:

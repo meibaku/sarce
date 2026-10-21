@@ -1,7 +1,7 @@
 # Sarce monorepo — agent instructions
 
 Chess **style identity** app (Tal-inspired, 6–10% Brilliant target) — not an engine accuracy coach.
-Package manager: **npm** (workspaces) for `apps/web`; **pip** for `apps/api`.
+Package manager: **npm** (workspaces) for `apps/web`, standalone npm for `apps/mobile`; **pip** for `apps/api`.
 
 ## Read first
 
@@ -18,6 +18,7 @@ Package manager: **npm** (workspaces) for `apps/web`; **pip** for `apps/api`.
 | Path | Role |
 | --- | --- |
 | `apps/web` | Next.js UI only — talks to the API through `src/lib/api.ts` |
+| `apps/mobile` | Expo (React Native) app — same API, own lockfile; see `apps/mobile/AGENTS.md` |
 | `apps/api` | FastAPI — Stockfish, classification and all business logic in `app/services/` |
 | `supabase/migrations` | Schema + RLS; append-only |
 | `docs/` | Philosophy, spec, ADRs (`docs/adr/`) |
