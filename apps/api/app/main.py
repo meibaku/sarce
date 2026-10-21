@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.deps import authenticate
-from app.routers import analysis, games, health, play, reference, scouting, traps, users, videos
+from app.routers import analysis, games, health, play, reference, scouting, shares, traps, users, videos
 from app.services.sync import sync_loop
 from app.services.job_queue import JobQueue, analysis_handlers, worker_loop
 
@@ -21,7 +21,7 @@ async def lifespan(_app: FastAPI):
     syncer = None
     if settings.auto_sync_enabled:
         syncer = asyncio.create_task(
-            sync_loop(users.sync_service, settings.local_user_id, games.analysis_service.analyze_pending, settings.sync_minutes)
+            sync_loop(users.sync_service, None, games.analysis_service.analyze_pending, settings.sync_minutes)
         )
     try:
         yield
@@ -59,3 +59,6 @@ app.include_router(traps.router, prefix="/traps", tags=["traps"], dependencies=A
 app.include_router(scouting.router, prefix="/scouting", tags=["scouting"], dependencies=AUTH)
 app.include_router(play.router, prefix="/play", tags=["play"], dependencies=AUTH)
 app.include_router(videos.router, prefix="/videos", tags=["videos"], dependencies=AUTH)
+app.include_router(shares.router, prefix="/shares", tags=["shares"], dependencies=AUTH)
+# Public on purpose: anyone with a share token reads that link's stored snapshot, nothing else.
+app.include_router(shares.public_router, prefix="/public/shares", tags=["shares"])

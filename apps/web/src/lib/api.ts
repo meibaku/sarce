@@ -262,6 +262,62 @@ export async function answerCheckin(gameId: string, ply: number, answer: import(
   });
 }
 
+/** A shared link's public snapshot (GET /public/shares/{token}); no names, no notes, not live. */
+export type PublicShare =
+  | {
+      kind: "summary";
+      result: "win" | "loss" | "draw" | null;
+      userColor: string | null;
+      timeControl: string | null;
+      headline: string;
+      outcome: string | null;
+      brilliant: { pct: number | null; count: number | null; of: number | null; goalLo: number | null; goalHi: number | null };
+      moments: { label: string; glyph: string; line: string }[];
+      styleRead: number | null;
+      sharedAt: string;
+    }
+  | {
+      kind: "sacrifice";
+      fen: string;
+      label: string;
+      glyph: string;
+      type: string;
+      material: number;
+      held: boolean;
+      opening: string | null;
+      playedAt: string | null;
+      sharedAt: string;
+    };
+
+export interface SharedLink {
+  id: string;
+  token: string;
+  kind: "summary" | "sacrifice";
+  game_id: string | null;
+  ply: number | null;
+  created_at: string;
+  revoked_at: string | null;
+  snapshot: { headline?: string; label?: string };
+}
+
+/** A read-only link to one of your summaries or sacrifices. */
+export async function createShare(kind: "summary" | "sacrifice", gameId: string, ply?: number) {
+  return fetchApi<{ id: string; token: string; kind: string }>(`/shares`, { method: "POST", body: JSON.stringify({ kind, gameId, ply }) });
+}
+
+export async function listShares() {
+  return fetchApi<{ links: SharedLink[] }>(`/shares`);
+}
+
+export async function revokeShare(id: string) {
+  return fetchApi<{ revoked: string }>(`/shares/${id}`, { method: "DELETE" });
+}
+
+/** Public: anyone with the token. */
+export async function getPublicShare(token: string) {
+  return fetchApi<PublicShare>(`/public/shares/${encodeURIComponent(token)}`);
+}
+
 export async function getSyncStatus() {
   return fetchApi<import("@/types/chess").SyncStatus>(`/users/sync`);
 }
