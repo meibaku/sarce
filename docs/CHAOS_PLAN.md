@@ -297,7 +297,7 @@ Tasks in `apps/web`:
 **Goal:** "Did I have an idea, did it land, did I pivot?"
 
 - Re-implement motif detectors, using Lichess's `lichess-puzzler` `cook.py` only as a reference for *which*
-  motifs matter — it is **AGPL-3.0**, so do not copy or port its code into this MIT repo: pin, fork, skewer, sacrifice,
+  motifs matter — the detectors here were written from scratch (Sarce is AGPL-3.0 now, ADR 0006, but no code was ported): pin, fork, skewer, sacrifice,
   discovered attack, hanging piece.
 - Idea windows (rules, configurable): **Gambit** (≥1 pawn down for ≥6 plies with EP ≥ 0.4),
   **King attack** (≥3 own units enter enemy king zone within 8 plies), **Squeeze** (opponent mobility and
