@@ -45,3 +45,15 @@ supabase/.temp/
 
 # Stockfish
 stockfish/
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Local agent / greploop review scratch
+.codex-remote-attachments/
+.greploop-comments.json
+.greploop-q.graphql
+.greploop-resolve.graphql
+
+# Chaos validation outputs (docs/CHAOS_PLAN.md, M4)
+apps/api/scripts/out/

@@ -1,0 +1,4 @@
+# Optional: the Maia-2 human move model (HUMAN_MODEL=maia2). See docs/adr/0002-human-model.md.
+# Not installed by default or in CI — it pulls PyTorch (about 1.6 GB installed).
+# Requires Python >= 3.10, < 3.13.
+maia2==0.11.0

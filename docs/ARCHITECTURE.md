@@ -33,7 +33,8 @@ services are required until you choose to deploy.
 | Game data | Postgres via `supabase start` on localhost |
 | Auth | Supabase local auth; optional `LOCAL_USER_ID` bypass for API-only dev |
 | Chess.com | Public API — no keys, works offline for cached games |
-| Analysis | In-process FastAPI `BackgroundTasks` (no Redis/queue needed locally) |
+| Analysis | In-process background work, several games at once (`ANALYSIS_WORKERS`); optional durable queue |
+| Phones | `apps/mobile` (Expo) calls the API directly (`EXPO_PUBLIC_API_URL`) |
 
 ### Production path (later)
 
@@ -42,7 +43,7 @@ Same architecture scales by:
 1. Deploying `apps/api` to a container (Fly.io, Railway, etc.) with Stockfish installed
 2. Pointing env vars at hosted Supabase instead of `supabase start`
 3. Replacing `BackgroundTasks` with a job queue (Celery, Supabase Edge Functions + pg_cron)
-4. Adding `apps/mobile` (Expo) as another client to the same API
+4. Shipping `apps/mobile` (Expo, already in the repo) through EAS as another client of the same API
 
 ---
 
@@ -51,11 +52,13 @@ Same architecture scales by:
 ```
 sarce/
 ├── apps/
-│   ├── web/                 # Next.js dashboard (Phase 1)
+│   ├── web/                 # Next.js app: the v1.0 screens
+│   ├── mobile/              # Expo app: the same screens for phones (own lockfile)
 │   └── api/                 # FastAPI analysis engine (Phase 1)
 │       ├── app/
 │       │   ├── routers/     # HTTP endpoints
 │       │   ├── services/    # Business logic
+│       │   ├── lenses/      # Style lenses — pure functions over stored data
 │       │   └── db/          # Supabase client
 │       ├── scripts/         # One-off batch jobs (Tal benchmark)
 │       └── tests/           # pytest suite

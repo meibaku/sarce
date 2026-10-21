@@ -1,0 +1,38 @@
+{
+  "Tal": {
+    "games": 40,
+    "axes": {
+      "Sacrifice rate": 18,
+      "Chaos created": 36,
+      "Calm under fire": 96,
+      "Initiative kept": 24
+    },
+    "model": "heuristic",
+    "source": "pgnmentor.com Tal corpus, every 60th of 2431 games",
+    "computedAt": "2026-10-20"
+  },
+  "Morphy": {
+    "games": 40,
+    "axes": {
+      "Sacrifice rate": 22,
+      "Chaos created": 31,
+      "Calm under fire": 90,
+      "Initiative kept": 22
+    },
+    "model": "heuristic",
+    "source": "pgnmentor.com Morphy corpus, every 5th of 211 games",
+    "computedAt": "2026-10-21"
+  },
+  "Shirov": {
+    "games": 40,
+    "axes": {
+      "Sacrifice rate": 20,
+      "Chaos created": 36,
+      "Calm under fire": 95,
+      "Initiative kept": 25
+    },
+    "model": "heuristic",
+    "source": "pgnmentor.com Shirov corpus, every 151st of 6069 games",
+    "computedAt": "2026-10-21"
+  }
+}

@@ -17,11 +17,28 @@ Thank you for helping build a chess companion focused on **style identity**, not
 
 ## Development workflow
 
-`main` is protected by a GitHub **ruleset** — all changes require a PR that passes CI.
+```text
+feat/* | fix/* | chore/*  →  staging  →  main
+```
+
+| Branch | Role |
+|--------|------|
+| `feat/*`, `fix/*`, `chore/*` | Short-lived work branches, one concern each |
+| `staging` | Integration — **default branch and default PR target** |
+| `main` | Released code only; promoted from `staging` |
+
+Both `staging` and `main` are meant to be protected by GitHub **rulesets** — all changes require a PR that passes CI.
+The JSON in `.github/rulesets/` only takes effect once an admin applies it; check the live state with
+`gh api repos/meibaku/sarce/rulesets` (see [QUALITY_GATES.md](docs/QUALITY_GATES.md)).
+Promote with the [promotion template](.github/PULL_REQUEST_TEMPLATE/promotion.md) (`npm run pr:promote`).
+Hotfix: branch from `main`, PR to `main`, then back-merge into `staging`.
+
+Keep PRs reviewable: aim for roughly **800 changed lines or fewer** (lockfiles excluded) and split larger work.
 
 ```powershell
 # 1. Fork & clone (or work on a branch if you have write access)
-git checkout -b feat/your-feature
+git fetch origin
+git checkout -b feat/your-feature origin/staging
 
 # 2. Set up locally — see README.md Quick start
 
@@ -31,8 +48,9 @@ npm run ci
 # 4. Commit (clear message, reference phase if relevant)
 git commit -m "feat: add reference player picker (Phase 2)"
 
-# 5. Push and open PR — template will guide philosophy check
+# 5. Push and open PR into staging — template will guide philosophy check
 git push -u origin feat/your-feature
+npm run pr:create -- --title "feat: add reference player picker (Phase 2)"
 ```
 
 ### Required CI checks (PR must pass)
@@ -42,6 +60,11 @@ git push -u origin feat/your-feature
 - `web-build` — Next.js production build
 - `migration-check` — Supabase migration sanity
 - `philosophy-check` — no punitive copy; Brilliant gauge present
+- `security-gates` — secret scan (`scripts/ci/secret-scan.mjs`) + `npm audit --audit-level=critical`
+
+### Secrets
+
+Never commit `.env*`, signing keys, or the Supabase service-role key. Run `npm run ci:security` before pushing.
 
 ## Before you code
 
@@ -102,7 +125,7 @@ Maintainers: install the Greptile GitHub App on the repo to enable reviews.
 
 ## License
 
-By contributing, you agree your contributions are licensed under the [MIT License](LICENSE).
+By contributing, you agree your contributions are licensed under the [GNU AGPL-3.0](LICENSE).
 
 ## Questions
 

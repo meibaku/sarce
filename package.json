@@ -1,8 +1,9 @@
 {
   "name": "sarce",
   "version": "0.1.0",
+  "license": "AGPL-3.0-only",
   "private": true,
-  "description": "Chess style analysis — track how your games match your preferred playing style",
+  "description": "Chess style analysis \u2014 track how your games match your preferred playing style",
   "workspaces": [
     "apps/web"
   ],
@@ -14,6 +15,10 @@
     "test:golden": "cd apps/api && pytest tests/test_golden_analysis.py -m stockfish -v",
     "test:arch": "cd apps/api && pytest tests/test_architecture.py tests/test_philosophy_contracts.py -v",
     "lint:web": "npm run lint --workspace=apps/web",
-    "ci": "npm run test:api && npm run lint:web && npm run build:web"
+    "scan:secrets": "node scripts/ci/secret-scan.mjs",
+    "ci:security": "npm run scan:secrets && npm audit --audit-level=critical",
+    "ci": "npm run scan:secrets && npm run test:api && npm run lint:web && npm run build:web",
+    "pr:create": "node scripts/gh-pr-staging.mjs",
+    "pr:promote": "node scripts/gh-pr-promote.mjs"
   }
 }

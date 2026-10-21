@@ -19,6 +19,27 @@ PIECE_VALUES = {
     chess.QUEEN: 9,
 }
 
+MIN_BRILLIANT_SACRIFICE_VALUE = PIECE_VALUES[chess.KNIGHT]
+MAX_BRILLIANT_EVAL_LOSS = 0.25
+
+# ADR 0004: a Brilliant move must also be hard to find — players at the relevant rating play it at
+# most this often (human model probability of the played move).
+FIND_RATE_MAX = 0.20
+
+
+def hard_to_find(probs: dict[str, float] | None, move_uci: str) -> bool | None:
+    """True/False for the find-rate clause; None when there is no human-model data to judge by."""
+    if not probs:
+        return None
+    return probs.get(move_uci, 0.0) <= FIND_RATE_MAX
+
+
+def piece_value(piece: chess.Piece | None) -> int:
+    """Return simple material value for a piece."""
+    if piece is None:
+        return 0
+    return PIECE_VALUES.get(piece.piece_type, 0)
+
 
 def material_for_side(board: chess.Board, color: chess.Color) -> int:
     """Total material value for one side."""
@@ -29,16 +50,64 @@ def material_for_side(board: chess.Board, color: chess.Color) -> int:
 
 def material_sacrifice(board: chess.Board, move: chess.Move) -> int:
     """
-    Positive value = moving side loses material on this move (sacrifice).
+    Positive value = material the moving side gives up or offers.
 
-    Compares moving side's material before and after the move.
+    Sacrifices are often offered before they are accepted, so this combines
+    immediate material loss with the value of the moved piece if it can be
+    captured on the opponent's next legal move.
     """
     color = board.turn
+    moving_piece = board.piece_at(move.from_square)
+    captured_piece = board.piece_at(move.to_square)
+    captured_value = piece_value(captured_piece)
+    if board.is_en_passant(move):
+        captured_value = PIECE_VALUES[chess.PAWN]
+
     before = material_for_side(board, color)
     board.push(move)
     after = material_for_side(board, color)
+    immediate_loss = max(0, before - after)
+
+    offered_loss = 0
+    moved_piece_after = board.piece_at(move.to_square)
+    if moved_piece_after and moved_piece_after.color == color:
+        moved_value = piece_value(moved_piece_after)
+        if any(reply.to_square == move.to_square for reply in board.legal_moves):
+            offered_loss = max(offered_loss, moved_value - captured_value)
+
     board.pop()
-    return before - after
+
+    # Promotion changes the moved piece value; do not count that as a sacrifice.
+    if moving_piece and move.promotion:
+        offered_loss = min(offered_loss, piece_value(moving_piece) - captured_value)
+
+    return max(immediate_loss, offered_loss)
+
+
+def real_offer(board: chess.Board, move: chess.Move) -> int:
+    """
+    Material genuinely offered by `move`, or 0 (ADR 0007).
+
+    Stricter than `material_sacrifice` (any piece a reply could land on): after the move the piece
+    must be attacked by something cheaper, or attacked and undefended. A defended piece that can
+    only be taken by an equal or bigger piece is not on offer.
+    """
+    piece = board.piece_at(move.from_square)
+    if piece is None or move.promotion:
+        return 0
+    captured = board.piece_at(move.to_square)
+    taken = PIECE_VALUES.get(captured.piece_type, 0) if captured else (1 if board.is_en_passant(move) else 0)
+    after = board.copy(stack=False)
+    after.push(move)
+    attackers = after.attackers(not piece.color, move.to_square)
+    if not attackers:
+        return 0
+    cheapest = min(PIECE_VALUES.get(after.piece_at(sq).piece_type, 100) for sq in attackers)
+    defended = bool(after.attackers(piece.color, move.to_square))
+    value = PIECE_VALUES.get(piece.piece_type, 0)
+    if cheapest < value or not defended:
+        return max(0, value - taken)
+    return 0
 
 
 def has_reasonable_alternatives(board: chess.Board, move: chess.Move) -> bool:
@@ -57,8 +126,8 @@ def is_brilliant_move(
     """
     Tal-specific brilliant detection. ALL conditions must hold:
 
-    1. Material sacrifice (piece value given up)
-    2. Eval after move within margin of best available
+    1. Real piece sacrifice (minor piece or larger, not a pawn), genuinely on offer (ADR 0007)
+    2. Eval after move within excellent-or-better margin of best available
     3. Position not already crushing (+3 pawns default)
     4. Not a forced-only move
 
@@ -67,10 +136,15 @@ def is_brilliant_move(
     if eval_before is None or eval_after is None or best_eval is None:
         return False
 
-    if material_sacrifice(board, move) < 1:
+    if material_sacrifice(board, move) < MIN_BRILLIANT_SACRIFICE_VALUE:
+        return False
+    # ADR 0007: the piece must really be on offer, not just a square a reply could reach.
+    if real_offer(board, move) < MIN_BRILLIANT_SACRIFICE_VALUE:
         return False
 
-    if abs(eval_after - best_eval) > settings.brilliant_eval_margin:
+    # Keep Brilliant above the normal "good move" band even if env margin is looser.
+    allowed_eval_loss = min(settings.brilliant_eval_margin, MAX_BRILLIANT_EVAL_LOSS)
+    if abs(eval_after - best_eval) > allowed_eval_loss:
         return False
 
     if eval_before > settings.brilliant_winning_margin:

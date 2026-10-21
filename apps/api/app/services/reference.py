@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import io
 import logging
+import re
 import zipfile
 from pathlib import Path
 
@@ -26,6 +27,41 @@ TAL_PGN_URL = "https://www.pgnmentor.com/players/Tal.zip"
 TAL_PLAYER_NAME = "Mikhail Tal"
 
 
+def infer_player_color(game: chess.pgn.Game, player_name: str) -> str:
+    """Infer whether the reference player had white or black in a PGN."""
+    white = game.headers.get("White", "")
+    black = game.headers.get("Black", "")
+    if _matches_player_name(black, player_name):
+        return "black"
+    if _matches_player_name(white, player_name):
+        return "white"
+    return "white"
+
+
+def _name_tokens(name: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", name.lower())
+
+
+def _matches_player_name(header_name: str, player_name: str) -> bool:
+    header = " ".join(_name_tokens(header_name))
+    player = " ".join(_name_tokens(player_name))
+    if not header or not player:
+        return False
+    if player in header:
+        return True
+
+    player_tokens = _name_tokens(player_name)
+    header_tokens = set(_name_tokens(header_name))
+    if player_tokens and set(player_tokens).issubset(header_tokens):
+        return True
+    # Transliterations differ ("Tal, Mihail" in pgnmentor vs "Mikhail Tal"): the surname plus the
+    # first name's initial is enough. Without this every Tal game fell back to "white".
+    if len(player_tokens) >= 2:
+        surname, first = player_tokens[-1], player_tokens[0]
+        return surname in header_tokens and any(t != surname and t[0] == first[0] for t in header_tokens)
+    return False
+
+
 class ReferenceService:
     """Fetch, analyze, and cache reference player benchmarks."""
 
@@ -39,7 +75,7 @@ class ReferenceService:
             .maybe_single()
             .execute()
         )
-        if not player_res.data:
+        if not player_res or not player_res.data:
             return self._empty_benchmark(TAL_PLAYER_NAME)
 
         bench_res = (
@@ -49,7 +85,7 @@ class ReferenceService:
             .maybe_single()
             .execute()
         )
-        if not bench_res.data:
+        if not bench_res or not bench_res.data:
             return {
                 "playerName": player_res.data["name"],
                 "brilliantPct": 0,
@@ -101,8 +137,11 @@ class ReferenceService:
                 continue
             board = game.board()
             moves = list(game.mainline_moves())
-            # Tal played both colors in corpus — classify white moves as proxy
-            classified = classifier.classify_game(board, moves, "white")
+            classified = classifier.classify_game(
+                board,
+                moves,
+                infer_player_color(game, TAL_PLAYER_NAME),
+            )
             dist = BaselineService.compute_distribution([m["quality"] for m in classified])
             for k in merged:
                 merged[k] += dist.get(k, 0)
@@ -119,7 +158,7 @@ class ReferenceService:
             .maybe_single()
             .execute()
         )
-        if player_res.data:
+        if player_res and player_res.data:
             pid = player_res.data["id"]
             sb.table("reference_players").update(
                 {"games_sampled": analyzed, "benchmark_status": "complete"}
@@ -150,7 +189,9 @@ class ReferenceService:
             for name in zf.namelist():
                 if not name.endswith(".pgn"):
                     continue
-                content = zf.read(name).decode("utf-8", errors="replace")
+                # pgnmentor files use CRLF; without normalising, the split below finds no game
+                # boundary and the whole corpus reads as its first game.
+                content = zf.read(name).decode("utf-8", errors="replace").replace("\r\n", "\n")
                 # Split multi-game PGN files
                 chunks = content.split("\n\n[")
                 for i, chunk in enumerate(chunks):
