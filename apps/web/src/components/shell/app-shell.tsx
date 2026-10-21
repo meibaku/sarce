@@ -56,7 +56,8 @@ function SettingsButton({ size, active }: { size: number; active: boolean }) {
     <Link
       href="/settings"
       aria-label="Settings"
-      className={`grid place-items-center rounded-[6px] border-[1.5px] text-ink transition-colors duration-[120ms] ease-sarce hover:bg-panel ${
+      // The drawn box stays 34/36px as in the handoff; `tap` extends the hit area to 44px.
+      className={`tap grid place-items-center rounded-[6px] border-[1.5px] text-ink transition-colors duration-[120ms] ease-sarce hover:bg-panel ${
         active ? "border-accent bg-accent-tint" : "border-line-2 bg-surface"
       }`}
       style={{ width: size, height: size }}

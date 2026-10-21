@@ -10,7 +10,7 @@ const primary =
   "inline-flex h-11 items-center justify-center rounded-[6px] border-0 bg-accent px-[18px] text-[13px] font-medium text-white transition-colors duration-[120ms] ease-sarce hover:bg-accent-hover active:bg-accent-active cursor-pointer";
 
 const textLink =
-  "inline-flex items-center border-0 bg-transparent p-0 text-[13px] font-medium text-accent-text hover:underline cursor-pointer";
+  "tap inline-flex items-center border-0 bg-transparent p-0 text-[13px] font-medium text-accent-text hover:underline cursor-pointer";
 
 type ButtonProps = ComponentProps<"button">;
 
@@ -47,7 +47,7 @@ export function ChoiceButton({
     <button
       type="button"
       aria-pressed={chosen || selected}
-      className={`rounded-[6px] border-[1.5px] text-[13px] font-medium transition-colors duration-[120ms] ease-sarce hover:bg-panel active:bg-press cursor-pointer ${state} ${className}`}
+      className={`tap rounded-[6px] border-[1.5px] text-[13px] font-medium transition-colors duration-[120ms] ease-sarce hover:bg-panel active:bg-press cursor-pointer ${state} ${className}`}
       {...props}
     >
       {children}
@@ -89,7 +89,7 @@ export function Stepper({
   max: number;
   suffix?: string;
 }) {
-  const step = "h-9 w-9 rounded-[6px] border-[1.5px] border-line-2 bg-surface font-mono text-[16px] font-medium hover:bg-panel active:bg-press";
+  const step = "tap h-9 w-9 rounded-[6px] border-[1.5px] border-line-2 bg-surface font-mono text-[16px] font-medium hover:bg-panel active:bg-press";
   return (
     <div className="flex items-center gap-2">
       <span className="w-9 text-[13px] text-muted">{label}</span>
