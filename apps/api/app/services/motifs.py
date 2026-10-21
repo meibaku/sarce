@@ -2,7 +2,7 @@
 Tactical motif detectors — Chaos Lens M7 (docs/CHAOS_PLAN.md).
 
 Rule-based, engine-free tags for a single move: fork, pin, skewer, discovered attack,
-sacrifice, hanging piece. Written from scratch for this MIT repo; Lichess's AGPL
+sacrifice, hanging piece. Written from scratch for this repo; Lichess's AGPL
 `lichess-puzzler` was a reference for *which* motifs matter only, not for code.
 These are heuristics for describing ideas, not verdicts on move quality.
 """

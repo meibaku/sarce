@@ -125,7 +125,7 @@ Maintainers: install the Greptile GitHub App on the repo to enable reviews.
 
 ## License
 
-By contributing, you agree your contributions are licensed under the [MIT License](LICENSE).
+By contributing, you agree your contributions are licensed under the [GNU AGPL-3.0](LICENSE).
 
 ## Questions
 

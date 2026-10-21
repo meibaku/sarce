@@ -75,7 +75,7 @@ From the project's README (github.com/CSSLab/maia3); it was not installed or tim
 
 ### Recommendation
 
-**Maia-2.** Its licence fits this MIT repository, it returns the full distribution the lenses need
+**Maia-2.** Its MIT licence fits this repository (MIT is compatible with Sarce's AGPL-3.0, ADR 0006), it returns the full distribution the lenses need
 in a single call, and it is fast enough: roughly 5 s of model time for an 80-ply game across the
 ladder, against about 4 s per position for Stockfish.
 

@@ -30,6 +30,7 @@ from app.services.pgn_parser import extract_clocks_ms
 from app.services.position_evals import (
     SupabaseEvalStore,
     evaluate_game_positions,
+    game_lines,
     iter_live_positions,
 )
 from app.services.stockfish import StockfishEngine
@@ -137,7 +138,7 @@ class AnalysisService:
 
         try:
             # In a worker thread (it opens its own engine): searching on the event loop froze the API.
-            classified = await asyncio.to_thread(self.classifier.classify_game, board, moves, user_color)
+            classified = await asyncio.to_thread(self._classify, board, moves, user_color)
         except Exception as exc:
             logger.exception("Analysis failed for game %s: %s", game_id, exc)
             sb.table("games").update({"analysis_status": "failed"}).eq("id", game_id).execute()
@@ -215,6 +216,18 @@ class AnalysisService:
             "totalMoves": len(classified),
             "distribution": distribution,
         }
+
+    def _classify(self, board: chess.Board, moves: list[chess.Move], user_color: str) -> list[dict]:
+        """
+        Phase 1. With the chaos pass on, one search per position serves both: classification reads
+        the lines the lens pass will need anyway (cached here, so that pass only reads). Without it,
+        the classifier's own depth-limited searches.
+        """
+        if not settings.position_evals_enabled:
+            return self.classifier.classify_game(board, moves, user_color)
+        with StockfishEngine() as engine:
+            lines = game_lines(board, moves, engine, SupabaseEvalStore())
+        return self.classifier.classify_game(board, moves, user_color, lines=lines)
 
     def _apply_find_rate(self, game_id: str) -> None:
         """Brilliant find-rate rule (ADR 0004). Never fails the analysis."""
@@ -338,9 +351,20 @@ class AnalysisService:
             query = query.eq("chess_com_username", chess_com_username)
 
         res = query.execute()
+        # Several games at once, each with its own single-threaded engine in a worker thread:
+        # results stay deterministic (node-limited, fresh hash) and an 8-core PC does ~N× the work.
+        gate = asyncio.Semaphore(settings.workers)
+
+        async def one(game_id: str) -> dict | None:
+            async with gate:
+                return await self.analyze_game(game_id)
+
+        outcomes = await asyncio.gather(*(one(row["id"]) for row in res.data or []), return_exceptions=True)
         results = []
-        for row in res.data or []:
-            summary = await self.analyze_game(row["id"])
-            if summary:
-                results.append(summary)
+        for row, outcome in zip(res.data or [], outcomes):
+            if isinstance(outcome, BaseException):
+                # analyze_game already marked the game failed; one bad game must not stop the batch.
+                logger.error("Analysis failed for game %s: %s", row["id"], outcome)
+            elif outcome:
+                results.append(outcome)
         return results
