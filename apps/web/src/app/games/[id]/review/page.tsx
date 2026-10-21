@@ -4,8 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, use, useEffect, useState } from "react";
 import { ReviewView } from "@/components/review/review-view";
 import { AppShell } from "@/components/shell/app-shell";
-import { PrimaryLink } from "@/components/ui/buttons";
-import { Card } from "@/components/ui/card";
+import { EdgeState } from "@/components/ui/edge-state";
 import { getGameReview, saveMoveIntent } from "@/lib/api";
 import type { ReviewApi } from "@/types/chess";
 
@@ -27,11 +26,7 @@ function Review({ id }: { id: string }) {
           onSaveIntent={(p, intent) => saveMoveIntent(id, p, intent)}
         />
       ) : failed ? (
-        <Card className="items-start gap-3">
-          <span className="text-[18px] font-medium">This review couldn&apos;t be loaded</span>
-          <span className="text-[13px] leading-[1.55] text-ink-2">The game may be gone, or the analysis service is offline.</span>
-          <PrimaryLink href="/">Back to Home</PrimaryLink>
-        </Card>
+        <EdgeState kind="failed" detail="This review couldn't be loaded. The game may be gone, or the analysis service is offline." action="Back to Home" href="/" />
       ) : (
         <div className="h-[2px] w-1/3 animate-pulse bg-accent" role="progressbar" aria-label="Loading" />
       )}

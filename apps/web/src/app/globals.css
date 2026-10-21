@@ -2,8 +2,7 @@
 
 /*
  * v1.0 design tokens (docs/DESIGN.md). Light only for now; no red, no shadows.
- * Utilities read the variables, so `.theme-lab` below can re-point them for the
- * legacy dashboard until every part of it has moved to the new screens.
+ * Utilities read the variables (a future dark theme re-points them in one place).
  */
 :root {
   --ink: #1a1f26;
@@ -27,26 +26,59 @@
   --checkin: #9a6420;
   --board-dark: #eef1f5;
   --press: #eef1f5;
-
-  /* Legacy names used by the old dashboard components. */
-  --background: var(--page);
-  --foreground: var(--ink);
-  --accent-muted: var(--muted);
-  --surface-elevated: var(--panel);
-  --brilliant: var(--accent);
+  --fp-0: #f5f7fa;
+  --fp-1: #e6edf6;
+  --fp-2: #d3e0f0;
+  --fp-3: #b9cde6;
+  --fp-4: #97b4d8;
+  --fp-5: #7096c4;
+  --fp-6: #4f7ab0;
+  --fp-7: #2f5f9e;
+  color-scheme: light;
 }
 
-/* The pre-v1 dashboard, kept at /lab while its features move to the new screens. */
-.theme-lab {
-  --background: #0f1419;
-  --foreground: #e7ecf3;
-  --accent: #c9a227;
-  --accent-muted: #8b7355;
-  --surface: #1a2332;
-  --surface-elevated: #243044;
-  --brilliant: #a855f7;
-  background: var(--background);
-  color: var(--foreground);
+/*
+ * Dark theme (Settings → Theme → Dark, or Match system on a dark OS). Every text token keeps at least
+ * 4.5:1 on page, surface and panel, as the light palette does; still no red and no shadows. The
+ * attribute is set before first paint by the script in app/layout.tsx.
+ */
+:root[data-theme="dark"] {
+  --ink: #e7eaee;
+  --ink-2: #c4c9d1;
+  --muted: #9ba3ae;
+  --faint: #8d95a0;
+  --line: #2a3038;
+  --line-2: #343b45;
+  --line-3: #444c57;
+  --hair: #20252c;
+  --page: #111418;
+  --panel: #1d222a;
+  --surface: #171b21;
+  --accent: #3d6fb3;
+  --accent-hover: #4a7cc0;
+  --accent-active: #5888cb;
+  --accent-text: #8db3e6;
+  --accent-tint: #1c2a3d;
+  --accent-mid: #6f97cf;
+  --sound: #62b98c;
+  --checkin: #d7a05a;
+  --board-dark: #262c35;
+  --press: #232931;
+  --fp-0: #1b2027;
+  --fp-1: #1f2a38;
+  --fp-2: #243549;
+  --fp-3: #2c4462;
+  --fp-4: #35557e;
+  --fp-5: #44699c;
+  --fp-6: #5a82bb;
+  --fp-7: #7ea2d6;
+  color-scheme: dark;
+}
+
+/* The mascot and the mark are drawn in fixed ink by the handoff's web components: lighten them. */
+:root[data-theme="dark"] sarce-mark,
+:root[data-theme="dark"] sarce-skit {
+  filter: invert(0.88) hue-rotate(180deg);
 }
 
 @theme inline {
@@ -71,20 +103,15 @@
   --color-checkin: var(--checkin);
   --color-board-dark: var(--board-dark);
   --color-press: var(--press);
-  --color-fp-0: #f5f7fa;
-  --color-fp-1: #e6edf6;
-  --color-fp-2: #d3e0f0;
-  --color-fp-3: #b9cde6;
-  --color-fp-4: #97b4d8;
-  --color-fp-5: #7096c4;
-  --color-fp-6: #4f7ab0;
-  --color-fp-7: #2f5f9e;
+  --color-fp-0: var(--fp-0);
+  --color-fp-1: var(--fp-1);
+  --color-fp-2: var(--fp-2);
+  --color-fp-3: var(--fp-3);
+  --color-fp-4: var(--fp-4);
+  --color-fp-5: var(--fp-5);
+  --color-fp-6: var(--fp-6);
+  --color-fp-7: var(--fp-7);
 
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-accent-muted: var(--accent-muted);
-  --color-surface-elevated: var(--surface-elevated);
-  --color-brilliant: var(--brilliant);
 
   --font-sans: var(--font-plex-sans), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
