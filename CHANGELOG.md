@@ -4,6 +4,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Changed
+- Licence: GNU AGPL-3.0 (was MIT), see ADR 0006 — open source and self-hostable; a modified version run as a
+  service must share its source; compatible with python-chess (GPL-3.0+)
+
 ### Removed
 - The pre-v1 dashboard at `/lab` and the components only it used (ADR 0005); the Brilliant headline contract now
   checks Home; sign-in status moved to Settings
@@ -15,6 +19,18 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Background analysis no longer freezes the API: move classification runs in a worker thread
 
 ### Added
+- Multi-user sharing (M8): "Share link" on Summary and the library makes a read-only page at `/s/<token>` from a
+  snapshot taken then (no opponent name, no private notes), listed and turned off in Settings → Shared links
+  (migration `shared_links`, RLS); the background sync now serves every user who saved a username; mobile Summary
+  shares through the system share sheet (`EXPO_PUBLIC_WEB_URL`)
+
+### Fixed
+- Settings no longer loses `aiAvailable` after saving a change (the AI help switch stayed usable)
+- Shirov and Morphy as references: "<Master> in your openings" drills in Train from 1,995 Shirov and 208 Morphy
+  positions (plus Tal's), rotated daily; the reference scripts take `--player` / `--key` and skip games the player
+  isn't in; mobile You gains the Tal / Shirov / Morphy toggles
+- `scripts/auth_smoke.py`: sign-in checked against a real Supabase Auth (throwaway user; token required, forged
+  tokens refused, another user's data unreachable, settings on the right profile); passes on the local stack
 - Positions from videos (PHASES 2.2–2.4): Train → Save a position takes a YouTube link and keeps the captions
   around that moment (or a pasted transcript when YouTube blocks the request); with Settings → "Video help (sent
   to AI)" on and Claude credentials on the server, Claude reads a board from a screenshot (FEN checked by
