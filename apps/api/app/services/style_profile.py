@@ -69,6 +69,7 @@ class StyleProfileService:
             sb.table("games")
             .select("id, pgn, result, time_control, opponent_rating")
             .eq("analysis_status", "complete")
+            .neq("source", "sarce_bot")  # bot games are practice
         )
         if user_id:
             games_query = games_query.eq("user_id", user_id)

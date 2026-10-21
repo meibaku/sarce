@@ -8,6 +8,9 @@ from __future__ import annotations
 
 from app.db.supabase import get_supabase
 
+PAGE = 1000  # PostgREST's default row cap per request
+CHUNK = 100  # game ids per `in_` lookup, to keep URLs short
+
 EMPTY_DISTRIBUTION = {
     "best": 0,
     "excellent": 0,
@@ -54,26 +57,40 @@ class BaselineService:
     ) -> dict:
         """Compute baseline directly from completed game analyses."""
         sb = get_supabase()
-        games_query = sb.table("games").select("id").eq("analysis_status", "complete")
-        if user_id:
-            games_query = games_query.eq("user_id", user_id)
-        if chess_com_username:
-            games_query = games_query.eq("chess_com_username", chess_com_username)
 
-        games_res = games_query.execute()
-        game_ids = [g["id"] for g in (games_res.data or [])]
+        def games_query():
+            q = sb.table("games").select("id").eq("analysis_status", "complete").neq("source", "sarce_bot").order("id")
+            if user_id:
+                q = q.eq("user_id", user_id)
+            if chess_com_username:
+                q = q.eq("chess_com_username", chess_com_username)
+            return q
+
+        # Paged (PostgREST returns at most 1,000 rows a request) and looked up in chunks: one `in_` with
+        # every game id made the URL too long (HTTP 414) past ~300 games, which failed each analysis
+        # right after it was marked complete and skipped its chaos pass.
+        game_ids: list[str] = []
+        while True:
+            batch = games_query().range(len(game_ids), len(game_ids) + PAGE - 1).execute().data or []
+            game_ids += [g["id"] for g in batch]
+            if len(batch) < PAGE:
+                break
         if not game_ids:
             return self._empty_baseline()
 
-        analyses_res = (
-            sb.table("game_analyses")
-            .select("distribution, brilliant_pct")
-            .in_("game_id", game_ids)
-            .execute()
-        )
+        analyses: list[dict] = []
+        for start in range(0, len(game_ids), CHUNK):
+            analyses += (
+                sb.table("game_analyses")
+                .select("distribution, brilliant_pct")
+                .in_("game_id", game_ids[start : start + CHUNK])
+                .execute()
+                .data
+                or []
+            )
 
         merged = {**EMPTY_DISTRIBUTION}
-        for row in analyses_res.data or []:
+        for row in analyses:
             dist = row.get("distribution", {})
             for key in merged:
                 merged[key] += dist.get(key, 0)
@@ -82,7 +99,7 @@ class BaselineService:
         return {
             "brilliantPct": brilliant_pct,
             "distribution": merged,
-            "gamesAnalyzed": len(analyses_res.data or []),
+            "gamesAnalyzed": len(analyses),
             "targetBrilliantMin": 6,
             "targetBrilliantMax": 10,
         }
@@ -124,6 +141,7 @@ class BaselineService:
             sb.table("games")
             .select("id, played_at, opponent, game_analyses(brilliant_pct)")
             .eq("analysis_status", "complete")
+            .neq("source", "sarce_bot")  # bot games are practice
             .order("played_at")
         )
         if user_id:

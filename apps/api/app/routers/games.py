@@ -10,6 +10,8 @@ from app.services.job_queue import JobQueue, queue_analysis
 from app.services.lens_service import LensService
 from app.services.lichess import LichessClient, normalize_lichess_username, parse_lichess_game
 from app.services.pgn_parser import mainline_positions
+from app.services.review import INTENTS, ReviewService
+from app.services.summary import FELT, SummaryService
 from app.services.tagger import TaggerService
 
 router = APIRouter()
@@ -18,6 +20,8 @@ lichess = LichessClient()
 game_store = GameStore()
 analysis_service = AnalysisService()
 lens_service = LensService()
+summary_service = SummaryService()
+review_service = ReviewService()
 tagger_service = TaggerService()
 
 
@@ -376,3 +380,68 @@ async def analyze_pending(body: AnalyzeRequest, background_tasks: BackgroundTask
         "username": username,
         "userId": user_id or settings.local_user_id,
     }
+
+
+class FeltRequest(BaseModel):
+    answer: str = Field(description="yes | partly | no")
+
+
+@router.get("/{game_id}/summary")
+async def get_game_summary(game_id: str):
+    """After-game Summary: headline, outcome, this game's Brilliant %, moments and the one question."""
+    require_game_access(game_id)
+    data = summary_service.summary(game_id, current_user_id(), resolve_user_id(None))
+    if data is None:
+        raise HTTPException(status_code=404, detail="Game not found")
+    return data
+
+
+@router.post("/{game_id}/felt")
+async def set_game_felt(game_id: str, body: FeltRequest):
+    """Records the answer to "Did this game feel like you?"."""
+    require_game_access(game_id)
+    if body.answer not in FELT:
+        raise HTTPException(status_code=422, detail=f"answer must be one of {list(FELT)}")
+    summary_service.set_felt(game_id, body.answer)
+    return {"gameId": game_id, "felt": body.answer}
+
+
+class IntentRequest(BaseModel):
+    type: str | None = Field(None, description="calculated | intuitive | bluff")
+    note: str = Field("", max_length=2000)
+
+
+@router.get("/{game_id}/review")
+async def get_game_review(game_id: str):
+    """Review: every moment with its board, squares that mattered, P_fail ladder, mirror line and note."""
+    require_game_access(game_id)
+    data = review_service.review(game_id)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Game not found")
+    return data
+
+
+@router.put("/{game_id}/moves/{ply}/intent")
+async def save_move_intent(game_id: str, ply: int, body: IntentRequest):
+    """Saves the player's intent note for a moment (one per move; editing replaces it)."""
+    require_game_access(game_id)
+    if body.type is not None and body.type not in INTENTS:
+        raise HTTPException(status_code=422, detail=f"type must be one of {list(INTENTS)}")
+    return review_service.save_intent(game_id, ply, body.type, body.note, current_user_id())
+
+
+class CheckinRequest(BaseModel):
+    ply: int
+    answer: str
+    flagged: bool = False
+
+
+@router.post("/{game_id}/checkin")
+async def answer_checkin(game_id: str, body: CheckinRequest):
+    """Records the answer to "Was something going on here?" (and whether the move had been flagged)."""
+    require_game_access(game_id)
+    try:
+        summary_service.set_checkin(game_id, body.ply, body.answer, body.flagged)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"gameId": game_id, "ply": body.ply, "answer": body.answer}
