@@ -72,6 +72,16 @@ export function ReviewBody({ gameId, back }: { gameId: string; back?: boolean })
 
   return (
     <Screen title={title} back={back}>
+      {/* Handoff header: the mark, who it was against, then time control · result · which moment. */}
+      <View style={[s.row, { gap: 10 }]}>
+        <Mascot state="static" size={28} eyes={false} />
+        <T weight="medium" size={20}>{`vs ${data.opponent ?? "an opponent"}`}</T>
+        <T mono size={11} tone="muted" style={{ flex: 1 }} numberOfLines={1}>
+          {[data.timeControl, data.result === "win" ? "won" : data.result === "loss" ? "lost" : data.result === "draw" ? "drew" : null, `moment ${Math.min(index, data.moments.length - 1) + 1} of ${data.moments.length}`]
+            .filter(Boolean)
+            .join(" · ")}
+        </T>
+      </View>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
         {data.moments.map((x, i) => (
           <Pressable
@@ -79,7 +89,7 @@ export function ReviewBody({ gameId, back }: { gameId: string; back?: boolean })
             onPress={() => go(i)}
             accessibilityRole="button"
             accessibilityState={{ selected: i === index }}
-            style={[s.row, { gap: 6, paddingHorizontal: 8, height: 32, borderRadius: 6, borderWidth: 1.5, borderColor: i === index ? color.accent : color.line2, backgroundColor: i === index ? color.accentTint : color.surface }]}
+            style={[s.row, { gap: 8, paddingLeft: 5, paddingRight: 12, height: 38, borderRadius: 19, borderWidth: 1.5, borderColor: i === index ? color.accent : color.line2, backgroundColor: i === index ? color.accentTint : color.surface }]}
           >
             <Badge glyph={x.glyph} />
             <T mono size={12}>{x.label}</T>

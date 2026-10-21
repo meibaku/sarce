@@ -54,8 +54,10 @@ export const savePosition = (body: { fen: string; title?: string; gameId?: strin
 export const getYou = () => api<YouApi>("/users/you");
 export const getSacrifices = () => api<{ sacrifices: SacrificeRow[] }>("/users/sacrifices");
 export const getRecap = () => api<RecapApi>("/users/recap");
+export const getFocus = () => api<{ weekly: string | null; today: string | null }>("/users/focus");
 export const setFocus = (kind: FocusKind, value: string) => api(`/users/focus`, put({ kind, value }));
-export const getTrain = () => api<TrainApi>("/users/train");
+/** `drill` (e.g. "defend:<game>:<ply>" from the library) goes to the front of the queue. */
+export const getTrain = (drill?: string) => api<TrainApi>(`/users/train${drill ? `?drill=${encodeURIComponent(drill)}` : ""}`);
 export const checkDrill = (fen: string, uci: string, answer: string | null, source: string) =>
   api<DrillCheck>("/users/train/check", post({ fen, uci, answer, source }));
 export const answerDrill = (drillKey: string, confidence: Confidence) => api("/users/train/answer", post({ drillKey, confidence }));

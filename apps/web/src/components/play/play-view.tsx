@@ -77,14 +77,6 @@ export function PlayView({
           </TextLink>
         </section>
 
-        <section className="flex flex-col gap-[10px] rounded-[8px] border border-line bg-surface p-[18px]">
-          <SectionLabel>Opponent prep · private</SectionLabel>
-          <span className="text-[15px] font-medium">Playing someone you know?</span>
-          <span className="text-[13px] leading-[1.5] text-ink-2">Their openings and tendencies from finished games only. Only you see it.</span>
-          <TextLink href="/prep" className="self-start">
-            Prep for an opponent
-          </TextLink>
-        </section>
 
         <section className="flex flex-col gap-[10px] rounded-[8px] border border-line bg-surface p-[18px]">
           <SectionLabel>Sarce bot</SectionLabel>
@@ -99,6 +91,15 @@ export function PlayView({
           <PrimaryLink href={`/play/game?bot=${bot}`} className="self-start !px-5">
             Play 3+0
           </PrimaryLink>
+        </section>
+        {/* After the handoff's three cards: Opponent prep came later, so it doesn't push the bot picker out of place. */}
+        <section className="flex flex-col gap-[10px] rounded-[8px] border border-line bg-surface p-[18px]">
+          <SectionLabel>Opponent prep · private</SectionLabel>
+          <span className="text-[15px] font-medium">Playing someone you know?</span>
+          <span className="text-[13px] leading-[1.5] text-ink-2">Their openings and tendencies from finished games only. Only you see it.</span>
+          <TextLink href="/prep" className="self-start">
+            Prep for an opponent
+          </TextLink>
         </section>
       </AutoGrid>
     </>
