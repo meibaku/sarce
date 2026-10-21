@@ -10,7 +10,7 @@ import chess
 
 from app.db.supabase import get_supabase
 
-TITLE_MAX, NOTE_MAX = 80, 2000
+TITLE_MAX, NOTE_MAX, EXCERPT_MAX = 80, 2000, 6000
 
 
 def clean_fen(fen: str) -> str:
@@ -22,7 +22,17 @@ def clean_fen(fen: str) -> str:
 
 
 class PositionStore:
-    def save(self, owner_id: str, fen: str, title: str | None, note: str | None, game_id: str | None, ply: int | None) -> dict:
+    def save(
+        self,
+        owner_id: str,
+        fen: str,
+        title: str | None,
+        note: str | None,
+        game_id: str | None,
+        ply: int | None,
+        source: dict | None = None,
+    ) -> dict:
+        """`source`: {url, time_s, excerpt, ai_summary} for a position taken from a video."""
         fen = clean_fen(fen)
         best = None
         if game_id is not None and ply is not None:
@@ -37,16 +47,34 @@ class PositionStore:
             "game_id": game_id,
             "ply": ply,
         }
+        if source:
+            row.update({
+                "source_url": (source.get("url") or None),
+                "source_time_s": source.get("time_s"),
+                "excerpt": (source.get("excerpt") or "")[:EXCERPT_MAX],
+                "ai_summary": (source.get("ai_summary") or "")[:NOTE_MAX],
+            })
         return get_supabase().table("saved_positions").upsert(row, on_conflict="user_id,fen").execute().data[0]
 
-    def list(self, owner_id: str, limit: int = 50) -> list[dict]:
-        return (
-            get_supabase().table("saved_positions").select("*").eq("user_id", owner_id).order("created_at", desc=True).limit(limit).execute().data
+    def list(self, owner_id: str, limit: int = 50, q: str | None = None) -> list[dict]:
+        rows = (
+            get_supabase().table("saved_positions").select("*").eq("user_id", owner_id).order("created_at", desc=True).limit(500 if q else limit).execute().data
             or []
         )
+        return search(rows, q)[:limit] if q else rows
 
     def delete(self, owner_id: str, position_id: str) -> None:
         get_supabase().table("saved_positions").delete().eq("user_id", owner_id).eq("id", position_id).execute()
+
+
+def search(rows: list[dict], q: str) -> list[dict]:
+    """Saved positions whose title, note, transcript excerpt or summary contain every word of `q`."""
+    words = [w for w in q.lower().split() if w]
+
+    def text(r: dict) -> str:
+        return " ".join(str(r.get(k) or "") for k in ("title", "note", "excerpt", "ai_summary", "best_san")).lower()
+
+    return [r for r in rows if all(w in text(r) for w in words)]
 
 
 def drill_items(rows: list[dict]) -> list[dict]:
@@ -55,9 +83,9 @@ def drill_items(rows: list[dict]) -> list[dict]:
         {
             "key": f"saved:{r['id']}",
             "source": "a saved position",
-            "meta": "you saved it",
+            "meta": "from a video" if r.get("source_url") else "you saved it",
             "title": r.get("title") or "Saved position",
-            "detail": r.get("note") or ("Find the move you were looking for." if r.get("best_san") else "Play the move you'd choose; Sarce says whether it holds."),
+            "detail": r.get("note") or r.get("ai_summary") or ("Find the move you were looking for." if r.get("best_san") else "Play the move you'd choose; Sarce says whether it holds."),
             "fen": r["fen"],
             "answer": r.get("best_san"),
             "gameId": r.get("game_id"),

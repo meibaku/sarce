@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { ShareButton } from "@/components/share/share-button";
 import { PrimaryLink, TextButton, TextLink } from "@/components/ui/buttons";
 import { AutoGrid, Card, SectionLabel, UncalibratedBadge } from "@/components/ui/card";
 import { Mascot, Skit } from "@/components/ui/mascot";
@@ -211,6 +212,7 @@ export function SummaryView({
         <TextLink href="/" className="!text-muted">
           Done for now
         </TextLink>
+        <ShareButton kind="summary" gameId={data.gameId} />
         {data.lichessUrl && (
           <a
             href={data.lichessUrl}
