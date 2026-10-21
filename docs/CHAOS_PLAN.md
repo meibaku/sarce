@@ -12,10 +12,10 @@
 | M2 Human model | Merged; default `auto` uses Maia-2 where installed, the heuristic elsewhere | Install `requirements-maia.txt` where you want calibrated numbers |
 | M3 Lenses | Merged | Thresholds are provisional until M4 |
 | M4 Validation | **GO** on the full 50,516-position run across twelve months (Maia-2); clock multipliers applied | Tune the verdict thresholds |
-| M5 Review UI | Merged; checked against one analysed game | Check against your own games; Tal in chaos terms |
-| M6 Trap atlas | Merged; 277 traps from 18,122 real games in `apps/api/data/trap_atlas.json` | Load it into your database (`build_trap_atlas --load`); most traps rest on 3–4 sightings |
+| M5 Review UI | Merged; rebuilt as the v1.0 Review screen (web and mobile); `/lab` retired (ADR 0005) | Tal in chaos terms: scoring script done, the rerun after the name-matching fix restores `data/reference_axes.json` |
+| M6 Trap atlas | Merged; 277 traps loaded; Train serves traps at your band, your own openings first (ECO) | Most traps rest on 3–4 sightings: grow the atlas with more games |
 | M7 Intention tagger | v1 merged, off by default | Tune thresholds; "sharpness" part of squeeze |
-| M8 Sharing + scouting | Not started | Needs the multi-user decision first |
+| M8 Sharing + scouting | Multi-user: sign-in (verified against a live Supabase Auth, `scripts/auth_smoke.py`), per-user sync and analysis, shared read-only links (`/s/<token>`, snapshots with no third-party names, revocable); opponent prep (`/prep`); Lichess import | Done |
 
 **What has actually been run** (10 Oct 2026, Stockfish 18, a throwaway Supabase Postgres + PostgREST stack):
 
@@ -227,9 +227,9 @@ Tasks:
 
 ### M4 — Validation on real bullet data (3–5 days, mostly compute)
 
-> **Status:** the script and its maths are implemented and unit-tested; **the run has not happened**.
-> It needs a local Stockfish, a Lichess database file and a trained human model (ADR 0002).
-> The go / no-go checkpoint is therefore still open — see `docs/VALIDATION.md`.
+> **Status:** done — **GO** on the full 50,516-position run across twelve months (Maia-2), clock multipliers
+> applied (see `docs/VALIDATION.md`). Still open: tuning the verdict thresholds on real games, and a blitz /
+> rapid run before the "uncalibrated" badge can go.
 
 **Goal:** prove the score means something; tune thresholds from data.
 
@@ -255,9 +255,9 @@ Tasks:
 
 ### M5 — Review UI (4–5 days)
 
-> **Status:** first version implemented inside the existing Style lab and dashboard. Not done: the Tal
-> reference in chaos terms (needs the Tal corpus run through the raw-data pass), and the
-> "review your last 20 bullet games" acceptance check, which needs real data.
+> **Status:** implemented as the v1.0 Review screen (web and `apps/mobile`); the Tal reference in chaos
+> terms has its scoring script (`scripts/process_tal_chaos.py`) and shows on You once its rerun has written
+> `data/reference_axes.json`. Still open: the "review your last 20 bullet games" acceptance check.
 
 **Goal:** make it feel like a coach, not a spreadsheet.
 
@@ -277,9 +277,8 @@ Tasks in `apps/web`:
 
 ### M6 — Rating-band trap atlas (3–4 days)
 
-> **Status:** table, builder, endpoint and UI (browse + drill) are implemented. **The atlas is empty**
-> until `scripts/validate_chaos.py` has been run on real games and `scripts/build_trap_atlas.py` has
-> loaded the result. Browsing by the user's own openings is not done — only a rating-band filter.
+> **Status:** implemented and loaded (277 traps). Train drills traps at your band and puts traps from your
+> own openings (ECO) first.
 
 **Goal:** "ideas that work at your level."
 
@@ -298,7 +297,7 @@ Tasks in `apps/web`:
 **Goal:** "Did I have an idea, did it land, did I pivot?"
 
 - Re-implement motif detectors, using Lichess's `lichess-puzzler` `cook.py` only as a reference for *which*
-  motifs matter — it is **AGPL-3.0**, so do not copy or port its code into this MIT repo: pin, fork, skewer, sacrifice,
+  motifs matter — the detectors here were written from scratch (Sarce is AGPL-3.0 now, ADR 0006, but no code was ported): pin, fork, skewer, sacrifice,
   discovered attack, hanging piece.
 - Idea windows (rules, configurable): **Gambit** (≥1 pawn down for ≥6 plies with EP ≥ 0.4),
   **King attack** (≥3 own units enter enemy king zone within 8 plies), **Squeeze** (opponent mobility and
@@ -311,7 +310,8 @@ Tasks in `apps/web`:
 ### M8 — Sharing + opponent scouting (later)
 
 > **Status:** Lichess import, opponent scouting and a style focus picker (ADR 0003) are implemented. A durable per-user analysis
-> job queue (`JOB_QUEUE_ENABLED`) and optional sign-in (`AUTH_REQUIRED`) are implemented too; sign-in is untested against a live Supabase Auth.
+> job queue (`JOB_QUEUE_ENABLED`) and optional sign-in (`AUTH_REQUIRED`) are implemented too; sign-in is verified against a
+> live Supabase Auth by `scripts/auth_smoke.py` (token required, forged tokens refused, per-user isolation).
 
 - Multi-user: auth flows, per-user queues, replace `BackgroundTasks` with a real job queue.
 - Style picker: users choose their lens; dashboard mirrors that identity.

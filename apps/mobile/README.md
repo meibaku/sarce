@@ -28,6 +28,7 @@ design handoff (`assets/`).
 The rook mascot uses the handoff's motion maths unchanged (`src/lib/mascot-frames.ts`), drawn with
 `react-native-svg`; with the system's Reduce Motion on it holds each state's still pose.
 
-## Web-only for now
+## Journal and prep
 
-Opponent prep and the printable journal.
+Settings → Export journal shares the Markdown journal through the system share sheet (save it to Files,
+mail it, or print it to PDF from there). Opponent prep is reached from Play.

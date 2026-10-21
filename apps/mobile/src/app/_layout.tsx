@@ -2,11 +2,16 @@
 import { IBMPlexMono_400Regular, IBMPlexMono_500Medium } from "@expo-google-fonts/ibm-plex-mono";
 import { IBMPlexSans_400Regular, IBMPlexSans_500Medium, IBMPlexSans_600SemiBold, useFonts } from "@expo-google-fonts/ibm-plex-sans";
 import { Stack } from "expo-router";
+import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
+import { loadPrefs } from "@/lib/prefs";
 import { color } from "@/lib/theme";
 
 export default function RootLayout() {
   const [loaded] = useFonts({ IBMPlexSans_400Regular, IBMPlexSans_500Medium, IBMPlexSans_600SemiBold, IBMPlexMono_400Regular, IBMPlexMono_500Medium });
+  useEffect(() => {
+    loadPrefs();
+  }, []);
   if (!loaded) return null;
   return (
     <>
