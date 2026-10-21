@@ -9,6 +9,7 @@ import type { IntentType, ReviewApi } from "@sarce/types";
 import { Board } from "@/components/board";
 import { Badge, Card, Choice, Edge, Label, Link, Loading, Primary, Screen, T, Uncalibrated, s } from "@/components/ui";
 import { Mascot } from "@/components/mascot";
+import { WhyCard } from "@/components/why";
 import { getReview, saveIntent, savePosition } from "@/lib/api";
 import { color, font } from "@/lib/theme";
 import { useLoad } from "@/lib/use-load";
@@ -40,6 +41,7 @@ export function ReviewBody({ gameId, back }: { gameId: string; back?: boolean })
   const [text, setText] = useState("");
   const [shown, setShown] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [why, setWhy] = useState(false);
 
   const title = data ? `review · ${data.opponent ?? "game"}` : "review";
   if (failed || !data) {
@@ -58,6 +60,7 @@ export function ReviewBody({ gameId, back }: { gameId: string; back?: boolean })
     setType(null);
     setText("");
     setShown(false);
+    setWhy(false);
   }
 
   async function save(d: ReviewApi) {
@@ -142,8 +145,10 @@ export function ReviewBody({ gameId, back }: { gameId: string; back?: boolean })
         </Card>
       )}
 
-      <View style={[s.row, { gap: 18 }]}>
+      {why && <WhyCard gameId={gameId} ply={m.ply} orientation={data.userColor === "black" ? "black" : "white"} onClose={() => setWhy(false)} />}
+      <View style={[s.row, { gap: 18, flexWrap: "wrap" }]}>
         <Primary label="Next moment" onPress={() => go((index + 1) % data.moments.length)} />
+        <Link label="Why this move?" onPress={() => setWhy(true)} />
         <Link
           label="Add to Train"
           onPress={() => {

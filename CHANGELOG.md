@@ -26,6 +26,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Background analysis no longer freezes the API: move classification runs in a worker thread
 
 ### Added
+- "Why this move?" in Review (web and mobile): the badge's reason, each Brilliant rule as a check with its
+  number (sacrifice size, eval gap, already decided, a real choice, find-rate at your opponent's rating), the
+  problem's P_fail ladder and safe replies, and lines to step through on a board — what you played and the reply,
+  the engine's top lines, and a sacrifice that would have counted (`GET /games/{id}/moves/{ply}/why`)
 - Multi-user sharing (M8): "Share link" on Summary and the library makes a read-only page at `/s/<token>` from a
   snapshot taken then (no opponent name, no private notes), listed and turned off in Settings → Shared links
   (migration `shared_links`, RLS); the background sync now serves every user who saved a username; mobile Summary
