@@ -51,3 +51,26 @@ def test_one_site_failing_does_not_stop_the_other():
          patch.object(service, "_lichess", AsyncMock(return_value=2)):
         result = asyncio.run(service.sync("owner", AsyncMock(return_value=[])))
     assert result["fetched"] == 2 and result["errors"] == ["Chess.com: down"]
+
+
+def test_sync_loop_keeps_going_while_games_are_pending(monkeypatch):
+    from app.services import sync as sync_module
+
+    sleeps = []
+
+    class Service:
+        calls = 0
+
+        async def sync(self, owner, analyse):
+            Service.calls += 1
+            return {"analysed": 5 if Service.calls == 1 else 0}
+
+    async def fake_sleep(seconds):
+        sleeps.append(seconds)
+        if len(sleeps) == 2:
+            raise asyncio.CancelledError
+
+    monkeypatch.setattr(sync_module.asyncio, "sleep", fake_sleep)
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(sync_module.sync_loop(Service(), "me", None, minutes=5))
+    assert sleeps == [sync_module.BACKLOG_PAUSE_S, 300]
