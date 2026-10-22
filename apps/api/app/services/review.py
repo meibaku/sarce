@@ -181,6 +181,21 @@ class ReviewService:
                 "best": by_ply.get(ply, {}).get("best_san") if sq["verdict"] == "gave_air" else None,
             })
 
+        # Fighting back (swindle lens): problems set while clearly losing, and whether the opponent fell for them.
+        fighting = []
+        for ply in sorted(lens_by_ply):
+            sw = lens_by_ply[ply].get("swindle")
+            if not sw or sw.get("verdict") not in ("set", "sprung"):
+                continue
+            d = sw.get("details") or {}
+            fighting.append({
+                "ply": ply,
+                "label": move_label(ply, by_ply.get(ply, {}).get("san")),
+                "verdict": sw["verdict"],
+                "edgeBefore": round(float(d.get("edge_before") or 0) / 100, 1),
+                "pFail": d.get("p_fail"),
+            })
+
         return {
             "gameId": game_id,
             "opponent": game.get("opponent"),
@@ -192,6 +207,7 @@ class ReviewService:
             "positions": [{"ply": p["ply"], "san": p["san"], "uci": p["uci"], "fen": p["fen"]} for p in line],
             "moments": moments,
             "closingOut": closing,
+            "fightingBack": fighting,
             "ideas": [
                 {"family": i["family"], "startPly": i["start_ply"], "endPly": i["end_ply"], "verdict": i["verdict"], "isPivot": i["is_pivot"]}
                 for i in ideas

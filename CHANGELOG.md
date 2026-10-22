@@ -5,6 +5,16 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- The swindle lens, the mirror of squeeze: once you are clearly losing (about −2), does each move set the opponent a
+  real problem (the chaos measure at their rating), and was it sprung (they missed every safe reply)? Adds a **Fight**
+  trait, a "Fighting back" card on You (comebacks from lost positions), and a list in Review
+- The clock lens, time as style, scaled to each game's starting clock. Moves are found, rushed or missed when one move
+  was clearly best, and quick, lingered or steady otherwise. Adds a **Clock** trait and a "Where your time went" card:
+  time on critical vs easy moves, plus wins and losses on time
+- `games.termination`, generated from the PGN header, so time-outs are counted without loading PGNs
+- Lens contexts now carry the opponent's actual reply and the time spent on each move
+
+### Added
 - The squeeze lens: once you are clearly winning (about +2), does each move keep the advantage and leave the opponent
   little room? A move is "squeezed" (one or two replies still hold), "kept", or "gave air" (the edge drops by more
   than a pawn). It is measured in centipawns from stored engine lines, so it needs no re-analysis:

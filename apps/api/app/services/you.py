@@ -1,6 +1,6 @@
 """
 You (docs/DESIGN.md, screen 5): Brilliant % with its 12-week trend and formula, the style
-fingerprint (6 traits × 12 weeks), your values on the reference axes, the time-control split,
+fingerprint (8 traits × 12 weeks), your values on the reference axes, the time-control split,
 the survival story and the sacrifice count.
 
 Trait definitions (v0, shown to the player on the screen):
@@ -11,6 +11,9 @@ Trait definitions (v0, shown to the player on the screen):
 - Defence: share of problems set for you that you survived.
 - Grip: share of your moves made while clearly winning that kept the advantage without giving the opponent air
   back (squeeze lens): converting the way Petrosian and Karpov did.
+- Fight: share of your moves made while clearly losing that set the opponent a real problem (swindle lens).
+- Clock: share of your timed moves where time use fit the position: not rushed when one move was critical, not
+  lingering when it was easy (clock lens).
 
 Weeks are the 12 ending at your latest analysed game, so an older history still has a picture.
 Anything resting on fewer than MIN_GAMES games is None and the UI dashes it.
@@ -26,7 +29,7 @@ from app.services.home import MIN_GAMES, PAGE, HomeService, format_time_control,
 from app.services.summary import clock_label, move_label
 
 WEEKS = 12
-TRAITS = ["Sacrifice", "Chaos", "Calm", "Initiative", "Defence", "Grip"]
+TRAITS = ["Sacrifice", "Chaos", "Calm", "Initiative", "Defence", "Grip", "Fight", "Clock"]
 STEADY = 0.1  # relative change below which a trait counts as "holding steady"
 CHUNK = 100  # game ids per request, to keep URLs short
 
@@ -50,11 +53,13 @@ def week_index(played_at: str, end: datetime) -> int | None:
 
 
 def trait_values(moves: list[dict], lens: list[dict]) -> dict[str, float | None]:
-    """The six traits for one set of moves and lens rows (one week, or all games)."""
+    """The eight traits for one set of moves and lens rows (one week, or all games)."""
     n = len(moves)
     chaos = [r for r in lens if r["lens"] == "chaos"]
     faced = [r for r in lens if r["lens"] == "survival" and r["verdict"] in ("survived", "missed")]
     winning = [r for r in lens if r["lens"] == "squeeze"]
+    losing = [r for r in lens if r["lens"] == "swindle"]
+    timed = [r for r in lens if r["lens"] == "clock"]
     return {
         "Sacrifice": sum("sacrifice" in (m.get("signals") or []) for m in moves) / n if n else None,
         "Chaos": sum(r["verdict"] in ("real_chaos", "calculated_risk") for r in chaos) / len(chaos) if chaos else None,
@@ -62,6 +67,8 @@ def trait_values(moves: list[dict], lens: list[dict]) -> dict[str, float | None]
         "Initiative": sum(float(r.get("score") or 0) for r in chaos) / len(chaos) if chaos else None,
         "Defence": sum(r["verdict"] == "survived" for r in faced) / len(faced) if faced else None,
         "Grip": sum(r["verdict"] != "gave_air" for r in winning) / len(winning) if winning else None,
+        "Fight": sum(r["verdict"] in ("set", "sprung") for r in losing) / len(losing) if losing else None,
+        "Clock": sum(r["verdict"] not in ("rushed", "lingered") for r in timed) / len(timed) if timed else None,
     }
 
 
@@ -100,7 +107,7 @@ def fingerprint_sentence(rows: dict[str, list[float | None]]) -> str:
     return sentence + "."
 
 
-DETAIL_KEYS = ("faced_chaos", "elo", "p_fail")
+DETAIL_KEYS = ("faced_chaos", "elo", "p_fail", "spent_ms", "critical")
 LENS_COLUMNS = "game_id, ply, lens, score, verdict, " + ", ".join(f"{k}:details->{k}" for k in DETAIL_KEYS)
 
 
@@ -117,7 +124,7 @@ class YouService:
 
         games = scoped(
             sb.table("games")
-            .select("id, played_at, opponent, time_control, clocks_ms, game_analyses(brilliant_pct, total_moves, style_vector)")
+            .select("id, played_at, opponent, result, termination, time_control, clocks_ms, game_analyses(brilliant_pct, total_moves, style_vector)")
             .eq("analysis_status", "complete")
             .neq("source", "sarce_bot")  # bot games are practice
             .order("played_at", desc=True)
@@ -136,10 +143,10 @@ class YouService:
             part = ids[start : start + CHUNK]
             moves += self._paged(lambda: sb.table("game_moves").select("game_id, ply, san, quality, signals, is_brilliant").in_("game_id", part).order("id"))
             lens += self._paged(
-                lambda: sb.table("move_lens_scores").select(LENS_COLUMNS).in_("game_id", part).in_("lens", ["chaos", "survival", "squeeze"]).order("game_move_id")
+                lambda: sb.table("move_lens_scores").select(LENS_COLUMNS).in_("game_id", part).in_("lens", ["chaos", "survival", "squeeze", "swindle", "clock"]).order("game_move_id")
             )
         for r in lens:
-            # Only three keys of `details` are read; selecting them alone keeps the blob off the wire.
+            # Only these keys of `details` are read; selecting them alone keeps the blob off the wire.
             if "details" not in r:
                 r["details"] = {k: r.pop(k, None) for k in DETAIL_KEYS}
 
@@ -211,6 +218,8 @@ class YouService:
             "timeControls": self._time_controls(games),
             "survival": self._survival(games, by_game_lens, by_game_moves, end, overall["Defence"], enough),
             "grip": self._grip(games, by_game_lens, by_game_moves),
+            "fight": self._fight(games, by_game_lens, by_game_moves),
+            "clock": self._clock(games, by_game_lens),
             "sacrifices": self._sacrifices(user_id, username),
         }
 
@@ -232,6 +241,56 @@ class YouService:
             "squeezed": sum(r["verdict"] == "squeezed" for r in rows),
             "gaveAir": sum(r["verdict"] == "gave_air" for r in rows),
             "latestLeak": leak,
+        }
+
+    @staticmethod
+    def _fight(games: list[dict], by_game_lens: dict, by_game_moves: dict) -> dict | None:
+        """Fighting back (swindle lens): problems set while losing, how often they were sprung, and comebacks."""
+        rows, comebacks, latest = [], 0, None
+        for g in games:  # newest first
+            mine = [r for r in by_game_lens.get(g["id"], []) if r["lens"] == "swindle"]
+            if not mine:
+                continue
+            rows += mine
+            if g.get("result") in ("win", "draw"):
+                comebacks += 1
+            sprung = next((r for r in sorted(mine, key=lambda r: -r["ply"]) if r["verdict"] == "sprung"), None)
+            if sprung and latest is None:
+                san = next((m.get("san") for m in by_game_moves.get(g["id"], []) if m["ply"] == sprung["ply"]), None)
+                latest = {"gameId": g["id"], "ply": sprung["ply"], "label": move_label(sprung["ply"], san), "opponent": g.get("opponent"), "result": g.get("result")}
+        if not rows:
+            return None
+        return {
+            "moves": len(rows),
+            "set": sum(r["verdict"] in ("set", "sprung") for r in rows),
+            "sprung": sum(r["verdict"] == "sprung" for r in rows),
+            "lostPositions": len({r["game_id"] for r in rows}),
+            "comebacks": comebacks,
+            "latestSprung": latest,
+        }
+
+    @staticmethod
+    def _clock(games: list[dict], by_game_lens: dict) -> dict | None:
+        """Where your time went (clock lens): critical vs easy moves, the slips, and games decided on time."""
+        rows = [r for g in games for r in by_game_lens.get(g["id"], []) if r["lens"] == "clock"]
+        if not rows:
+            return None
+
+        def avg_s(sel: list[dict]) -> float | None:
+            spent = [float((r.get("details") or {}).get("spent_ms") or 0) for r in sel]
+            return round(sum(spent) / len(spent) / 1000, 1) if spent else None
+
+        critical = [r for r in rows if (r.get("details") or {}).get("critical")]
+        on_time = [g for g in games if "on time" in (g.get("termination") or "")]
+        return {
+            "moves": len(rows),
+            "criticalAvgS": avg_s(critical),
+            "easyAvgS": avg_s([r for r in rows if not (r.get("details") or {}).get("critical")]),
+            "rushed": sum(r["verdict"] == "rushed" for r in rows),
+            "lingered": sum(r["verdict"] == "lingered" for r in rows),
+            "critical": len(critical),
+            "wonOnTime": sum(g.get("result") == "win" for g in on_time),
+            "lostOnTime": sum(g.get("result") == "loss" for g in on_time),
         }
 
     @staticmethod
