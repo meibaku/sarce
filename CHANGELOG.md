@@ -4,6 +4,15 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Added
+- The squeeze lens: once you are clearly winning (about +2), does each move keep the advantage and leave the opponent
+  little room? A move is "squeezed" (one or two replies still hold), "kept", or "gave air" (the edge drops by more
+  than a pawn). It is measured in centipawns from stored engine lines, so it needs no re-analysis:
+  `scripts/rescore_lenses.py --only-missing squeeze` scores games already analysed
+- **Grip**, a sixth fingerprint trait: the share of your moves while winning that kept the grip
+- You: a "Closing it out" card (web and phone) with the count and a link to the latest move that gave air
+- Review: a "Closing it out" list with each squeezed or gave-air move and, for the latter, the move that kept it
+  tight
 ### Security
 - Next.js 15.5.27 → 15.5.28 for a critical advisory (GHSA-2464-fhr4-w9xw, remote code execution in the image
   optimizer with SVG). The remaining high advisories are in lint tooling and need a breaking ESLint upgrade

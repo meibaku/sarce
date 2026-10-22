@@ -241,6 +241,28 @@ export function YouView({ data }: { data: YouApi }) {
           )}
         </Card>
 
+        {/* The squeeze lens: once clearly winning (about +2), did your moves keep it tight? */}
+        <Card className="gap-2 !px-5 !py-[18px]">
+          <SectionLabel>Closing it out · the squeeze</SectionLabel>
+          {data.grip ? (
+            <>
+              <span className="text-[15px] leading-[1.35] font-medium">
+                {Math.round(((data.grip.moves - data.grip.gaveAir) / data.grip.moves) * 100)}% of your moves while winning kept the grip.
+              </span>
+              <span className="text-[13px] leading-[1.5] text-ink-2">
+                {data.grip.squeezed} squeezed (left one or two replies that hold) · {data.grip.gaveAir} gave air back, of {data.grip.moves}.
+              </span>
+              {data.grip.latestLeak && (
+                <Link href={`/games/${data.grip.latestLeak.gameId}/review?ply=${data.grip.latestLeak.ply}`} className="text-[13px] text-accent-text hover:underline">
+                  Latest one that gave air: {data.grip.latestLeak.label} vs {data.grip.latestLeak.opponent ?? "your opponent"} →
+                </Link>
+              )}
+            </>
+          ) : (
+            <span className="text-[13px] text-muted">Shows once you reach clearly winning positions (about +2).</span>
+          )}
+        </Card>
+
         <Link
           href="/library"
           className="flex flex-col gap-2 rounded-[8px] border border-line bg-surface px-5 py-[18px] text-left transition-colors duration-[120ms] ease-sarce hover:border-ink"

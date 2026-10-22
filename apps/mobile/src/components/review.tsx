@@ -99,6 +99,23 @@ export function ReviewBody({ gameId, back }: { gameId: string; back?: boolean })
 
       <Board fen={fen} orientation={data.userColor === "black" ? "black" : "white"} hot={m.hot} />
 
+      {data.closingOut && data.closingOut.length > 0 && (
+        // Squeeze lens: while clearly winning, which moves tightened the grip and which gave air back.
+        <Card>
+          <T mono size={11} tone="muted">Closing it out · while you were winning</T>
+          {data.closingOut.map((c) => (
+            <View key={c.ply} style={[s.row, { gap: 10, alignItems: "flex-start" }]}>
+              <T mono weight="medium" size={12}>{c.label}</T>
+              <T size={12} tone={c.verdict === "squeezed" ? "sound" : "muted"} style={{ flex: 1 }}>
+                {c.verdict === "squeezed"
+                  ? `squeezed · ${c.holding === 1 ? "one reply holds" : `${c.holding} replies hold`} · +${c.edgeAfter.toFixed(1)}`
+                  : `gave air · +${c.edgeBefore.toFixed(1)} → ${c.edgeAfter >= 0 ? "+" : ""}${c.edgeAfter.toFixed(1)}${c.best ? ` · ${c.best} kept it tight` : ""}`}
+              </T>
+            </View>
+          ))}
+        </Card>
+      )}
+
       <Card lead>
         <View style={s.row}>
           <Mascot state={m.glyph === "!!" ? "brilliant" : m.glyph === "✓" ? "sound" : m.glyph === "?!" ? "checkin" : "think"} size={36} eyes={false} />

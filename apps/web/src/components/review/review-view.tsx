@@ -164,6 +164,28 @@ export function ReviewView({
             label={current ? `Position after ${current.label}` : "Starting position"}
           />
           {!twoMove && <IdeaArcs ideas={data.ideas} plies={data.positions.length} />}
+          {!twoMove && data.closingOut && data.closingOut.length > 0 && (
+            // Squeeze lens: while clearly winning, which moves tightened the grip and which gave air back.
+            <section className="flex flex-col gap-1 rounded-[8px] border border-line bg-surface px-4 py-3">
+              <span className="font-mono text-[11px] text-muted">Closing it out · while you were winning</span>
+              {data.closingOut.map((c) => (
+                <button
+                  key={c.ply}
+                  type="button"
+                  onClick={() => setViewPly(c.ply)}
+                  aria-pressed={viewPly === c.ply}
+                  className={`tap grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] items-baseline gap-3 rounded-[4px] px-1 py-[3px] text-left text-[12px] ${viewPly === c.ply ? "bg-accent-tint" : "hover:bg-panel"}`}
+                >
+                  <span className="font-mono font-medium">{c.label}</span>
+                  <span className={c.verdict === "squeezed" ? "text-sound" : "text-muted"}>
+                    {c.verdict === "squeezed"
+                      ? `squeezed · ${c.holding === 1 ? "one reply holds" : `${c.holding} replies hold`} · +${c.edgeAfter.toFixed(1)}`
+                      : `gave air · +${c.edgeBefore.toFixed(1)} → ${c.edgeAfter >= 0 ? "+" : ""}${c.edgeAfter.toFixed(1)}${c.best ? ` · ${c.best} kept it tight` : ""}`}
+                  </span>
+                </button>
+              ))}
+            </section>
+          )}
         </div>
 
         {current ? (

@@ -135,6 +135,21 @@ export default function You() {
         </Card>
       )}
 
+      {/* The squeeze lens: once clearly winning (about +2), did your moves keep it tight? */}
+      {data.grip && (
+        <Card>
+          <Label>Closing it out · the squeeze</Label>
+          <T weight="medium" size={15}>{`${Math.round(((data.grip.moves - data.grip.gaveAir) / data.grip.moves) * 100)}% of your moves while winning kept the grip.`}</T>
+          <T size={13} tone="ink2">{`${data.grip.squeezed} squeezed (left one or two replies that hold) · ${data.grip.gaveAir} gave air back, of ${data.grip.moves}.`}</T>
+          {data.grip.latestLeak && (
+            <Link
+              label={`Latest one that gave air: ${data.grip.latestLeak.label} →`}
+              onPress={() => router.push(`/games/${data.grip?.latestLeak?.gameId}/review`)}
+            />
+          )}
+        </Card>
+      )}
+
       {data.sacrifices && (
         <Card>
           <Label>Your sacrifices</Label>
