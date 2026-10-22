@@ -40,3 +40,16 @@ SQUEEZE_AIR_CP = 100
 SQUEEZE_TIGHT_REPLIES = 2
 # Holding replies beyond the tight count over which the "kept" score falls from 1 to 0.
 SQUEEZE_ROOM_SPAN = 5
+
+# Swindle (fighting back). Only moves made at or below this edge (centipawns, negative) count: clearly losing.
+SWINDLE_MAX_CP = 200
+
+# Clock (time use). A position is critical when the best move is this much better than the second (centipawns):
+# finding the one move is worth thinking for.
+CLOCK_CRITICAL_CP = 100
+# A move costing at most this many centipawns versus the best counts as sound.
+CLOCK_SOUND_CP = 50
+# Time thresholds as fractions of the starting clock (1+0: quick ≤ 2 s, slow ≥ 5 s, a real think ≥ 3 s).
+CLOCK_QUICK_FRACTION = 1 / 30
+CLOCK_SLOW_FRACTION = 1 / 12
+CLOCK_THINK_FRACTION = 1 / 20

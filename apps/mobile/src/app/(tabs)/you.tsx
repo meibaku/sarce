@@ -150,6 +150,28 @@ export default function You() {
         </Card>
       )}
 
+      {/* The swindle lens: once clearly losing (about −2), did your moves set real problems, and did they work? */}
+      {data.fight && (
+        <Card>
+          <Label>Fighting back · the swindle</Label>
+          <T weight="medium" size={15}>{`${data.fight.comebacks} of ${data.fight.lostPositions} games where you were clearly losing ended in a win or a draw.`}</T>
+          <T size={13} tone="ink2">{`While losing you set a real problem with ${Math.round((data.fight.set / data.fight.moves) * 100)}% of your moves; ${data.fight.sprung} were sprung.`}</T>
+          {data.fight.latestSprung && (
+            <Link label={`Latest one that worked: ${data.fight.latestSprung.label} →`} onPress={() => router.push(`/games/${data.fight?.latestSprung?.gameId}/review`)} />
+          )}
+        </Card>
+      )}
+
+      {/* The clock lens: time as style, scaled to each game's starting clock. */}
+      {data.clock && (
+        <Card>
+          <Label>Where your time went</Label>
+          <T weight="medium" size={15}>{`${data.clock.criticalAvgS ?? "–"} s on moves where one move was clearly best, ${data.clock.easyAvgS ?? "–"} s on the rest.`}</T>
+          <T size={13} tone="ink2">{`${data.clock.rushed} of ${data.clock.critical} critical moves were rushed · ${data.clock.lingered} easy moves took a long think.`}</T>
+          <T mono size={11} tone="muted">{`won on time ${data.clock.wonOnTime} · lost on time ${data.clock.lostOnTime}`}</T>
+        </Card>
+      )}
+
       {data.sacrifices && (
         <Card>
           <Label>Your sacrifices</Label>

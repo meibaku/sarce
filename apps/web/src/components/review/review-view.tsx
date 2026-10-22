@@ -164,6 +164,27 @@ export function ReviewView({
             label={current ? `Position after ${current.label}` : "Starting position"}
           />
           {!twoMove && <IdeaArcs ideas={data.ideas} plies={data.positions.length} />}
+          {!twoMove && data.fightingBack && data.fightingBack.length > 0 && (
+            // Swindle lens: problems set while clearly losing, and whether the opponent fell for them.
+            <section className="flex flex-col gap-1 rounded-[8px] border border-line bg-surface px-4 py-3">
+              <span className="font-mono text-[11px] text-muted">Fighting back · while you were losing</span>
+              {data.fightingBack.map((f) => (
+                <button
+                  key={f.ply}
+                  type="button"
+                  onClick={() => setViewPly(f.ply)}
+                  aria-pressed={viewPly === f.ply}
+                  className={`tap grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] items-baseline gap-3 rounded-[4px] px-1 py-[3px] text-left text-[12px] ${viewPly === f.ply ? "bg-accent-tint" : "hover:bg-panel"}`}
+                >
+                  <span className="font-mono font-medium">{f.label}</span>
+                  <span className={f.verdict === "sprung" ? "text-sound" : "text-ink-2"}>
+                    {f.verdict === "sprung" ? "sprung · they missed every safe reply" : "set a problem"}
+                    {f.pFail != null ? ` · ${Math.round(f.pFail * 100)}% at their rating would miss it` : ""} · from {f.edgeBefore.toFixed(1)}
+                  </span>
+                </button>
+              ))}
+            </section>
+          )}
           {!twoMove && data.closingOut && data.closingOut.length > 0 && (
             // Squeeze lens: while clearly winning, which moves tightened the grip and which gave air back.
             <section className="flex flex-col gap-1 rounded-[8px] border border-line bg-surface px-4 py-3">

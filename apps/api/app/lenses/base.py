@@ -36,6 +36,13 @@ class PlyContext:
     # Position the user left for the opponent; None if not stored.
     left: PositionData | None = None
     opponent_elo: int | None = None
+    # The opponent's actual reply (None when the game ended on this move), for lenses that ask "did it work?".
+    reply_uci: str | None = None
+    # The user's clock before the move and the time spent on it (increment included), when the PGN has clocks.
+    clock_ms: int | None = None
+    spent_ms: int | None = None
+    # Starting clock of the game, so time thresholds scale from 1+0 to rapid.
+    initial_ms: int | None = None
 
 
 @dataclass(frozen=True)

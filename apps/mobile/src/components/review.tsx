@@ -99,6 +99,20 @@ export function ReviewBody({ gameId, back }: { gameId: string; back?: boolean })
 
       <Board fen={fen} orientation={data.userColor === "black" ? "black" : "white"} hot={m.hot} />
 
+      {data.fightingBack && data.fightingBack.length > 0 && (
+        // Swindle lens: problems set while clearly losing, and whether the opponent fell for them.
+        <Card>
+          <T mono size={11} tone="muted">Fighting back · while you were losing</T>
+          {data.fightingBack.map((f) => (
+            <View key={f.ply} style={[s.row, { gap: 10, alignItems: "flex-start" }]}>
+              <T mono weight="medium" size={12}>{f.label}</T>
+              <T size={12} tone={f.verdict === "sprung" ? "sound" : "ink2"} style={{ flex: 1 }}>
+                {`${f.verdict === "sprung" ? "sprung · they missed every safe reply" : "set a problem"}${f.pFail != null ? ` · ${Math.round(f.pFail * 100)}% would miss it` : ""}`}
+              </T>
+            </View>
+          ))}
+        </Card>
+      )}
       {data.closingOut && data.closingOut.length > 0 && (
         // Squeeze lens: while clearly winning, which moves tightened the grip and which gave air back.
         <Card>
