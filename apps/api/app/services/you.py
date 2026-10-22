@@ -1,6 +1,6 @@
 """
 You (docs/DESIGN.md, screen 5): Brilliant % with its 12-week trend and formula, the style
-fingerprint (5 traits × 12 weeks), your values on the reference axes, the time-control split,
+fingerprint (6 traits × 12 weeks), your values on the reference axes, the time-control split,
 the survival story and the sacrifice count.
 
 Trait definitions (v0, shown to the player on the screen):
@@ -9,6 +9,8 @@ Trait definitions (v0, shown to the player on the screen):
 - Calm: share of your moves without a large evaluation swing.
 - Initiative: mean chaos score of your moves (the pressure you keep on).
 - Defence: share of problems set for you that you survived.
+- Grip: share of your moves made while clearly winning that kept the advantage without giving the opponent air
+  back (squeeze lens): converting the way Petrosian and Karpov did.
 
 Weeks are the 12 ending at your latest analysed game, so an older history still has a picture.
 Anything resting on fewer than MIN_GAMES games is None and the UI dashes it.
@@ -21,10 +23,10 @@ from datetime import datetime, timedelta
 from app.db.supabase import get_supabase
 from app.services.reference_axes import AXES, axis_values, references
 from app.services.home import MIN_GAMES, PAGE, HomeService, format_time_control, window_brilliant
-from app.services.summary import clock_label
+from app.services.summary import clock_label, move_label
 
 WEEKS = 12
-TRAITS = ["Sacrifice", "Chaos", "Calm", "Initiative", "Defence"]
+TRAITS = ["Sacrifice", "Chaos", "Calm", "Initiative", "Defence", "Grip"]
 STEADY = 0.1  # relative change below which a trait counts as "holding steady"
 CHUNK = 100  # game ids per request, to keep URLs short
 
@@ -48,16 +50,18 @@ def week_index(played_at: str, end: datetime) -> int | None:
 
 
 def trait_values(moves: list[dict], lens: list[dict]) -> dict[str, float | None]:
-    """The five traits for one set of moves and lens rows (one week, or all games)."""
+    """The six traits for one set of moves and lens rows (one week, or all games)."""
     n = len(moves)
     chaos = [r for r in lens if r["lens"] == "chaos"]
     faced = [r for r in lens if r["lens"] == "survival" and r["verdict"] in ("survived", "missed")]
+    winning = [r for r in lens if r["lens"] == "squeeze"]
     return {
         "Sacrifice": sum("sacrifice" in (m.get("signals") or []) for m in moves) / n if n else None,
         "Chaos": sum(r["verdict"] in ("real_chaos", "calculated_risk") for r in chaos) / len(chaos) if chaos else None,
         "Calm": 1 - sum("evaluation_swing" in (m.get("signals") or []) for m in moves) / n if n else None,
         "Initiative": sum(float(r.get("score") or 0) for r in chaos) / len(chaos) if chaos else None,
         "Defence": sum(r["verdict"] == "survived" for r in faced) / len(faced) if faced else None,
+        "Grip": sum(r["verdict"] != "gave_air" for r in winning) / len(winning) if winning else None,
     }
 
 
@@ -132,7 +136,7 @@ class YouService:
             part = ids[start : start + CHUNK]
             moves += self._paged(lambda: sb.table("game_moves").select("game_id, ply, san, quality, signals, is_brilliant").in_("game_id", part).order("id"))
             lens += self._paged(
-                lambda: sb.table("move_lens_scores").select(LENS_COLUMNS).in_("game_id", part).in_("lens", ["chaos", "survival"]).order("game_move_id")
+                lambda: sb.table("move_lens_scores").select(LENS_COLUMNS).in_("game_id", part).in_("lens", ["chaos", "survival", "squeeze"]).order("game_move_id")
             )
         for r in lens:
             # Only three keys of `details` are read; selecting them alone keeps the blob off the wire.
@@ -206,7 +210,28 @@ class YouService:
             "references": {player: {"games": ref.get("games", 0), "model": ref.get("model")} for player, ref in refs.items()},
             "timeControls": self._time_controls(games),
             "survival": self._survival(games, by_game_lens, by_game_moves, end, overall["Defence"], enough),
+            "grip": self._grip(games, by_game_lens, by_game_moves),
             "sacrifices": self._sacrifices(user_id, username),
+        }
+
+    @staticmethod
+    def _grip(games: list[dict], by_game_lens: dict, by_game_moves: dict) -> dict | None:
+        """Converting advantages (squeeze lens): how often a winning position stayed tight, and the latest leak."""
+        rows = [r for g in games for r in by_game_lens.get(g["id"], []) if r["lens"] == "squeeze"]
+        if not rows:
+            return None
+        leak = None
+        for g in games:  # newest first
+            r = next((r for r in sorted(by_game_lens.get(g["id"], []), key=lambda r: -r["ply"]) if r["lens"] == "squeeze" and r["verdict"] == "gave_air"), None)
+            if r:
+                san = next((m.get("san") for m in by_game_moves.get(g["id"], []) if m["ply"] == r["ply"]), None)
+                leak = {"gameId": g["id"], "ply": r["ply"], "label": move_label(r["ply"], san), "opponent": g.get("opponent")}
+                break
+        return {
+            "moves": len(rows),
+            "squeezed": sum(r["verdict"] == "squeezed" for r in rows),
+            "gaveAir": sum(r["verdict"] == "gave_air" for r in rows),
+            "latestLeak": leak,
         }
 
     @staticmethod

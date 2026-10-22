@@ -31,9 +31,15 @@ def test_trait_values():
         {"lens": "chaos", "verdict": None, "score": 0.0},
         {"lens": "survival", "verdict": "survived"},
         {"lens": "survival", "verdict": "missed"},
+        {"lens": "squeeze", "verdict": "squeezed", "score": 1.0},
+        {"lens": "squeeze", "verdict": "kept", "score": 0.4},
+        {"lens": "squeeze", "verdict": "gave_air", "score": 0.0},
+        {"lens": "squeeze", "verdict": "kept", "score": 0.8},
     ]
     t = you.trait_values(moves, lens)
-    assert t == {"Sacrifice": 0.25, "Chaos": 0.5, "Calm": 0.75, "Initiative": 0.1, "Defence": 0.5}
+    # Grip: 3 of the 4 moves made while winning kept the grip.
+    assert t == {"Sacrifice": 0.25, "Chaos": 0.5, "Calm": 0.75, "Initiative": 0.1, "Defence": 0.5, "Grip": 0.75}
+    assert you.trait_values(moves, lens[:4])["Grip"] is None
     assert you.trait_values([], [])["Sacrifice"] is None
 
 
