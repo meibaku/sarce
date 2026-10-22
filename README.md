@@ -97,8 +97,12 @@ npm run test:golden     # Stockfish regression (local)
 | Phase | Status |
 |-------|--------|
 | **1** — Import, classify, Brilliant %, Tal benchmark | ✅ Complete |
-| **2** — Video position capture + transcript context | 🔲 Planned |
-| **3** — Move intent journal + style goals | 🔲 Planned |
+| **2** — Video position capture + transcript context | ✅ Complete |
+| **3** — Move intent journal + style goals | ✅ Complete |
+| **Chaos plan** M0–M8 — style lenses, validation, trap atlas, sharing | ✅ Merged ([docs/CHAOS_PLAN.md](docs/CHAOS_PLAN.md)) |
+
+What's next: [docs/REVIEW_2026-10.md](docs/REVIEW_2026-10.md) (trajectory and maths review) and
+[docs/BENCHMARK.md](docs/BENCHMARK.md) (Lichess and Chess.com comparison).
 
 ## Contributing
 
