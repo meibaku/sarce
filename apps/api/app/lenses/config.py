@@ -53,3 +53,11 @@ CLOCK_SOUND_CP = 50
 CLOCK_QUICK_FRACTION = 1 / 30
 CLOCK_SLOW_FRACTION = 1 / 12
 CLOCK_THINK_FRACTION = 1 / 20
+
+# Prophylaxis (stopping the opponent's idea). Centipawns. A threat counts when the opponent's best move after a
+# pass beats their normal standing by this much.
+PROPH_THREAT_CP = 150
+# The user's move kept the position (stopped or met the threat) when it cost at most this.
+PROPH_SOUND_CP = 50
+# The threat came through when the move cost at least this and the threat was their best reply or what they played.
+PROPH_LET_CP = 150

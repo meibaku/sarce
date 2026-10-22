@@ -384,6 +384,8 @@ export interface ReviewApi {
   moments: ReviewMoment[];
   /** Squeeze lens: moves made while clearly winning that tightened the grip or gave air back. Edges in pawns. */
   /** Swindle lens: problems set while clearly losing; "sprung" when the opponent missed every safe reply. */
+  /** Prophylaxis lens: real threats taken away with a quiet move, or let through. */
+  theirIdeas?: { ply: number; label: string; verdict: "stopped" | "let_through"; threat: string | null; threatPawns: number }[];
   fightingBack?: { ply: number; label: string; verdict: "set" | "sprung"; edgeBefore: number; pFail: number | null }[];
   closingOut?: { ply: number; label: string; verdict: "squeezed" | "gave_air"; edgeBefore: number; edgeAfter: number; holding: number | null; best: string | null }[];
   ideas: { family: string; startPly: number; endPly: number; verdict: "worked" | "refuted" | "fizzled"; isPivot: boolean }[];
@@ -420,6 +422,14 @@ export interface YouApi {
     lostPositions: number;
     comebacks: number;
     latestSprung: { gameId: string; ply: number; label: string; opponent: string | null; result: string | null } | null;
+  } | null;
+  /** Stopping their ideas (prophylaxis lens). */
+  foresight?: {
+    threats: number;
+    stopped: number;
+    met: number;
+    letThrough: number;
+    latestStopped: { gameId: string; ply: number; label: string; threat: string | null; opponent: string | null } | null;
   } | null;
   /** Where your time went (clock lens). */
   clock?: { moves: number; criticalAvgS: number | null; easyAvgS: number | null; rushed: number; lingered: number; critical: number; wonOnTime: number; lostOnTime: number } | null;

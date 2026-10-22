@@ -99,6 +99,20 @@ export function ReviewBody({ gameId, back }: { gameId: string; back?: boolean })
 
       <Board fen={fen} orientation={data.userColor === "black" ? "black" : "white"} hot={m.hot} />
 
+      {data.theirIdeas && data.theirIdeas.length > 0 && (
+        // Prophylaxis lens: real threats taken away with a quiet move, or let through.
+        <Card>
+          <T mono size={11} tone="muted">Their ideas</T>
+          {data.theirIdeas.map((t) => (
+            <View key={t.ply} style={[s.row, { gap: 10, alignItems: "flex-start" }]}>
+              <T mono weight="medium" size={12}>{t.label}</T>
+              <T size={12} tone={t.verdict === "stopped" ? "sound" : "muted"} style={{ flex: 1 }}>
+                {t.verdict === "stopped" ? `stopped their ${t.threat ?? "idea"} before it started` : `their ${t.threat ?? "idea"} came through`}
+              </T>
+            </View>
+          ))}
+        </Card>
+      )}
       {data.fightingBack && data.fightingBack.length > 0 && (
         // Swindle lens: problems set while clearly losing, and whether the opponent fell for them.
         <Card>

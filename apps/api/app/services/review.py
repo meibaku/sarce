@@ -196,6 +196,21 @@ class ReviewService:
                 "pFail": d.get("p_fail"),
             })
 
+        # Stopping their ideas (prophylaxis lens): real threats taken away quietly, or let through.
+        ideas_stopped = []
+        for ply in sorted(lens_by_ply):
+            pr = lens_by_ply[ply].get("prophylaxis")
+            if not pr or pr.get("verdict") not in ("stopped", "let_through"):
+                continue
+            d = pr.get("details") or {}
+            ideas_stopped.append({
+                "ply": ply,
+                "label": move_label(ply, by_ply.get(ply, {}).get("san")),
+                "verdict": pr["verdict"],
+                "threat": d.get("threat"),
+                "threatPawns": round(float(d.get("threat_gain_cp") or 0) / 100, 1),
+            })
+
         return {
             "gameId": game_id,
             "opponent": game.get("opponent"),
@@ -208,6 +223,7 @@ class ReviewService:
             "moments": moments,
             "closingOut": closing,
             "fightingBack": fighting,
+            "theirIdeas": ideas_stopped,
             "ideas": [
                 {"family": i["family"], "startPly": i["start_ply"], "endPly": i["end_ply"], "verdict": i["verdict"], "isPivot": i["is_pivot"]}
                 for i in ideas

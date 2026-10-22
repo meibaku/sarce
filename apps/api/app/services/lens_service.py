@@ -18,6 +18,7 @@ from app.lenses import PlyContext, PositionData, score_ply
 from app.lenses import config as lens_config
 from app.services.chaos_validation import clock_bucket, decider_clock_ms
 from app.services.ep import cp_to_ep
+from app.services.threats import THREAT_NODES
 from app.services.human_model import get_human_model
 from app.services.position_evals import fen_key
 
@@ -89,6 +90,7 @@ def build_ply_contexts(
     initial_clock_ms: int | None = None,
     model_name: str | None = None,
     inc_ms: int = 0,
+    threats_by_key: dict[str, dict] | None = None,
 ) -> list[tuple[dict, PlyContext]]:
     """Pair every stored user move with its context. Pure: no I/O."""
     keys = keys_after_each_ply(pgn_text)
@@ -107,6 +109,8 @@ def build_ply_contexts(
             probs_by_elo=probs_by_key.get(keys[ply], {}),
             clock_bucket=bucket,
             p_fail_multiplier=multipliers.get(bucket, 1.0),
+            key=keys[ply],
+            threat=(threats_by_key or {}).get(keys[ply]),
         )
 
     contexts = []
@@ -252,6 +256,7 @@ class LensService:
         model = get_human_model(settings.human_model)
         model_version = model.model_version
         probs = self._fetch_by_keys("human_probs", keys, "model_version", model_version)
+        threats = self._fetch_by_keys("position_threats", keys, "nodes", THREAT_NODES)
 
         probs_by_key: dict[str, dict[int, dict[str, float]]] = {}
         for row in probs:
@@ -266,6 +271,7 @@ class LensService:
             clocks_ms=game.data.get("clocks_ms"),
             initial_clock_ms=initial_clock_ms(game.data.get("time_control")),
             inc_ms=increment_ms(game.data.get("time_control")),
+            threats_by_key={row["fen_key"]: row for row in threats},
             model_name=model.name,
         )
         rows = score_contexts(game_id, contexts)

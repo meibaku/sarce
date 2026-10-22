@@ -27,6 +27,7 @@ from app.services.lens_service import LensService
 from app.services.move_classifier import MoveClassifier
 from app.services.move_signals import signal_distribution
 from app.services.pgn_parser import extract_clocks_ms
+from app.services.threats import SupabaseThreatStore, evaluate_game_threats
 from app.services.position_evals import (
     SupabaseEvalStore,
     evaluate_game_positions,
@@ -281,6 +282,11 @@ class AnalysisService:
                 stats = evaluate_game_positions(
                     board, moves, user_color, classified, engine, SupabaseEvalStore()
                 )
+                # Threats for the prophylaxis lens: a short null-move search per position the user faced.
+                try:
+                    evaluate_game_threats(board, moves, user_color, classified, engine, SupabaseThreatStore())
+                except Exception:
+                    logger.exception("Threat pass failed for game %s", game_id)
             model, prob_store = get_human_model(settings.human_model), SupabaseProbStore()
             elos = elo_ladder(opponent_rating)
             for _ply, position in iter_live_positions(board, moves, user_color, classified):

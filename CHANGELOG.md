@@ -5,6 +5,13 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- The prophylaxis lens: stopping the opponent's idea before it happens. The analysis pass now stores each faced
+  position's threat (a short null-move search: the opponent's best move if you passed, in a new table
+  `position_threats`). Real threats (worth 1.5+ pawns to them) are stopped by a quiet move, met by force, or let
+  through. Adds a **Foresight** trait, a "Stopping their ideas" card on You and a "Their ideas" list in Review.
+  `scripts/backfill_threats.py` stores threats for games analysed before (needs Stockfish)
+
+### Added
 - Your traps (You, web and phone): the opening positions you steer into where opponents most often go wrong on the
   very next move, from your own games and stored evaluations (no engine). For each: caught N of M, the usual slip,
   what it wins, and the defence that holds. `GET`/`POST /users/traps-set`, new `traps_set` table (RLS)

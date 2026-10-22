@@ -164,6 +164,21 @@ export default function You() {
         </Card>
       )}
 
+      {/* The prophylaxis lens: when the opponent had a real idea, did your move take it away? */}
+      {data.foresight && (
+        <Card>
+          <Label>Stopping their ideas</Label>
+          <T weight="medium" size={15}>{`Of ${data.foresight.threats} real threats you faced, you stopped ${data.foresight.stopped} quietly and met ${data.foresight.met} by force.`}</T>
+          <T size={13} tone="ink2">{`${data.foresight.letThrough} came through.`}</T>
+          {data.foresight.latestStopped && (
+            <Link
+              label={`Latest: ${data.foresight.latestStopped.label} stopped their ${data.foresight.latestStopped.threat ?? "idea"} →`}
+              onPress={() => router.push(`/games/${data.foresight?.latestStopped?.gameId}/review`)}
+            />
+          )}
+        </Card>
+      )}
+
       {/* The clock lens: time as style, scaled to each game's starting clock. */}
       {data.clock && (
         <Card>
