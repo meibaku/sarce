@@ -164,6 +164,26 @@ export function ReviewView({
             label={current ? `Position after ${current.label}` : "Starting position"}
           />
           {!twoMove && <IdeaArcs ideas={data.ideas} plies={data.positions.length} />}
+          {!twoMove && data.theirIdeas && data.theirIdeas.length > 0 && (
+            // Prophylaxis lens: real threats taken away with a quiet move, or let through.
+            <section className="flex flex-col gap-1 rounded-[8px] border border-line bg-surface px-4 py-3">
+              <span className="font-mono text-[11px] text-muted">Their ideas</span>
+              {data.theirIdeas.map((t) => (
+                <button
+                  key={t.ply}
+                  type="button"
+                  onClick={() => setViewPly(t.ply)}
+                  aria-pressed={viewPly === t.ply}
+                  className={`tap grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] items-baseline gap-3 rounded-[4px] px-1 py-[3px] text-left text-[12px] ${viewPly === t.ply ? "bg-accent-tint" : "hover:bg-panel"}`}
+                >
+                  <span className="font-mono font-medium">{t.label}</span>
+                  <span className={t.verdict === "stopped" ? "text-sound" : "text-muted"}>
+                    {t.verdict === "stopped" ? `stopped their ${t.threat ?? "idea"} before it started` : `their ${t.threat ?? "idea"} came through`} · worth {t.threatPawns.toFixed(1)}
+                  </span>
+                </button>
+              ))}
+            </section>
+          )}
           {!twoMove && data.fightingBack && data.fightingBack.length > 0 && (
             // Swindle lens: problems set while clearly losing, and whether the opponent fell for them.
             <section className="flex flex-col gap-1 rounded-[8px] border border-line bg-surface px-4 py-3">

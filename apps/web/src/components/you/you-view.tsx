@@ -286,6 +286,28 @@ export function YouView({ data }: { data: YouApi }) {
           )}
         </Card>
 
+        {/* The prophylaxis lens: when the opponent had a real idea, did your move take it away? */}
+        <Card className="gap-2 !px-5 !py-[18px]">
+          <SectionLabel>Stopping their ideas</SectionLabel>
+          {data.foresight ? (
+            <>
+              <span className="text-[15px] leading-[1.35] font-medium">
+                Of {data.foresight.threats} real threats you faced, you stopped {data.foresight.stopped} quietly and met {data.foresight.met} by force.
+              </span>
+              <span className="text-[13px] leading-[1.5] text-ink-2">
+                {data.foresight.letThrough} came through. A quiet stop is a move that takes the idea away before it starts, no capture or check needed.
+              </span>
+              {data.foresight.latestStopped && (
+                <Link href={`/games/${data.foresight.latestStopped.gameId}/review?ply=${data.foresight.latestStopped.ply}`} className="text-[13px] text-accent-text hover:underline">
+                  Latest: {data.foresight.latestStopped.label} stopped their {data.foresight.latestStopped.threat ?? "idea"} →
+                </Link>
+              )}
+            </>
+          ) : (
+            <span className="text-[13px] text-muted">Shows once threats are stored for your games.</span>
+          )}
+        </Card>
+
         {/* The clock lens: time as style, scaled to each game's starting clock. */}
         <Card className="gap-2 !px-5 !py-[18px]">
           <SectionLabel>Where your time went</SectionLabel>

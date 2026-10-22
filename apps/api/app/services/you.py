@@ -1,6 +1,6 @@
 """
 You (docs/DESIGN.md, screen 5): Brilliant % with its 12-week trend and formula, the style
-fingerprint (8 traits × 12 weeks), your values on the reference axes, the time-control split,
+fingerprint (9 traits × 12 weeks), your values on the reference axes, the time-control split,
 the survival story and the sacrifice count.
 
 Trait definitions (v0, shown to the player on the screen):
@@ -14,6 +14,8 @@ Trait definitions (v0, shown to the player on the screen):
 - Fight: share of your moves made while clearly losing that set the opponent a real problem (swindle lens).
 - Clock: share of your timed moves where time use fit the position: not rushed when one move was critical, not
   lingering when it was easy (clock lens).
+- Foresight: share of the real threats you faced that your move stopped or met rather than let through
+  (prophylaxis lens).
 
 Weeks are the 12 ending at your latest analysed game, so an older history still has a picture.
 Anything resting on fewer than MIN_GAMES games is None and the UI dashes it.
@@ -29,7 +31,7 @@ from app.services.home import MIN_GAMES, PAGE, HomeService, format_time_control,
 from app.services.summary import clock_label, move_label
 
 WEEKS = 12
-TRAITS = ["Sacrifice", "Chaos", "Calm", "Initiative", "Defence", "Grip", "Fight", "Clock"]
+TRAITS = ["Sacrifice", "Chaos", "Calm", "Initiative", "Defence", "Grip", "Fight", "Clock", "Foresight"]
 STEADY = 0.1  # relative change below which a trait counts as "holding steady"
 CHUNK = 100  # game ids per request, to keep URLs short
 
@@ -53,13 +55,14 @@ def week_index(played_at: str, end: datetime) -> int | None:
 
 
 def trait_values(moves: list[dict], lens: list[dict]) -> dict[str, float | None]:
-    """The eight traits for one set of moves and lens rows (one week, or all games)."""
+    """The nine traits for one set of moves and lens rows (one week, or all games)."""
     n = len(moves)
     chaos = [r for r in lens if r["lens"] == "chaos"]
     faced = [r for r in lens if r["lens"] == "survival" and r["verdict"] in ("survived", "missed")]
     winning = [r for r in lens if r["lens"] == "squeeze"]
     losing = [r for r in lens if r["lens"] == "swindle"]
     timed = [r for r in lens if r["lens"] == "clock"]
+    threats = [r for r in lens if r["lens"] == "prophylaxis"]
     return {
         "Sacrifice": sum("sacrifice" in (m.get("signals") or []) for m in moves) / n if n else None,
         "Chaos": sum(r["verdict"] in ("real_chaos", "calculated_risk") for r in chaos) / len(chaos) if chaos else None,
@@ -69,6 +72,7 @@ def trait_values(moves: list[dict], lens: list[dict]) -> dict[str, float | None]
         "Grip": sum(r["verdict"] != "gave_air" for r in winning) / len(winning) if winning else None,
         "Fight": sum(r["verdict"] in ("set", "sprung") for r in losing) / len(losing) if losing else None,
         "Clock": sum(r["verdict"] not in ("rushed", "lingered") for r in timed) / len(timed) if timed else None,
+        "Foresight": sum(r["verdict"] != "let_through" for r in threats) / len(threats) if threats else None,
     }
 
 
@@ -107,7 +111,7 @@ def fingerprint_sentence(rows: dict[str, list[float | None]]) -> str:
     return sentence + "."
 
 
-DETAIL_KEYS = ("faced_chaos", "elo", "p_fail", "spent_ms", "critical")
+DETAIL_KEYS = ("faced_chaos", "elo", "p_fail", "spent_ms", "critical", "threat")
 LENS_COLUMNS = "game_id, ply, lens, score, verdict, " + ", ".join(f"{k}:details->{k}" for k in DETAIL_KEYS)
 
 
@@ -143,7 +147,7 @@ class YouService:
             part = ids[start : start + CHUNK]
             moves += self._paged(lambda: sb.table("game_moves").select("game_id, ply, san, quality, signals, is_brilliant").in_("game_id", part).order("id"))
             lens += self._paged(
-                lambda: sb.table("move_lens_scores").select(LENS_COLUMNS).in_("game_id", part).in_("lens", ["chaos", "survival", "squeeze", "swindle", "clock"]).order("game_move_id")
+                lambda: sb.table("move_lens_scores").select(LENS_COLUMNS).in_("game_id", part).in_("lens", ["chaos", "survival", "squeeze", "swindle", "clock", "prophylaxis"]).order("game_move_id")
             )
         for r in lens:
             # Only these keys of `details` are read; selecting them alone keeps the blob off the wire.
@@ -220,6 +224,7 @@ class YouService:
             "grip": self._grip(games, by_game_lens, by_game_moves),
             "fight": self._fight(games, by_game_lens, by_game_moves),
             "clock": self._clock(games, by_game_lens),
+            "foresight": self._foresight(games, by_game_lens, by_game_moves),
             "sacrifices": self._sacrifices(user_id, username),
         }
 
@@ -291,6 +296,27 @@ class YouService:
             "critical": len(critical),
             "wonOnTime": sum(g.get("result") == "win" for g in on_time),
             "lostOnTime": sum(g.get("result") == "loss" for g in on_time),
+        }
+
+    @staticmethod
+    def _foresight(games: list[dict], by_game_lens: dict, by_game_moves: dict) -> dict | None:
+        """Stopping their ideas (prophylaxis lens): real threats faced, stopped quietly, met by force, or let through."""
+        rows = [r for g in games for r in by_game_lens.get(g["id"], []) if r["lens"] == "prophylaxis"]
+        if not rows:
+            return None
+        best = None
+        for g in games:  # newest first
+            r = next((r for r in sorted(by_game_lens.get(g["id"], []), key=lambda r: -r["ply"]) if r["lens"] == "prophylaxis" and r["verdict"] == "stopped"), None)
+            if r:
+                san = next((m.get("san") for m in by_game_moves.get(g["id"], []) if m["ply"] == r["ply"]), None)
+                best = {"gameId": g["id"], "ply": r["ply"], "label": move_label(r["ply"], san), "threat": (r.get("details") or {}).get("threat"), "opponent": g.get("opponent")}
+                break
+        return {
+            "threats": len(rows),
+            "stopped": sum(r["verdict"] == "stopped" for r in rows),
+            "met": sum(r["verdict"] == "met" for r in rows),
+            "letThrough": sum(r["verdict"] == "let_through" for r in rows),
+            "latestStopped": best,
         }
 
     @staticmethod

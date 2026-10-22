@@ -19,6 +19,10 @@ class PositionData:
     # Clock of the player to move, as a bucket, and the P_fail multiplier that goes with it.
     clock_bucket: str | None = None
     p_fail_multiplier: float = 1.0
+    # The position's cache key (FEN without the move number), so a lens can rebuild the board.
+    key: str | None = None
+    # position_threats row for a position the user faced: the opponent's move and score if the user passed.
+    threat: dict | None = None
 
 
 @dataclass(frozen=True)
