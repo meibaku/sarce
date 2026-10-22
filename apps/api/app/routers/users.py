@@ -8,6 +8,7 @@ from app.deps import current_user_id, resolve_user_id, scoped_user_id
 
 from app.services.chaos_map import CHAOS_DRILL, ChaosMapService
 from app.services.chess_com import normalize_chess_com_username
+from app.services.traps_set import TrapsSetService
 from app.services.home import HomeService
 from app.services.lens_service import LensService
 from app.services.library import LibraryService
@@ -27,6 +28,8 @@ train_service = TrainService()
 settings_store = SettingsStore()
 sync_service = SyncService()
 chaos_map_service = ChaosMapService()
+traps_set_service = TrapsSetService()
+_traps_building: set[str] = set()  # owners whose traps are being rebuilt right now
 _chaos_map_building: set[str] = set()  # owners whose map is being rebuilt right now
 
 
@@ -260,6 +263,30 @@ async def rebuild_chaos_map(background_tasks: BackgroundTasks, user_id: str | No
     if owner not in _chaos_map_building:
         _chaos_map_building.add(owner)
         background_tasks.add_task(_build_chaos_map, owner)
+    return {"building": True}
+
+
+@router.get("/traps-set")
+async def get_traps_set(user_id: str | None = Query(None)):
+    """Your traps: opening positions you steer into where opponents most often go wrong on the next move."""
+    owner = resolve_user_id(user_id)
+    return {"traps": await asyncio.to_thread(traps_set_service.get, owner), "building": owner in _traps_building}
+
+
+def _build_traps(owner: str) -> None:
+    try:
+        traps_set_service.build(owner)
+    finally:
+        _traps_building.discard(owner)
+
+
+@router.post("/traps-set")
+async def rebuild_traps_set(background_tasks: BackgroundTasks, user_id: str | None = Query(None)):
+    """Rebuilds your traps in the background from stored evaluations (no engine); GET shows them when done."""
+    owner = resolve_user_id(user_id)
+    if owner not in _traps_building:
+        _traps_building.add(owner)
+        background_tasks.add_task(_build_traps, owner)
     return {"building": True}
 
 

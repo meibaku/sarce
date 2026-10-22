@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
 import { ChaosMapCard } from "@/components/chaos-map";
+import { TrapsSetCard } from "@/components/traps-set";
 import { Card, Choice, Edge, Label, Link, Loading, Screen, T, Uncalibrated, s } from "@/components/ui";
 import { getYou } from "@/lib/api";
 import { color, ramp } from "@/lib/theme";
@@ -21,6 +22,7 @@ export default function You() {
       <Screen title="you">
         {failed ? <Edge kind="offline" action="Try again" onAction={reload} /> : <Loading />}
         <ChaosMapCard />
+        <TrapsSetCard />
       </Screen>
     );
   if (data.games === 0) return <Screen title="you"><Edge kind="no-games" action="Connect an account" onAction={() => router.push("/onboarding")} /></Screen>;
@@ -181,6 +183,7 @@ export default function You() {
       )}
 
       <ChaosMapCard />
+      <TrapsSetCard />
     </Screen>
   );
 }
