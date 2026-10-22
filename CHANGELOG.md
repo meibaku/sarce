@@ -5,6 +5,11 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- Your traps (You, web and phone): the opening positions you steer into where opponents most often go wrong on the
+  very next move, from your own games and stored evaluations (no engine). For each: caught N of M, the usual slip,
+  what it wins, and the defence that holds. `GET`/`POST /users/traps-set`, new `traps_set` table (RLS)
+
+### Added
 - The swindle lens, the mirror of squeeze: once you are clearly losing (about −2), does each move set the opponent a
   real problem (the chaos measure at their rating), and was it sprung (they missed every safe reply)? Adds a **Fight**
   trait, a "Fighting back" card on You (comebacks from lost positions), and a list in Review

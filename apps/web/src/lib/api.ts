@@ -378,6 +378,28 @@ export async function getChaosMap() {
   return fetchApi<{ positions: ChaosMapPosition[]; building: boolean }>(`/users/chaos-map`);
 }
 
+/** One of your traps (app/services/traps_set.py): where opponents most often go wrong on the next move. */
+export interface TrapSet {
+  fen: string;
+  line: string;
+  move: string;
+  seen: number;
+  caught: number;
+  rate: number;
+  gainPawns: number;
+  slip: string;
+  defence: string;
+}
+
+export async function getTrapsSet() {
+  return fetchApi<{ traps: TrapSet[]; building: boolean }>(`/users/traps-set`);
+}
+
+/** Rebuilds your traps in the background from stored evaluations; poll getTrapsSet until `building` is false. */
+export async function rebuildTrapsSet() {
+  return fetchApi<{ building: boolean }>(`/users/traps-set`, { method: "POST" });
+}
+
 /** Rebuilds the map in the background; poll getChaosMap until `building` is false. */
 export async function rebuildChaosMap() {
   return fetchApi<{ building: boolean }>(`/users/chaos-map`, { method: "POST" });
