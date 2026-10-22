@@ -28,3 +28,15 @@ DEFAULT_ELO = 1600
 CLOCK_MULTIPLIERS = {
     "maia2": {"<5s": 1.2294, "5-15s": 0.9797, "15s+": 0.9317},
 }
+
+# Squeeze (converting an advantage). Centipawns, from the user's side.
+# Only moves made at or above this edge count: clearly winning, about two pawns.
+SQUEEZE_MIN_CP = 200
+# Opponent replies within this of their best still "hold" (they have room).
+SQUEEZE_REPLY_CP = 50
+# Giving back more than this is "gave_air": the opponent got counterplay back.
+SQUEEZE_AIR_CP = 100
+# At most this many holding replies left, with the edge kept, is a squeeze.
+SQUEEZE_TIGHT_REPLIES = 2
+# Holding replies beyond the tight count over which the "kept" score falls from 1 to 0.
+SQUEEZE_ROOM_SPAN = 5

@@ -5,6 +5,7 @@ from __future__ import annotations
 from app.lenses.base import Lens, LensResult, PlyContext
 from app.lenses.chaos import ChaosLens
 from app.lenses.soundness import SoundnessLens
+from app.lenses.squeeze import SqueezeLens
 from app.lenses.survival import SurvivalLens
 
 _LENSES: dict[str, Lens] = {}
@@ -32,5 +33,5 @@ def score_ply(ctx: PlyContext) -> dict[str, tuple[Lens, LensResult]]:
     return results
 
 
-for _lens in (SoundnessLens(), ChaosLens(), SurvivalLens()):
+for _lens in (SoundnessLens(), ChaosLens(), SurvivalLens(), SqueezeLens()):
     register(_lens)

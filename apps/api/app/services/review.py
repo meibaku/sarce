@@ -164,6 +164,23 @@ class ReviewService:
                 "intent": {"type": note["intent_type"], "note": note["note"]} if note else None,
             })
 
+        # Closing it out (squeeze lens): moves made while clearly winning that tightened the grip or gave air back.
+        closing = []
+        for ply in sorted(lens_by_ply):
+            sq = lens_by_ply[ply].get("squeeze")
+            if not sq or sq.get("verdict") not in ("squeezed", "gave_air"):
+                continue
+            d = sq.get("details") or {}
+            closing.append({
+                "ply": ply,
+                "label": move_label(ply, by_ply.get(ply, {}).get("san")),
+                "verdict": sq["verdict"],
+                "edgeBefore": round(float(d.get("edge_before") or 0) / 100, 1),
+                "edgeAfter": round(float(d.get("edge_after") or 0) / 100, 1),
+                "holding": d.get("replies_that_hold"),
+                "best": by_ply.get(ply, {}).get("best_san") if sq["verdict"] == "gave_air" else None,
+            })
+
         return {
             "gameId": game_id,
             "opponent": game.get("opponent"),
@@ -174,6 +191,7 @@ class ReviewService:
             "initialFen": initial_fen,
             "positions": [{"ply": p["ply"], "san": p["san"], "uci": p["uci"], "fen": p["fen"]} for p in line],
             "moments": moments,
+            "closingOut": closing,
             "ideas": [
                 {"family": i["family"], "startPly": i["start_ply"], "endPly": i["end_ply"], "verdict": i["verdict"], "isPivot": i["is_pivot"]}
                 for i in ideas

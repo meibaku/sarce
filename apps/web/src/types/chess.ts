@@ -382,6 +382,8 @@ export interface ReviewApi {
   initialFen: string;
   positions: { ply: number; san: string; uci: string; fen: string }[];
   moments: ReviewMoment[];
+  /** Squeeze lens: moves made while clearly winning that tightened the grip or gave air back. Edges in pawns. */
+  closingOut?: { ply: number; label: string; verdict: "squeezed" | "gave_air"; edgeBefore: number; edgeAfter: number; holding: number | null; best: string | null }[];
   ideas: { family: string; startPly: number; endPly: number; verdict: "worked" | "refuted" | "fizzled"; isPivot: boolean }[];
 }
 
@@ -407,6 +409,8 @@ export interface YouApi {
   axes: { name: string; you: number | null; refs?: Record<string, number | null> }[] | null;
   references?: Record<string, { games: number; model: string | null }>;
   timeControls: { class: "bullet" | "blitz" | "rapid"; games: number; pct: number | null; spread: number | null; calibrated: boolean }[];
+  /** Converting advantages (squeeze lens) across the window; null before any clearly winning position. */
+  grip?: { moves: number; squeezed: number; gaveAir: number; latestLeak: { gameId: string; ply: number; label: string; opponent: string | null } | null } | null;
   survival: {
     gameId: string;
     ply: number;
