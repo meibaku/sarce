@@ -5,6 +5,28 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Added
+- The prophylaxis lens: stopping the opponent's idea before it happens. The analysis pass now stores each faced
+  position's threat (a short null-move search: the opponent's best move if you passed, in a new table
+  `position_threats`). Real threats (worth 1.5+ pawns to them) are stopped by a quiet move, met by force, or let
+  through. Adds a **Foresight** trait, a "Stopping their ideas" card on You and a "Their ideas" list in Review.
+  `scripts/backfill_threats.py` stores threats for games analysed before (needs Stockfish)
+
+### Added
+- Your traps (You, web and phone): the opening positions you steer into where opponents most often go wrong on the
+  very next move, from your own games and stored evaluations (no engine). For each: caught N of M, the usual slip,
+  what it wins, and the defence that holds. `GET`/`POST /users/traps-set`, new `traps_set` table (RLS)
+
+### Added
+- The swindle lens, the mirror of squeeze: once you are clearly losing (about −2), does each move set the opponent a
+  real problem (the chaos measure at their rating), and was it sprung (they missed every safe reply)? Adds a **Fight**
+  trait, a "Fighting back" card on You (comebacks from lost positions), and a list in Review
+- The clock lens, time as style, scaled to each game's starting clock. Moves are found, rushed or missed when one move
+  was clearly best, and quick, lingered or steady otherwise. Adds a **Clock** trait and a "Where your time went" card:
+  time on critical vs easy moves, plus wins and losses on time
+- `games.termination`, generated from the PGN header, so time-outs are counted without loading PGNs
+- Lens contexts now carry the opponent's actual reply and the time spent on each move
+
+### Added
 - The squeeze lens: once you are clearly winning (about +2), does each move keep the advantage and leave the opponent
   little room? A move is "squeezed" (one or two replies still hold), "kept", or "gave air" (the edge drops by more
   than a pawn). It is measured in centipawns from stored engine lines, so it needs no re-analysis:

@@ -18,6 +18,7 @@ from app.lenses import PlyContext, PositionData, score_ply
 from app.lenses import config as lens_config
 from app.services.chaos_validation import clock_bucket, decider_clock_ms
 from app.services.ep import cp_to_ep
+from app.services.threats import THREAT_NODES
 from app.services.human_model import get_human_model
 from app.services.position_evals import fen_key
 
@@ -36,6 +37,29 @@ def keys_after_each_ply(pgn_text: str) -> list[str]:
         board.push(move)
         keys.append(fen_key(board))
     return keys
+
+
+def mainline_ucis(pgn_text: str) -> list[str]:
+    """UCI of every mainline ply."""
+    game = chess.pgn.read_game(io.StringIO(pgn_text))
+    return [] if game is None else [m.uci() for m in game.mainline_moves()]
+
+
+def increment_ms(time_control: str | None) -> int:
+    """Per-move increment in milliseconds from "180+2"; 0 when there is none or it can't be read."""
+    try:
+        return int(str(time_control).split("+")[1]) * 1000
+    except (IndexError, TypeError, ValueError):
+        return 0
+
+
+def spent_on(clocks_ms: list[int | None], ply: int, initial_ms: int | None, inc_ms: int = 0) -> tuple[int | None, int | None]:
+    """(clock before, time spent) for the move at `ply`. `%clk` is the mover's time after their own move."""
+    before = (clocks_ms[ply - 2] if ply - 2 < len(clocks_ms) else None) if ply >= 2 else initial_ms
+    after = clocks_ms[ply] if ply < len(clocks_ms) else None
+    if before is None or after is None:
+        return before, None
+    return before, max(0, before - after + inc_ms)
 
 
 def objective_cost(move: dict) -> float | None:
@@ -65,9 +89,12 @@ def build_ply_contexts(
     clocks_ms: list[int | None] | None = None,
     initial_clock_ms: int | None = None,
     model_name: str | None = None,
+    inc_ms: int = 0,
+    threats_by_key: dict[str, dict] | None = None,
 ) -> list[tuple[dict, PlyContext]]:
     """Pair every stored user move with its context. Pure: no I/O."""
     keys = keys_after_each_ply(pgn_text)
+    ucis = mainline_ucis(pgn_text)
     multipliers = lens_config.CLOCK_MULTIPLIERS.get(model_name or "", {})
 
     def position(ply: int) -> PositionData | None:
@@ -82,11 +109,14 @@ def build_ply_contexts(
             probs_by_elo=probs_by_key.get(keys[ply], {}),
             clock_bucket=bucket,
             p_fail_multiplier=multipliers.get(bucket, 1.0),
+            key=keys[ply],
+            threat=(threats_by_key or {}).get(keys[ply]),
         )
 
     contexts = []
     for move in sorted(move_rows, key=lambda m: m["ply"]):
         before = move.get("eval_before")
+        clock, spent = spent_on(clocks_ms or [], move["ply"], initial_clock_ms, inc_ms)
         ctx = PlyContext(
             ply=move["ply"],
             uci=move["uci"],
@@ -96,6 +126,10 @@ def build_ply_contexts(
             faced=position(move["ply"] - 1),
             left=position(move["ply"]),
             opponent_elo=opponent_rating,
+            reply_uci=ucis[move["ply"] + 1] if move["ply"] + 1 < len(ucis) else None,
+            clock_ms=clock,
+            spent_ms=spent,
+            initial_ms=initial_clock_ms,
         )
         contexts.append((move, ctx))
     return contexts
@@ -222,6 +256,7 @@ class LensService:
         model = get_human_model(settings.human_model)
         model_version = model.model_version
         probs = self._fetch_by_keys("human_probs", keys, "model_version", model_version)
+        threats = self._fetch_by_keys("position_threats", keys, "nodes", THREAT_NODES)
 
         probs_by_key: dict[str, dict[int, dict[str, float]]] = {}
         for row in probs:
@@ -235,6 +270,8 @@ class LensService:
             game.data.get("opponent_rating"),
             clocks_ms=game.data.get("clocks_ms"),
             initial_clock_ms=initial_clock_ms(game.data.get("time_control")),
+            inc_ms=increment_ms(game.data.get("time_control")),
+            threats_by_key={row["fen_key"]: row for row in threats},
             model_name=model.name,
         )
         rows = score_contexts(game_id, contexts)

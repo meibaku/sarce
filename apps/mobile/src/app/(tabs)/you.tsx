@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
 import { ChaosMapCard } from "@/components/chaos-map";
+import { TrapsSetCard } from "@/components/traps-set";
 import { Card, Choice, Edge, Label, Link, Loading, Screen, T, Uncalibrated, s } from "@/components/ui";
 import { getYou } from "@/lib/api";
 import { color, ramp } from "@/lib/theme";
@@ -21,6 +22,7 @@ export default function You() {
       <Screen title="you">
         {failed ? <Edge kind="offline" action="Try again" onAction={reload} /> : <Loading />}
         <ChaosMapCard />
+        <TrapsSetCard />
       </Screen>
     );
   if (data.games === 0) return <Screen title="you"><Edge kind="no-games" action="Connect an account" onAction={() => router.push("/onboarding")} /></Screen>;
@@ -150,6 +152,43 @@ export default function You() {
         </Card>
       )}
 
+      {/* The swindle lens: once clearly losing (about −2), did your moves set real problems, and did they work? */}
+      {data.fight && (
+        <Card>
+          <Label>Fighting back · the swindle</Label>
+          <T weight="medium" size={15}>{`${data.fight.comebacks} of ${data.fight.lostPositions} games where you were clearly losing ended in a win or a draw.`}</T>
+          <T size={13} tone="ink2">{`While losing you set a real problem with ${Math.round((data.fight.set / data.fight.moves) * 100)}% of your moves; ${data.fight.sprung} were sprung.`}</T>
+          {data.fight.latestSprung && (
+            <Link label={`Latest one that worked: ${data.fight.latestSprung.label} →`} onPress={() => router.push(`/games/${data.fight?.latestSprung?.gameId}/review`)} />
+          )}
+        </Card>
+      )}
+
+      {/* The prophylaxis lens: when the opponent had a real idea, did your move take it away? */}
+      {data.foresight && (
+        <Card>
+          <Label>Stopping their ideas</Label>
+          <T weight="medium" size={15}>{`Of ${data.foresight.threats} real threats you faced, you stopped ${data.foresight.stopped} quietly and met ${data.foresight.met} by force.`}</T>
+          <T size={13} tone="ink2">{`${data.foresight.letThrough} came through.`}</T>
+          {data.foresight.latestStopped && (
+            <Link
+              label={`Latest: ${data.foresight.latestStopped.label} stopped their ${data.foresight.latestStopped.threat ?? "idea"} →`}
+              onPress={() => router.push(`/games/${data.foresight?.latestStopped?.gameId}/review`)}
+            />
+          )}
+        </Card>
+      )}
+
+      {/* The clock lens: time as style, scaled to each game's starting clock. */}
+      {data.clock && (
+        <Card>
+          <Label>Where your time went</Label>
+          <T weight="medium" size={15}>{`${data.clock.criticalAvgS ?? "–"} s on moves where one move was clearly best, ${data.clock.easyAvgS ?? "–"} s on the rest.`}</T>
+          <T size={13} tone="ink2">{`${data.clock.rushed} of ${data.clock.critical} critical moves were rushed · ${data.clock.lingered} easy moves took a long think.`}</T>
+          <T mono size={11} tone="muted">{`won on time ${data.clock.wonOnTime} · lost on time ${data.clock.lostOnTime}`}</T>
+        </Card>
+      )}
+
       {data.sacrifices && (
         <Card>
           <Label>Your sacrifices</Label>
@@ -159,6 +198,7 @@ export default function You() {
       )}
 
       <ChaosMapCard />
+      <TrapsSetCard />
     </Screen>
   );
 }

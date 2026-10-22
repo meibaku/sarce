@@ -263,6 +263,72 @@ export function YouView({ data }: { data: YouApi }) {
           )}
         </Card>
 
+        {/* The swindle lens: once clearly losing (about −2), did your moves set real problems, and did they work? */}
+        <Card className="gap-2 !px-5 !py-[18px]">
+          <SectionLabel>Fighting back · the swindle</SectionLabel>
+          {data.fight ? (
+            <>
+              <span className="text-[15px] leading-[1.35] font-medium">
+                {data.fight.comebacks} of {data.fight.lostPositions} games where you were clearly losing ended in a win or a draw.
+              </span>
+              <span className="text-[13px] leading-[1.5] text-ink-2">
+                While losing you set a real problem with {Math.round((data.fight.set / data.fight.moves) * 100)}% of your moves; {data.fight.sprung} were sprung (the
+                opponent missed every safe reply).
+              </span>
+              {data.fight.latestSprung && (
+                <Link href={`/games/${data.fight.latestSprung.gameId}/review?ply=${data.fight.latestSprung.ply}`} className="text-[13px] text-accent-text hover:underline">
+                  Latest one that worked: {data.fight.latestSprung.label} vs {data.fight.latestSprung.opponent ?? "your opponent"} →
+                </Link>
+              )}
+            </>
+          ) : (
+            <span className="text-[13px] text-muted">Shows once you have played on from clearly losing positions (about −2).</span>
+          )}
+        </Card>
+
+        {/* The prophylaxis lens: when the opponent had a real idea, did your move take it away? */}
+        <Card className="gap-2 !px-5 !py-[18px]">
+          <SectionLabel>Stopping their ideas</SectionLabel>
+          {data.foresight ? (
+            <>
+              <span className="text-[15px] leading-[1.35] font-medium">
+                Of {data.foresight.threats} real threats you faced, you stopped {data.foresight.stopped} quietly and met {data.foresight.met} by force.
+              </span>
+              <span className="text-[13px] leading-[1.5] text-ink-2">
+                {data.foresight.letThrough} came through. A quiet stop is a move that takes the idea away before it starts, no capture or check needed.
+              </span>
+              {data.foresight.latestStopped && (
+                <Link href={`/games/${data.foresight.latestStopped.gameId}/review?ply=${data.foresight.latestStopped.ply}`} className="text-[13px] text-accent-text hover:underline">
+                  Latest: {data.foresight.latestStopped.label} stopped their {data.foresight.latestStopped.threat ?? "idea"} →
+                </Link>
+              )}
+            </>
+          ) : (
+            <span className="text-[13px] text-muted">Shows once threats are stored for your games.</span>
+          )}
+        </Card>
+
+        {/* The clock lens: time as style, scaled to each game's starting clock. */}
+        <Card className="gap-2 !px-5 !py-[18px]">
+          <SectionLabel>Where your time went</SectionLabel>
+          {data.clock ? (
+            <>
+              <span className="text-[15px] leading-[1.35] font-medium">
+                {data.clock.criticalAvgS ?? "–"} s on moves where one move was clearly best, {data.clock.easyAvgS ?? "–"} s on the rest.
+              </span>
+              <span className="text-[13px] leading-[1.5] text-ink-2">
+                {data.clock.rushed} of {data.clock.critical} critical moves were rushed (played fast, and the one good move was missed) ·{" "}
+                {data.clock.lingered} easy moves took a long think.
+              </span>
+              <span className="font-mono text-[11px] text-muted">
+                won on time {data.clock.wonOnTime} · lost on time {data.clock.lostOnTime}
+              </span>
+            </>
+          ) : (
+            <span className="text-[13px] text-muted">Shows for games with clock times.</span>
+          )}
+        </Card>
+
         <Link
           href="/library"
           className="flex flex-col gap-2 rounded-[8px] border border-line bg-surface px-5 py-[18px] text-left transition-colors duration-[120ms] ease-sarce hover:border-ink"
