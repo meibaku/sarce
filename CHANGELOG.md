@@ -4,6 +4,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Security
+- Next.js 15.5.27 → 15.5.28 for a critical advisory (GHSA-2464-fhr4-w9xw, remote code execution in the image
+  optimizer with SVG). The remaining high advisories are in lint tooling and need a breaking ESLint upgrade
+
 ### Fixed
 - Phone app (Expo): the board wrapped each row after seven squares, showing stripes instead of a checkerboard; it now
   has proper rank rows and file letters. The tab bar and header use the handoff's line icons and rook mark instead of
