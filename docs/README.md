@@ -17,6 +17,7 @@
 | [VALIDATION.md](./VALIDATION.md) | M4 chaos validation results |
 | [REVIEW_2026-10.md](./REVIEW_2026-10.md) | Trajectory and maths review, findings F1–F11, next six weeks |
 | [BENCHMARK.md](./BENCHMARK.md) | Lichess and Chess.com comparison, cost, style pilot |
+| [COMPETITIVE.md](./COMPETITIVE.md) | Pricing and scoring models vs Lichess, Chess.com, Aimchess and others; scoring-model test |
 | [COMPUTE.md](./COMPUTE.md) | Analysis cost model; cache, Sarce Node, browser, cloud |
 | [LEGAL.md](./LEGAL.md) | Licensing, third-party terms, privacy (not legal advice) |
 | [SUSTAINABILITY.md](./SUSTAINABILITY.md) | How Sarce pays for itself |
