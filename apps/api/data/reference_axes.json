@@ -2,37 +2,43 @@
   "Tal": {
     "games": 40,
     "axes": {
-      "Sacrifice rate": 18,
+      "Sacrifices per 1,000 moves": 5,
       "Chaos created": 36,
       "Calm under fire": 96,
       "Initiative kept": 24
     },
     "model": "heuristic",
     "source": "pgnmentor.com Tal corpus, every 60th of 2431 games",
-    "computedAt": "2026-10-20"
+    "computedAt": "2026-10-20",
+    "sacrificeRule": "real_offer >= 3, per 1,000 moves (review F2)",
+    "sacrificeComputedAt": "2026-10-23"
   },
   "Morphy": {
     "games": 40,
     "axes": {
-      "Sacrifice rate": 22,
+      "Sacrifices per 1,000 moves": 16,
       "Chaos created": 31,
       "Calm under fire": 90,
       "Initiative kept": 22
     },
     "model": "heuristic",
     "source": "pgnmentor.com Morphy corpus, every 5th of 211 games",
-    "computedAt": "2026-10-21"
+    "computedAt": "2026-10-21",
+    "sacrificeRule": "real_offer >= 3, per 1,000 moves (review F2)",
+    "sacrificeComputedAt": "2026-10-23"
   },
   "Shirov": {
     "games": 40,
     "axes": {
-      "Sacrifice rate": 20,
+      "Sacrifices per 1,000 moves": 7,
       "Chaos created": 36,
       "Calm under fire": 95,
       "Initiative kept": 25
     },
     "model": "heuristic",
     "source": "pgnmentor.com Shirov corpus, every 151st of 6069 games",
-    "computedAt": "2026-10-21"
+    "computedAt": "2026-10-21",
+    "sacrificeRule": "real_offer >= 3, per 1,000 moves (review F2)",
+    "sacrificeComputedAt": "2026-10-23"
   }
 }

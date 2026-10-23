@@ -4,7 +4,8 @@ fingerprint (9 traits × 12 weeks), your values on the reference axes, the time-
 the survival story and the sacrifice count.
 
 Trait definitions (v0, shown to the player on the screen):
-- Sacrifice: share of your moves that sacrifice material (Phase 1 signal).
+- Sacrifice: share of your moves that genuinely offer a minor piece or more (`real_sacrifice`, the test Brilliant
+  uses since ADR 0007; the looser `sacrifice` signal counted any capturable piece, review F2).
 - Chaos: share of your scored moves that set a real or speculative problem.
 - Calm: share of your moves without a large evaluation swing.
 - Initiative: mean chaos score of your moves (the pressure you keep on).
@@ -64,7 +65,7 @@ def trait_values(moves: list[dict], lens: list[dict]) -> dict[str, float | None]
     timed = [r for r in lens if r["lens"] == "clock"]
     threats = [r for r in lens if r["lens"] == "prophylaxis"]
     return {
-        "Sacrifice": sum("sacrifice" in (m.get("signals") or []) for m in moves) / n if n else None,
+        "Sacrifice": sum("real_sacrifice" in (m.get("signals") or []) for m in moves) / n if n else None,
         "Chaos": sum(r["verdict"] in ("real_chaos", "calculated_risk") for r in chaos) / len(chaos) if chaos else None,
         "Calm": 1 - sum("evaluation_swing" in (m.get("signals") or []) for m in moves) / n if n else None,
         "Initiative": sum(float(r.get("score") or 0) for r in chaos) / len(chaos) if chaos else None,

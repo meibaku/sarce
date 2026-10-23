@@ -4,6 +4,15 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Changed
+- Sacrifice trait (review F2): it now counts only real sacrifices, a minor piece or more genuinely on offer (the
+  test Brilliant uses since ADR 0007), through a new `real_sacrifice` move signal. The loose signal counted any
+  piece a reply could land on: locally only 349 of 3,807 tagged moves really offered a piece. The You axis is now
+  "Sacrifices per 1,000 moves" (as a percentage everyone rounds to 0–2), and the references are rescored
+  board-only: Tal 5, Shirov 7, Morphy 16. Tal still isn't first; with 7 events in 40 games that awaits F3/F4's
+  larger samples and intervals. `scripts/backfill_real_sacrifice.py` and `scripts/rescore_reference_sacrifice.py`
+  need no engine. The stored style vector's `sacrificeRate` is unchanged and unread, so no version bump
+
 ### Docs
 - Planning and review docs:
   - `docs/REVIEW_2026-10.md`: trajectory, statistical findings F1–F11, Brilliant disagreement plan, feature ideas;
