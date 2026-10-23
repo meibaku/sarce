@@ -4,6 +4,11 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Added
+- `docs/IMPLEMENTATION_PLAN.md`: every suggestion from the October review and its companion docs as ordered work
+  items (phases 1–5), with size, dependencies, ADR/engine/data needs and the decisions only the owner can make.
+  F2, F4 and F12 are marked done; F6 moves to the front after F4 showed Brilliant at 0.01% under rule v3
+
 ### Changed
 - Honest uncertainty (review F4), in a new `services/uncertainty.py`:
   - Brilliant % shows its Wilson 95% range ("likely 3.2–5.0%") on Home, You and Recap, web and phone.

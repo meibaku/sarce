@@ -4,7 +4,7 @@
 
 > **Philosophy:** [PHILOSOPHY.md](./PHILOSOPHY.md) — product constitution (CI-enforced).
 
-> **Next:** [REVIEW_2026-10.md](./REVIEW_2026-10.md) (findings and the six-week plan) · [BENCHMARK.md](./BENCHMARK.md) · [COMPUTE.md](./COMPUTE.md)
+> **Next:** [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) (ordered work items) · [REVIEW_2026-10.md](./REVIEW_2026-10.md) (findings) · [BENCHMARK.md](./BENCHMARK.md) · [COMPUTE.md](./COMPUTE.md)
 
 > **Chaos Lens gameplan:** [CHAOS_PLAN.md](./CHAOS_PLAN.md) — milestone-by-milestone plan for the chaos/survival style lenses (post-Phase-1 work, run in parallel with the phases below).
 
