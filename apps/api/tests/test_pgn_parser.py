@@ -31,3 +31,27 @@ class TestParseChessComGame:
 
     def test_returns_none_without_pgn(self):
         assert parse_chess_com_game({"white": {}, "black": {}}, "x") is None
+
+
+def game(white_result, black_result, pgn_result=None):
+    header = f'[Result "{pgn_result}"]\n' if pgn_result else ""
+    return {**SAMPLE_GAME, "pgn": f'{header}1. e4 e5 *', "white": {**SAMPLE_GAME["white"], "result": white_result}, "black": {**SAMPLE_GAME["black"], "result": black_result}}
+
+
+class TestResults:
+    """Chess.com's per-player codes say how *that* player did; the PGN header wins when present."""
+
+    def test_white_resigned_or_timed_out_is_a_black_win(self):
+        # Before the fix these read as White wins.
+        for code in ("resigned", "timeout", "abandoned"):
+            assert parse_chess_com_game(game(code, "win"), "tal_fan")["result"] == "loss"
+            assert parse_chess_com_game(game(code, "win"), "opponent1")["result"] == "win"
+
+    def test_draw_codes_are_draws(self):
+        for code in ("agreed", "repetition", "stalemate", "insufficient", "50move", "timevsinsufficient"):
+            assert parse_chess_com_game(game(code, code), "tal_fan")["result"] == "draw"
+
+    def test_the_pgn_result_header_is_the_source_of_truth(self):
+        assert parse_chess_com_game(game("resigned", "win", "0-1"), "opponent1")["result"] == "win"
+        assert parse_chess_com_game(game("win", "timeout", "1-0"), "tal_fan")["result"] == "win"
+        assert parse_chess_com_game(game("agreed", "agreed", "1/2-1/2"), "opponent1")["result"] == "draw"
