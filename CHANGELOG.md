@@ -4,6 +4,15 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Docs
+- Planning and review docs:
+  - `docs/REVIEW_2026-10.md`: trajectory, statistical findings F1–F11, Brilliant disagreement plan, feature ideas;
+  - `docs/BENCHMARK.md`: Lichess and Chess.com comparison, cost measurement, style pilot;
+  - `docs/COMPUTE.md` and ADR 0008 (proposed): shared cache, Sarce Node, browser engine, cloud;
+  - `docs/LEGAL.md`: licensing, CLA, trademark, third-party terms, privacy (Tanzania PDPA, GDPR, minors);
+  - `docs/SUSTAINABILITY.md`: free / Plus / Coach tiers.
+- README phase table: Phases 2 and 3 marked complete
+
 ### Fixed
 - Game results: the Chess.com import read White's own outcome code backwards ("resigned", "timeout" and
   "abandoned" counted as White wins; every draw code as a White loss), so about a third of stored results were
