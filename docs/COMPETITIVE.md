@@ -137,3 +137,115 @@ over-call range for the other four tools, not a figure for each.
 3. **Keep Plus below the $6–15 paid cluster,** and keep Brilliant history free. Chess.com charges Diamond for it,
    which makes it a good free hook.
 4. **Re-check prices before launch.** Most of these figures come from listings, not first-party price pages.
+
+## 7. Aimchess vs Sarce, in detail
+
+Aimchess is the closest rival to Sarce's "who you are" story. It's a skill profile built from your online games,
+compared with players at your rating, and it has been owned by Chess.com since late 2022 (sold as Chess.com,
+LLC on the App Store).
+
+### Product
+
+| | **Aimchess** | **Sarce** |
+| --- | --- | --- |
+| Question it answers | "Where are you weak, compared with your peers?" | "What kind of player are you, and are you becoming the one you want to be?" |
+| Imports | Chess.com, Lichess, Chess24 | Chess.com, Lichess (auto-sync) |
+| Profile | Six areas: Openings, Tactics, Endings, Advantage Capitalization, Resourcefulness, Time Management | Brilliant % headline + nine traits (Sacrifice, Chaos, Calm, Initiative, Defence, Grip, Fight, Clock, Foresight) |
+| Reference point | **Peers at your rating** (its strongest feature) | Tal, Shirov, Morphy dots (not yet comparable, F3); no peer reference yet |
+| Human difficulty | Not described | **Chaos lens** (Maia-2, validated), Brilliant find-rate, trap atlas |
+| Intent | — | **Intent journal**: your plan first, then the engine |
+| Training | GM- and coach-written lessons, daily sessions, weekly study plans, puzzles from your mistakes | Train queue from your own games, traps at your band, "defend it yourself", chaos-map drills, Sarce bots |
+| Opponent prep | Scouting reports (limited when free) | Opponent prep (`/prep`) |
+| Coaches | Share data with a coach, multi-account (Premium) | Planned Coach tier |
+| Video and positions | — | Screenshot → FEN, YouTube transcript notes |
+| Method published | No | **Yes**: open source, ADRs, VALIDATION.md |
+| Uncertainty shown | No | Not yet (S7) |
+| Open source / self-host | No | **Yes** (AGPL) |
+| Maturity | Years in market; recent reviews report bugs and slow updates (Lichess sync broke in July 2026, fixed in August) | v1.0 build, not yet hosted |
+
+### Pricing
+
+| | Aimchess | Sarce (proposal) |
+| --- | --- | --- |
+| Free | One 40-game report per month, one daily training session, limited scouting | Style read on recent games, full history via your own Sarce Node, self-host |
+| Monthly | $7.99 (web and Google Play) – $9.99 (US App Store) | ≈ $4 Plus |
+| Annual | $57.99 – $71.99 (≈ $4.85–5.99/mo) | ≈ $36 |
+| Premium unlocks | Unlimited reports, last 1,000 games, unlimited training, statistics page | Cloud analysis of the full history, unlimited prep, all references, full exports |
+
+Sources: [App Store listing](https://apps.apple.com/us/app/aimchess-learn-chess-online/id1524941307),
+[tool listing, Sep 2026](https://www.stork.ai/en/aimchess).
+
+### Scoring
+
+Aimchess doesn't publish how its six scores are made. The listings say only that they come from engine analysis
+of your games, **compared with players in your rating range**. So a head-to-head on formulas isn't possible.
+What can be compared is whether the two products measure the same things:
+
+| Aimchess area | Nearest Sarce measure | Expected relationship |
+| --- | --- | --- |
+| Advantage Capitalization | Squeeze lens, **Grip** trait | Strong positive (both: converting winning positions) |
+| Resourcefulness | Swindle lens, **Fight** + survival, **Defence** | Strong positive (both: fighting from worse positions) |
+| Time Management | Clock lens, **Clock** trait | Positive |
+| Tactics | Miss rate, Brilliant, prophylaxis (**Foresight**) | Moderate |
+| Endings | Move quality by phase (`game_phase`), not a trait | Moderate |
+| Openings | ECO stats, chaos map, trap atlas | Weak (Aimchess scores results; Sarce scores choices) |
+| — (no equivalent) | **Chaos, Initiative, Sacrifice, Brilliant**: style, not skill | Little or none. This is the point: Sarce measures what Aimchess doesn't |
+
+**Verdict.** Aimchess is a *skill* profile against peers. Sarce is a *style* profile plus human difficulty. They
+overlap on three lenses (conversion, resourcefulness, clock); everything Tal-shaped is Sarce-only.
+
+Aimchess is ahead on two things, and both are on Sarce's plan:
+- **Peer comparison:** S6 (population percentiles).
+- **Coach-written training content:** not planned. Sarce's drills come from your own games instead.
+
+Sarce is ahead on:
+- human-model difficulty;
+- the intent journal;
+- an open, validated method;
+- price.
+
+### Running the head-to-head
+
+This is [BENCHMARK.md](./BENCHMARK.md) Part E. Aimchess's free tier gives one 40-game report a month, which is
+enough for one comparison:
+
+1. Generate an Aimchess report on your last 40 games, and screenshot the six scores.
+2. Run the same 40 games through Sarce.
+3. Compare each pair in the table above: Spearman correlation across several players, or agreement on each
+   player's strongest and weakest areas when there's only one.
+4. Repeat for the 5–10 pilot players (Part D). With one report each per month, the comparison builds up over the
+   pilot.
+
+**Expected outcome:**
+- Grip, Fight and Clock agree in direction with Aimchess. That's *convergent* evidence that Sarce's lenses
+  measure something real.
+- Chaos, Sacrifice and Brilliant correlate weakly. That's *discriminant* evidence that Sarce measures something
+  new.
+
+Both results support Sarce's story. A strong correlation for the style traits would be the warning sign: it would
+mean they're skill under another name (S8's discriminant check).
+
+## 8. Other tools worth comparing
+
+| Category | Tool | What it does | Price | Why compare |
+| --- | --- | --- | --- | --- |
+| Skill / style profiles | **Chess DNA** | Eight-area radar (openings, tactics, defence, positional, endgame, calculation, time, resilience), "world champion" style match, share cards, Time Machine drills | Listed free | Closest to Sarce's champion-match idea; method unpublished ([App Store](https://apps.apple.com/app/id6762600434)) |
+| | **Chessigma** | Free Chess.com-style review; paid "Chess DNA" report, Froggy AI coach, daily plan | Review free; coach paid | Publishes the Brilliant benchmark (§4) ([Chessiro's survey](https://chessiro.com/blog/best-chess-analysis-tools)) |
+| | **Chess.com Insights** | Stats across all your games | Diamond | The incumbent's own profile |
+| | **Lichess Insights** | Filter and slice your stats (by phase, piece, time, and more) | Free | The free baseline for "stats about me" |
+| | **ChessBase Style Report** | Aggressiveness, risk, sharp vs quiet, Elo profile | €199.90+ one-off | Only established "style" tool; GM-calibrated, for prep |
+| Game review | **Chessiro** | Stockfish 19 review, plain-English AI coach (24 languages, voice), puzzles from your games, Maia-based bots 250–3000 | Free review; credits for coach | Human-model bots plus AI coach; nearest feature overlap with Maia use ([blog](https://chessiro.com/blog/best-chess-analysis-tools)) |
+| | **WintrChess, Chessitup** | Free Stockfish review and accuracy | Free | Scored in Chessigma's Brilliant benchmark |
+| | **Chesskit** | Open-source game review | Free, open source | The open-source peer ([repo](https://gittrend.io/repo/GuillaumeSD/Chesskit)) |
+| | **DecodeChess** | Natural-language explanations of moves and plans | $8.25/mo | Benchmark for Sarce's grounded commentary (S13) |
+| Human-like | **Maia Chess** | Human-like bots, Maia analysis, drills | Free | Same model family Sarce uses; the research reference |
+| | **Noctie, Chessiverse** | Human-like AI opponents and coaching | ≈ $15/mo; from $7.50/mo | Paid human-like training ([comparison](https://chessiverse.com/compare/chessiverse-vs-noctie)) |
+| Openings and data | **Chessmonitor** | Your games, openings, win rates, opponent search across Chess.com and Lichess, "data science" insights | Free profiles; Plus/Pro Studio | Strongest "stats about me" site; overlaps with chaos map and prep ([chessmonitor.com](https://chessmonitor.com)) |
+| | **OpeningTree** | Your and your opponents' opening trees from Chess.com, Lichess and PGN | Free | Overlaps with opponent prep ([listing](https://alternativeto.net/software/openingtree)) |
+| | **Chessbook** | Opening repertoire trainer | Subscription | Where opening-chaos drills could plug in ([App Store](https://apps.apple.com/app/id6466343415)) |
+
+**Pattern across the field:** every tool either *grades* moves (Chess.com, Lichess, Chessigma, Chessiro, WintrChess,
+Chesskit) or *profiles skill against peers* (Aimchess, Chess DNA, Insights). Only ChessBase measures *style*, and
+it's built for grandmasters' prep, not your own development. None publishes validation or shows uncertainty.
+
+Sarce's open lane is a validated, human-aware style mirror for online players.
