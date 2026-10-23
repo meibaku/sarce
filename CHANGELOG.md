@@ -4,6 +4,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Fixed
+- Chess.com game downloads now send Sarce's contact User-Agent, like the archive-list request already did
+  (Chess.com's PubAPI guidance)
+
 ### Added
 - The prophylaxis lens: stopping the opponent's idea before it happens. The analysis pass now stores each faced
   position's threat (a short null-move search: the opponent's best move if you passed, in a new table
