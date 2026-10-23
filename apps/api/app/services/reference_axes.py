@@ -14,7 +14,7 @@ from functools import lru_cache
 from pathlib import Path
 
 PATH = Path(__file__).resolve().parents[2] / "data" / "reference_axes.json"
-AXES = ["Sacrifice rate", "Chaos created", "Calm under fire", "Initiative kept"]
+AXES = ["Sacrifices per 1,000 moves", "Chaos created", "Calm under fire", "Initiative kept"]
 
 
 def axis_values(traits: dict[str, float | None]) -> dict[str, int | None]:
@@ -24,8 +24,11 @@ def axis_values(traits: dict[str, float | None]) -> dict[str, int | None]:
         return None if value is None else round(value * 100)
 
     initiative = traits.get("Initiative")
+    sacrifice = traits.get("Sacrifice")
     return {
-        "Sacrifice rate": pct(traits.get("Sacrifice")),
+        # Real sacrifices are rare (Tal: about 5 in 1,000 moves), so this axis counts them per 1,000 moves, capped at
+        # 100: as a percentage every player would round to 0-2 (review F2).
+        "Sacrifices per 1,000 moves": None if sacrifice is None else min(100, round(sacrifice * 1000)),
         "Chaos created": pct(traits.get("Chaos")),
         "Calm under fire": pct(traits.get("Calm")),
         # Mean chaos score sits around 0–0.5, so it is doubled onto the 0–100 axis.

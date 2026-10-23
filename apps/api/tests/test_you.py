@@ -25,7 +25,8 @@ def test_week_index():
 
 
 def test_trait_values():
-    moves = [{"signals": ["sacrifice"]}, {"signals": ["evaluation_swing"]}, {"signals": []}, {"signals": []}]
+    # Only real_sacrifice counts for the trait (review F2); a loose "sacrifice" tag alone does not.
+    moves = [{"signals": ["sacrifice", "real_sacrifice"]}, {"signals": ["evaluation_swing", "sacrifice"]}, {"signals": []}, {"signals": []}]
     lens = [
         {"lens": "chaos", "verdict": "real_chaos", "score": 0.2},
         {"lens": "chaos", "verdict": None, "score": 0.0},

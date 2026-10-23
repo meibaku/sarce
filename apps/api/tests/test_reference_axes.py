@@ -5,8 +5,10 @@ from app.services.reference_axes import axis_values
 
 
 def test_axis_values_scale_traits_onto_0_100():
-    axes = axis_values({"Sacrifice": 0.034, "Chaos": 0.2, "Calm": 0.9, "Initiative": 0.7, "Defence": 0.5})
-    assert axes == {"Sacrifice rate": 3, "Chaos created": 20, "Calm under fire": 90, "Initiative kept": 100}
+    axes = axis_values({"Sacrifice": 0.005, "Chaos": 0.2, "Calm": 0.9, "Initiative": 0.7, "Defence": 0.5})
+    # Sacrifice is per 1,000 moves (real sacrifices are rare); the others are percentages.
+    assert axes == {"Sacrifices per 1,000 moves": 5, "Chaos created": 20, "Calm under fire": 90, "Initiative kept": 100}
+    assert axis_values({"Sacrifice": 0.4})["Sacrifices per 1,000 moves"] == 100  # capped
     assert axis_values({})["Chaos created"] is None
 
 

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 import chess
 
-from app.services.brilliant import material_sacrifice, piece_value
+from app.services.brilliant import MIN_BRILLIANT_SACRIFICE_VALUE, material_sacrifice, piece_value, real_offer
 
 if TYPE_CHECKING:
     from app.services.move_classifier import MoveQuality
@@ -120,6 +120,10 @@ def build_move_signals(
 
     if sacrifice > 0:
         signals.append("sacrifice")
+        # The strict test Brilliant uses (ADR 0007): a minor piece or more genuinely on offer. "sacrifice" above
+        # counts any piece a reply could land on, defended or not; the Sacrifice trait reads this one (review F2).
+        if real_offer(board, move) >= MIN_BRILLIANT_SACRIFICE_VALUE:
+            signals.append("real_sacrifice")
     if is_exchange_sacrifice(board, move, sacrifice):
         signals.append("exchange_sacrifice")
         highlight = "Exchange sacrifice with compensation to inspect."
