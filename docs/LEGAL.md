@@ -44,7 +44,7 @@ before a public or paid launch. Get a lawyer to confirm the items marked ⚖️.
 | Maia-3 | AGPL | Rejected in ADR 0002; would only be usable as a separate process. |
 | Lichess open database and evaluation database | CC0 | Free to use, store and redistribute. Attribution isn't required but is good manners. |
 | Lichess API | Lichess API terms | Make one request at a time and respect `429`. Cloud-eval is for occasional positions only. Use OAuth for anything signed-in. |
-| Chess.com Published-Data API | Chess.com's PubAPI page | Read-only, public data only. Set a `User-Agent` with contact info. `services/chess_com.py` sends it on the archive-list request, but game downloads still send a plain `Sarce/0.1`; fix that before any hosted use. See §3. |
+| Chess.com Published-Data API | Chess.com's PubAPI page | Read-only, public data only. Set a `User-Agent` with contact info. `services/chess_com.py` sends it on the archive-list request, but game downloads still send a plain `Sarce/0.1`; fix that before any further Chess.com API use, self-hosted or hosted (PR #155). See §3. |
 | pgnmentor.com reference games | Site terms | Game scores are facts; the collection is pgnmentor's. Sarce stores derived axis values and selected positions only. Don't redistribute the PGN files. |
 | YouTube transcripts | YouTube Terms of Service | Already private per user (PRODUCT_SPEC Phase 2). Never pool or republish transcript text. |
 | Claude API (vision, summaries) | Anthropic terms | Opt-in already. Say in the privacy notice that screenshots and transcripts go to Anthropic for processing. |

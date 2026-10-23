@@ -81,8 +81,9 @@ Two options. They aren't exclusive.
 - **Idle-aware:** below-normal priority, a configurable CPU cap (default half the threads), pauses on battery
   or when the user is active, and resumes later.
 - **Trust:** a player's Node writes only that player's own games, under RLS with their own token, never the
-  service-role key. Results from a Node *don't* enter the shared cache unless they pass a server spot check:
-  the server re-searches a random ~2% of positions and rejects nodes that disagree.
+  service-role key. Results from a Node stay scoped to that player. A row enters the shared cache only after the server has
+  re-searched that row itself (ADR 0008); sampling a batch isn't enough, because a forger can poison a few
+  chosen rows.
 - **Packaging risk:** Maia-2 needs PyTorch, a large installer. Options:
   - ship Node with Stockfish only, and let the cloud run the cheap human-model step;
   - export Maia-2 to ONNX (adding onnxruntime is a heavy dependency, so ask first, per AGENTS.md).

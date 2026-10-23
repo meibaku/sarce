@@ -66,9 +66,10 @@ spread it over the first weeks of a subscription, or run it on the player's Node
 
 ## Order
 
-1. Before a hosted beta stores anyone's games: the privacy notice, minimum age, and PDPC registration and
-   hosting region ([LEGAL.md](./LEGAL.md)), confirmed with counsel. The alternative is a beta that collects
-   nothing, where each tester self-hosts.
+1. Before a hosted beta stores anyone's games, everything in [LEGAL.md](./LEGAL.md) §4 "What the product
+   should do before launch": the privacy notice, minimum age, export and deletion (including derived data),
+   retention rules and processor agreements, plus PDPC registration and the hosting region, confirmed with
+   counsel. Until then the beta collects nothing, and each tester self-hosts.
 2. Deploy the hosted beta (free), run the pilot, and ask what players would pay for (BENCHMARK Part D).
 3. Before taking any money:
    - CLA and trademark ([LEGAL.md](./LEGAL.md));

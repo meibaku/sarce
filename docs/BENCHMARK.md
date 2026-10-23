@@ -43,8 +43,9 @@ different labelling model, and Sarce's Brilliant is deliberately stricter (ADR 0
 
    Normalise first. Lichess evals are from White's point of view and describe the position *after* the ply;
    Sarce's `eval_before` / `eval_after` are from the Sarce user's point of view. Convert both to the mover's
-   point of view and compare post-move evals with post-move evals, or every black-side sample flips sign and
-   shifts by one ply.
+   point of view, or every black-side sample flips sign. Separately, index both by the position after each ply
+   and compare post-move evals with post-move evals; pairing Lichess's post-move eval with Sarce's
+   `eval_before` shifts every sample by one ply.
 4. Time every stage (Phase 1 search, MultiPV evals, human model, lenses) and count cache hits.
 
 ### Metrics
