@@ -29,6 +29,8 @@ export interface HomeData {
     window: string;
     value: number | null;
     spread?: number | null;
+    /** "likely 3.2–5.0%": the 95% range, shown in place of ±spread when known (review F4). */
+    range?: string;
     trend?: string;
     goalLo: number;
     goalHi: number;
@@ -103,9 +105,9 @@ export function HomeView({ data }: { data: HomeData }) {
             ) : (
               <>
                 <span className="font-mono text-[32px] text-accent-text">{brilliant.value.toFixed(1)}%</span>
-                {(brilliant.spread != null || brilliant.trend) && (
+                {(brilliant.range || brilliant.spread != null || brilliant.trend) && (
                   <span className="font-mono text-[12px] text-faint">
-                    {[brilliant.spread != null ? `±${brilliant.spread.toFixed(1)}` : null, brilliant.trend]
+                    {[brilliant.range ?? (brilliant.spread != null ? `±${brilliant.spread.toFixed(1)}` : null), brilliant.trend]
                       .filter(Boolean)
                       .join(" · ")}
                   </span>

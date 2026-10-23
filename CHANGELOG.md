@@ -5,6 +5,17 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Changed
+- Honest uncertainty (review F4), in a new `services/uncertainty.py`:
+  - Brilliant % shows its Wilson 95% range ("likely 3.2–5.0%") on Home, You and Recap, web and phone.
+  - The You trend is Brilliant % over rolling 20-game windows, drawn as a line in its shaded range, instead of one
+    noisy point per week.
+  - Recap says "up" or "down" only when this week's and last week's ranges separate; otherwise "about the same as
+    last week".
+  - Every trait reports the events it rests on, and is dashed below 30, overall and per week.
+- You: the fingerprint labels now take one row per trait. They were fixed at five rows, so with nine traits the
+  later labels drifted out of line with their week cells
+
+### Changed
 - Sacrifice trait (review F2): it now counts only real sacrifices, a minor piece or more genuinely on offer (the
   test Brilliant uses since ADR 0007), through a new `real_sacrifice` move signal. The loose signal counted any
   piece a reply could land on: locally only 349 of 3,807 tagged moves really offered a piece. The You axis is now

@@ -82,8 +82,10 @@ export default function Home() {
                   {data.brilliant.pct == null ? "—" : `${data.brilliant.pct.toFixed(1)}%`}
                 </T>
               )}
-              {!quiet && data.brilliant.pct != null && data.brilliant.spread != null && (
-                <T mono size={12} tone="faint">{`±${data.brilliant.spread.toFixed(1)}`}</T>
+              {!quiet && data.brilliant.pct != null && (data.brilliant.lo != null || data.brilliant.spread != null) && (
+                <T mono size={12} tone="faint">
+                  {data.brilliant.lo != null && data.brilliant.hi != null ? `likely ${data.brilliant.lo.toFixed(1)}–${data.brilliant.hi.toFixed(1)}%` : `±${data.brilliant.spread?.toFixed(1)}`}
+                </T>
               )}
             </View>
             <Gauge value={quiet ? null : data.brilliant.pct} lo={data.brilliant.goalLo} hi={data.brilliant.goalHi} spread={data.brilliant.spread} />

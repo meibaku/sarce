@@ -12,6 +12,7 @@ from __future__ import annotations
 import math
 
 from app.db.supabase import get_supabase
+from app.services.uncertainty import ROLLING_GAMES, ROLLING_POINTS, ROLLING_STEP, wilson
 from app.services.distraction import flagged_plies
 
 WINDOW = 64
@@ -135,7 +136,7 @@ def pick_moments(moves: list[dict], lens_by_ply: dict[int, dict], limit: int = M
 
 
 def window_brilliant(games: list[dict]) -> dict:
-    """Brilliant % over the window, its standard error and the games it rests on."""
+    """Brilliant % over the window with its Wilson 95% interval (lo/hi, review F4), standard error and games."""
     moves = brilliant = 0.0
     counted = 0
     for game in games:
@@ -147,9 +148,34 @@ def window_brilliant(games: list[dict]) -> dict:
         moves += total
         brilliant += float(analysis.get("brilliant_pct") or 0) * total / 100
     if counted < MIN_GAMES or moves == 0:
-        return {"pct": None, "spread": None, "games": counted}
+        return {"pct": None, "spread": None, "lo": None, "hi": None, "games": counted, "moves": int(moves)}
     p = brilliant / moves
-    return {"pct": round(p * 100, 2), "spread": round(math.sqrt(p * (1 - p) / moves) * 100, 2), "games": counted}
+    lo, hi = wilson(brilliant, moves)
+    return {
+        "pct": round(p * 100, 2),
+        "spread": round(math.sqrt(p * (1 - p) / moves) * 100, 2),
+        "lo": round(lo * 100, 2),
+        "hi": round(hi * 100, 2),
+        "games": counted,
+        "moves": int(moves),
+    }
+
+
+def rolling_brilliant(games_newest_first: list[dict]) -> list[dict]:
+    """
+    Brilliant % over rolling windows of ROLLING_GAMES games (step ROLLING_STEP), oldest first, each with its interval:
+    the trend the You screen draws instead of one noisy point per game or week (review F4).
+    """
+    games = [g for g in reversed(games_newest_first) if (g.get("analysis") or {}).get("total_moves")]
+    points = []
+    for end in range(len(games), ROLLING_GAMES - 1, -ROLLING_STEP):
+        window = games[end - ROLLING_GAMES : end]
+        w = window_brilliant(window)
+        if w["pct"] is not None:
+            points.append({"pct": w["pct"], "lo": w["lo"], "hi": w["hi"], "games": w["games"], "endAt": window[-1].get("played_at")})
+        if len(points) >= ROLLING_POINTS:
+            break
+    return points[::-1]
 
 
 def gap_line(pct: float | None, lo: float, hi: float) -> str:

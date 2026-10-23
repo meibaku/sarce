@@ -19,11 +19,14 @@ const REFS = ["Tal", "Shirov", "Morphy"];
 
 function TrendChart({
   weekly,
+  rolling,
   goalLo,
   goalHi,
   changedWeek,
 }: {
   weekly: (number | null)[];
+  /** Rolling 20-game windows with intervals (review F4); drawn as a line in a shaded band when there are two or more. */
+  rolling?: { pct: number; lo: number; hi: number }[];
   goalLo: number;
   goalHi: number;
   /** Week the Brilliant definition changed (ADR 0004): a dashed "style v2" marker. */
@@ -31,9 +34,26 @@ function TrendChart({
 }) {
   // Same frame as the handoff: the goal band at y 12–36, so 1% = 6 units.
   const scale = 24 / Math.max(1, goalHi - goalLo);
-  const y = (pct: number) => 36 - (pct - goalLo) * scale;
+  const y = (pct: number) => Math.max(2, Math.min(78, 36 - (pct - goalLo) * scale));
+  if (rolling && rolling.length >= 2) {
+    const x = (i: number) => (i / (rolling.length - 1)) * 300;
+    const band = [...rolling.map((p, i) => `${x(i)},${y(p.hi)}`), ...rolling.map((p, i) => `${x(i)},${y(p.lo)}`).reverse()].join(" ");
+    const line = rolling.map((p, i) => `${x(i)},${y(p.pct)}`);
+    const end = line.at(-1)!.split(",");
+    return (
+      <svg viewBox="0 0 300 80" className="h-20 w-full overflow-visible" role="img" aria-label="Brilliant % over rolling 20-game windows, with its likely range, against your goal band">
+        <rect x="0" y="12" width="300" height="24" fill="var(--accent-tint)" stroke="var(--accent)" strokeWidth="1.25" />
+        <polygon points={band} fill="var(--line-3)" opacity="0.45" />
+        <polyline points={line.join(" ")} fill="none" stroke="var(--ink)" strokeWidth="1.75" strokeLinejoin="round" strokeLinecap="round" />
+        <circle cx={end[0]} cy={end[1]} r="3.5" fill="var(--ink)" />
+        <text x="0" y="78" fontFamily="var(--font-plex-mono)" fontSize="9" fill="var(--faint)">
+          each point: your last 20 games · shaded: likely range
+        </text>
+      </svg>
+    );
+  }
   const points = weekly
-    .map((v, i) => (v == null ? null : `${(i / Math.max(1, weekly.length - 1)) * 300},${Math.max(2, Math.min(78, y(v)))}`))
+    .map((v, i) => (v == null ? null : `${(i / Math.max(1, weekly.length - 1)) * 300},${y(v)}`))
     .filter(Boolean) as string[];
   const last = points.at(-1)?.split(",");
   return (
@@ -104,9 +124,13 @@ export function YouView({ data }: { data: YouApi }) {
                 <Dashed />
               </span>
             )}
-            {b?.from != null && <span className="font-mono text-[12px] text-faint">from {b.from.toFixed(1)}% in 12 weeks</span>}
+            {b?.lo != null && b?.hi != null && (
+              <span className="font-mono text-[12px] text-faint" title="95% range: where your true rate probably is, given these games">
+                likely {b.lo.toFixed(1)}–{b.hi.toFixed(1)}%
+              </span>
+            )}
           </div>
-          <TrendChart weekly={b?.weekly ?? []} goalLo={data.goalLo} goalHi={data.goalHi} changedWeek={b?.ruleChangedWeek} />
+          <TrendChart weekly={b?.weekly ?? []} rolling={b?.rolling} goalLo={data.goalLo} goalHi={data.goalHi} changedWeek={b?.ruleChangedWeek} />
           {explain && b && (
             <div className="rounded-[6px] bg-panel px-3 py-[10px] font-mono text-[12px] leading-[1.6] text-ink-2">
               {b.brilliantMoves} brilliant ÷ {b.yourMoves.toLocaleString()} your moves = {b.pct?.toFixed(1)}%
@@ -121,11 +145,19 @@ export function YouView({ data }: { data: YouApi }) {
         <Card className="gap-3 !px-5 !py-[18px]">
           <SectionLabel>Style fingerprint · 12 weeks</SectionLabel>
           {data.fingerprint && (
-            <div className="grid grid-cols-[76px_minmax(0,1fr)] gap-1">
-              <div className="grid grid-rows-[repeat(5,20px)] items-center gap-1 text-[12px] text-ink-2">
-                {data.fingerprint.traits.map((t) => (
-                  <span key={t}>{t}</span>
-                ))}
+            <div className="grid grid-cols-[96px_minmax(0,1fr)] gap-1">
+              {/* One label row per trait (there are nine now), with the events behind it; thin traits read dashed. */}
+              <div className="grid auto-rows-[20px] items-center gap-1 text-[12px] text-ink-2">
+                {data.fingerprint.traits.map((t) => {
+                  const n = data.fingerprint?.events?.[t];
+                  const thin = n != null && n < (data.fingerprint?.minEvents ?? 30);
+                  return (
+                    <span key={t} className={`flex items-baseline justify-between gap-1 ${thin ? "text-faint" : ""}`} title={n != null ? `${n} events` : undefined}>
+                      {t}
+                      {n != null && <span className="font-mono text-[9px] text-faint">{thin ? "–" : n >= 1000 ? `${Math.round(n / 1000)}k` : n}</span>}
+                    </span>
+                  );
+                })}
               </div>
               <div className="grid grid-cols-12 auto-rows-[20px] gap-1" role="img" aria-label="Style fingerprint by week">
                 {data.fingerprint.levels.flatMap((row, r) =>

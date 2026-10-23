@@ -39,6 +39,9 @@ export default function You() {
           {data.brilliant?.pct == null ? "—" : `${data.brilliant.pct.toFixed(1)}%`}
         </T>
         {data.brilliant && <T size={12} tone="muted">{`${data.brilliant.brilliantMoves} brilliant of ${data.brilliant.yourMoves} of your moves · 12 weeks`}</T>}
+        {data.brilliant?.lo != null && data.brilliant?.hi != null && (
+          <T mono size={11} tone="faint">{`likely ${data.brilliant.lo.toFixed(1)}–${data.brilliant.hi.toFixed(1)}% · the range your true rate probably sits in`}</T>
+        )}
         <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 3, height: 48 }} accessibilityLabel="Brilliant by week">
           {weekly.map((w, i) => (
             <View
@@ -59,7 +62,11 @@ export default function You() {
           <Label>Style fingerprint · 12 weeks</Label>
           {fingerprint.traits.map((trait, r) => (
             <View key={trait} style={s.row}>
-              <T size={12} style={{ width: 72 }}>{trait}</T>
+              {/* The events behind each trait; thin ones (under minEvents) read faint and dashed (review F4). */}
+              <T size={12} tone={(fingerprint.events?.[trait] ?? 99) < (fingerprint.minEvents ?? 30) ? "faint" : "ink"} style={{ width: 72 }}>{trait}</T>
+              <T mono size={9} tone="faint" style={{ width: 22, textAlign: "right" }}>
+                {fingerprint.events?.[trait] == null ? "" : fingerprint.events[trait] < (fingerprint.minEvents ?? 30) ? "–" : fingerprint.events[trait] >= 1000 ? `${Math.round(fingerprint.events[trait] / 1000)}k` : String(fingerprint.events[trait])}
+              </T>
               <View style={{ flex: 1, flexDirection: "row", gap: 2 }}>
                 {fingerprint.levels[r].map((lvl, i) => (
                   <View key={i} style={{ flex: 1, height: 14, borderRadius: 2, backgroundColor: ramp[Math.max(0, Math.min(7, lvl))] }} />

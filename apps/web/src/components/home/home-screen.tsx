@@ -28,6 +28,7 @@ export function toHomeData(api: HomeApi): HomeData | null {
       window: `last ${brilliant.games}`,
       value: brilliant.pct,
       spread: brilliant.spread,
+      range: brilliant.lo != null && brilliant.hi != null ? `likely ${brilliant.lo.toFixed(1)}–${brilliant.hi.toFixed(1)}%` : undefined,
       goalLo: brilliant.goalLo,
       goalHi: brilliant.goalHi,
       gapLine: brilliant.gapLine ?? "",

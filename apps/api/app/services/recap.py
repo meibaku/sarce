@@ -13,6 +13,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from app.db.supabase import get_supabase
+from app.services.uncertainty import direction
 from app.services.home import HomeService, window_brilliant
 from app.services.summary import move_label, style_read
 
@@ -115,6 +116,11 @@ class RecapService:
         change = None
         if this_week["pct"] is not None and last_week["pct"] is not None:
             change = round(this_week["pct"] - last_week["pct"], 1)
+        # "Up" or "down" only when the weeks' intervals separate; otherwise the change may be noise (review F4).
+        trend = direction(
+            (last_week["lo"], last_week["hi"]) if last_week.get("lo") is not None else None,
+            (this_week["lo"], this_week["hi"]) if this_week.get("lo") is not None else None,
+        )
 
         # Weeks in a row (newest first) with at least one game that felt like you or set a real problem.
         kept = []
@@ -129,7 +135,7 @@ class RecapService:
             "games": len(week),
             "feltLikeYou": sum(1 for g in week if g.get("felt_like_you") == "yes"),
             "bars": bars,
-            "brilliant": {**this_week, "change": change},
+            "brilliant": {**this_week, "change": change, "trend": trend},
             "best": best,
             "lastFocus": {"id": weekly, "label": FOCUSES.get(weekly or ""), "line": focus_line(weekly, real, cheap, survived, len(faced))} if weekly else None,
             "streakWeeks": streak_weeks(kept),

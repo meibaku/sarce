@@ -57,7 +57,11 @@ export default function Recap() {
         <T mono size={11} tone="faint">
           {b.pct == null
             ? `${b.games} game${b.games === 1 ? "" : "s"} this week · needs 5`
-            : [b.spread != null ? `±${b.spread.toFixed(1)}` : null, b.change != null ? `${b.change >= 0 ? "up" : "down"} ${Math.abs(b.change).toFixed(1)}` : null].filter(Boolean).join(" · ")}
+            : [
+                b.lo != null && b.hi != null ? `likely ${b.lo.toFixed(1)}–${b.hi.toFixed(1)}%` : b.spread != null ? `±${b.spread.toFixed(1)}` : null,
+                // Up or down only when the weeks' ranges separate (review F4).
+                b.change != null ? (b.trend ? `${b.trend} ${Math.abs(b.change).toFixed(1)}` : "about the same as last week") : null,
+              ].filter(Boolean).join(" · ")}
         </T>
       </View>
 
