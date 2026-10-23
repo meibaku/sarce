@@ -73,3 +73,52 @@ def test_startup_requeues_interrupted_games(monkeypatch):
     monkeypatch.setattr(analysis, "get_supabase", lambda: db)
     assert AnalysisService.requeue_interrupted() == 2
     assert db.rows == {"a": "pending", "b": "complete", "c": "pending"}
+
+
+class OneGame:
+    """A games table with one row: answers analyze_game's single-row read and records status updates."""
+
+    def __init__(self):
+        self.status = "pending"
+        self._update = None
+
+    def table(self, _name):
+        self._update = None
+        return self
+
+    def __getattr__(self, _name):
+        return lambda *a, **k: self
+
+    def update(self, values):
+        self._update = values
+        return self
+
+    def execute(self):
+        if self._update:
+            self.status = self._update["analysis_status"]
+            return types.SimpleNamespace(data=[])
+        return types.SimpleNamespace(data={"id": "g", "pgn": "1. e4 *", "user_color": "white"})
+
+
+def test_engine_timeouts_are_retried_a_few_times_then_marked_failed(monkeypatch):
+    import chess
+
+    db = OneGame()
+    monkeypatch.setattr(analysis, "get_supabase", lambda: db)
+    monkeypatch.setattr(analysis, "_attempts", {})
+    service = AnalysisService.__new__(AnalysisService)
+    service._parse_game = lambda pgn: (chess.Board(), [chess.Move.from_uci("e2e4")])
+
+    def classify(*_a):
+        raise TimeoutError("engine took too long")
+
+    service._classify = classify
+    statuses = []
+    for _ in range(analysis.MAX_ATTEMPTS):
+        try:
+            asyncio.run(service.analyze_game("g"))
+        except TimeoutError:
+            pass
+        statuses.append(db.status)
+    # Back to the queue twice, then failed: a game that always fails cannot hold a worker forever.
+    assert statuses == ["pending"] * (analysis.MAX_ATTEMPTS - 1) + ["failed"]

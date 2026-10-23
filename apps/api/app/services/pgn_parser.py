@@ -6,12 +6,38 @@ import chess
 import chess.pgn
 
 
-def _parse_result(white_result: str, user_color: str) -> str:
-    if white_result in ("win", "resigned", "timeout", "abandoned"):
-        return "win" if user_color == "white" else "loss"
-    if white_result in ("checkmated", "insufficient", "stalemate", "agreed", "repetition", "50move", "timevsinsufficient"):
-        return "loss" if user_color == "white" else "win"
-    return "draw"
+# Chess.com's per-player `result` is that player's own outcome: "win", a draw code, or how they lost.
+DRAW_CODES = {"agreed", "repetition", "stalemate", "insufficient", "50move", "timevsinsufficient"}
+LOSS_CODES = {"checkmated", "resigned", "timeout", "abandoned", "lose", "kingofthehill", "threecheck", "bughousepartnerlose"}
+PGN_RESULTS = {"1-0": "white", "0-1": "black", "1/2-1/2": "draw"}
+
+
+def _pgn_result(pgn: str) -> str | None:
+    """The PGN's own [Result] header: "white", "black", "draw", or None when absent or "*"."""
+    match = re.search(r'\[Result "([^"]+)"\]', pgn or "")
+    return PGN_RESULTS.get(match.group(1)) if match else None
+
+
+def _parse_result(white_result: str, user_color: str, pgn: str = "") -> str:
+    """
+    The user's result. The PGN's [Result] header is the source of truth; Chess.com's codes are the fallback.
+
+    An earlier version read White's code as if "resigned"/"timeout"/"abandoned" meant White *won* and every draw code
+    meant White lost, which inverted about a third of results (fixed in migration 20261023000000).
+    """
+    winner = _pgn_result(pgn)
+    if winner is None:
+        if white_result == "win":
+            winner = "white"
+        elif white_result in DRAW_CODES:
+            winner = "draw"
+        elif white_result in LOSS_CODES:
+            winner = "black"
+        else:
+            return "draw"
+    if winner == "draw":
+        return "draw"
+    return "win" if winner == user_color else "loss"
 
 
 def parse_chess_com_game(raw: dict, username: str) -> dict | None:
@@ -37,7 +63,7 @@ def parse_chess_com_game(raw: dict, username: str) -> dict | None:
         "opponent": opponent_data.get("username", "unknown"),
         "opponent_rating": opponent_data.get("rating"),
         "time_control": raw.get("time_control"),
-        "result": _parse_result(white.get("result", ""), user_color),
+        "result": _parse_result(white.get("result", ""), user_color, pgn),
         "user_color": user_color,
     }
 
