@@ -10,7 +10,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   - `docs/BENCHMARK.md`: Lichess and Chess.com comparison, cost measurement, style pilot;
   - `docs/COMPUTE.md` and ADR 0008 (proposed): shared cache, Sarce Node, browser engine, cloud;
   - `docs/LEGAL.md`: licensing, CLA, trademark, third-party terms, privacy (Tanzania PDPA, GDPR, minors);
-  - `docs/SUSTAINABILITY.md`: free / Plus / Coach tiers.
+  - `docs/SUSTAINABILITY.md`: free / Plus / Coach tiers;
+  - `docs/STYLE_SCIENCE_PLAN.md`: milestones S0–S15 from the October research report, each with plan and build prompts for Claude Code.
 - README phase table: Phases 2 and 3 marked complete
 
 ### Added
