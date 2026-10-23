@@ -42,11 +42,16 @@ logger = logging.getLogger(__name__)
 TRANSIENT_DB_CODES = {"57014", "40001", "40P01", "53300", "08006"}  # statement timeout, serialization, deadlock, too many connections, connection lost
 
 
+MAX_ATTEMPTS = 3
+_attempts: dict[str, int] = {}  # engine failures per game in this process
+
+
 def is_transient(exc: BaseException) -> bool:
-    """Worth retrying later: a database timeout or dropped connection, not a bad game."""
+    """Worth retrying later: a database timeout, a dropped connection, or the engine timing out or dying under load."""
+    import chess.engine
     import httpx
 
-    if isinstance(exc, (httpx.TransportError, TimeoutError, ConnectionError)):
+    if isinstance(exc, (httpx.TransportError, TimeoutError, ConnectionError, chess.engine.EngineTerminatedError)):
         return True
     code = getattr(exc, "code", None)
     return code in TRANSIENT_DB_CODES or any(c in str(exc) for c in TRANSIENT_DB_CODES)
@@ -154,7 +159,11 @@ class AnalysisService:
             classified = await asyncio.to_thread(self._classify, board, moves, user_color)
         except Exception as exc:
             logger.exception("Analysis failed for game %s: %s", game_id, exc)
-            sb.table("games").update({"analysis_status": "failed"}).eq("id", game_id).execute()
+            # An engine timeout under heavy CPU load is not the game's fault: send it back to the queue, up to
+            # MAX_ATTEMPTS times in this process, so a game that always fails cannot take a worker forever.
+            tries = _attempts[game_id] = _attempts.get(game_id, 0) + 1
+            retry = is_transient(exc) and tries < MAX_ATTEMPTS
+            sb.table("games").update({"analysis_status": "pending" if retry else "failed"}).eq("id", game_id).execute()
             raise
 
         # Clear prior moves if re-analyzing

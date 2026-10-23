@@ -4,6 +4,19 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Fixed
+- Game results: the Chess.com import read White's own outcome code backwards ("resigned", "timeout" and
+  "abandoned" counted as White wins; every draw code as a White loss), so about a third of stored results were
+  inverted. This affected Summary's won/lost variants, Recap, comebacks, wins on time and scouting reports. The
+  parser now uses the PGN's [Result] header, with the Chess.com codes read correctly as a fallback. Migration
+  20261023000000 repairs stored games (1,167 of 3,200 locally)
+- Analysis: an engine timeout or crash under heavy CPU load sends the game back to the queue (up to 3 tries),
+  instead of marking it failed for good
+
+### Fixed
+- Chess.com game downloads now send Sarce's contact User-Agent, like the archive-list request already did
+  (Chess.com's PubAPI guidance)
+
 ### Added
 - The prophylaxis lens: stopping the opponent's idea before it happens. The analysis pass now stores each faced
   position's threat (a short null-move search: the opponent's best move if you passed, in a new table
