@@ -48,15 +48,16 @@ replacement.
 - **Self-host support:** a paid setup or support plan for clubs and schools that want their own instance.
 - **Creator partnerships:** style cards and "play like Tal" weekly challenges with chess streamers. Revenue
   share on Plus sign-ups through their link.
-- **Not recommended:** ads (they break the coaching tone), selling or sharing data (it breaks trust and
-  privacy law), and paywalling Brilliant % (it breaks principle 1).
+- **Not recommended:** ads (they break the coaching tone), selling or sharing data (Sarce's own policy: it breaks trust, and any data use is reviewed with counsel
+  against the privacy law that applies), and paywalling Brilliant % (it breaks principle 1).
 
 ## Unit economics to check
 
 Using the cost model in [COMPUTE.md](./COMPUTE.md):
 
 ```text
-Margin per Plus player = price − (cloud CPU-hours × price per CPU-hour) − storage − payment fees − store cut
+Monthly margin per Plus player = monthly price (annual plans ÷ 12) − (monthly cloud CPU-hours × price per CPU-hour)
+                                 − monthly storage − payment fees − store cut
 ```
 
 With the example assumptions there (a regular bullet player at about 13.5 CPU-hours a month), cloud

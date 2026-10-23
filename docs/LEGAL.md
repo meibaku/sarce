@@ -95,7 +95,10 @@ If you serve the EU/UK or the US:
 - **GDPR / UK GDPR:** you need a lawful basis, a privacy notice and erasure. Record the lawful basis for each
   processing purpose separately. For opponent profiling, legitimate interests is one candidate, but it needs a
   documented purpose, necessity and balancing assessment before it can be relied on. ⚖️
-- **COPPA (US, under 13).**
+- **COPPA (US, under 13):** applies to services directed at children, and to general-audience services that
+  know they are collecting personal data from a child under 13. Covered operators need a notice, verifiable
+  parental consent, and parental access and deletion. An 18+ gate that stops sign-up when a user says they are
+  younger avoids that knowledge; anything aimed at juniors (clubs, schools, the Coach tier) needs a COPPA review. ⚖️
 
 ### What the product should do before launch
 

@@ -20,6 +20,8 @@ different labelling model, and Sarce's Brilliant is deliberately stricter (ADR 0
 
 ## Part A — Lichess comparison (automated)
 
+Paths in this document are repository-relative.
+
 **Script:** `apps/api/scripts/benchmark_lichess.py` (new). Outputs go to `apps/api/scripts/out/benchmark/`
 (gitignored).
 
@@ -64,13 +66,16 @@ different labelling model, and Sarce's Brilliant is deliberately stricter (ADR 0
   - cache hit rate;
   - projected CPU-hours for a 3,000-game backfill.
 
+**Uncertainty:** report every Part A and Part B metric with its denominator (games, plies, labels) and a 95%
+interval from a game-level bootstrap (resample whole games, since plies within a game aren't independent).
+
 ### Done when
 
 This page has the tables for one real player and for the 2,000-game sample, plus a short "why we differ"
 list that feeds the Brilliant copy ([REVIEW_2026-10.md](./REVIEW_2026-10.md) §4).
 
 > **Claude Code prompt:** *Read docs/BENCHMARK.md, docs/VALIDATION.md and docs/CHAOS_PLAN.md. Build
-> scripts/benchmark_lichess.py on `feat/benchmark-lichess`. Reuse the PGN streaming in validate_chaos.py and
+> apps/api/scripts/benchmark_lichess.py on `feat/benchmark-lichess`. Reuse the PGN streaming in validate_chaos.py and
 > the existing analysis services. Never write to a real user's library. Start with 20 games from one
 > username, then report runtime and CPU per stage before scaling.*
 
@@ -94,14 +99,14 @@ The Chess.com Published-Data API is read-only and has no Game Review data. It on
 
    Shortcut: screenshot the Game Review move list and let Claude vision extract the rows (the app already
    uses Claude vision for screenshot → FEN, `services/ai.py`). Check the extracted rows by eye.
-3. `scripts/benchmark_chesscom.py` (new) joins those rows with the synced games and reports:
+3. `apps/api/scripts/benchmark_chesscom.py` (new) joins those rows with the synced games and reports:
    - Brilliant precision and recall: Sarce Brilliant against Chess.com Brilliant, and against Brilliant + Great;
    - for each disagreement, which clause failed: offer, eval margin, already winning, find rate, or real offer.
      This list writes the "Why not Brilliant?" copy;
    - accuracy correlation;
    - Miss and Blunder agreement.
 
-**Data handling:** the labels CSV holds game URLs and opponents' moves. Keep it under `scripts/out/`,
+**Data handling:** the labels CSV holds game URLs and opponents' moves. Keep it under `apps/api/scripts/out/`,
 which is gitignored. Don't commit it.
 
 ---
@@ -115,7 +120,7 @@ and one option must not reuse another's rows. Report cold-cache and warm-cache n
 
 | Option | What changes | Acceptance |
 | --- | --- | --- |
-| C0 Baseline | Current settings: Phase 1 depth 18; MultiPV 4 at 1.5M nodes per ply, widened adaptively to a cap of 8 only while the safe set isn't complete; plus the prophylaxis threat search (150k nodes per user-to-move position), timed separately | — |
+| C0 Baseline | Current settings with `POSITION_EVALS_ENABLED=true`: the shared search classifies Phase 1 too (the depth-18 search only runs as a fallback when shared lines are missing, so don't count both): MultiPV 4 at 1.5M nodes per ply, widened adaptively to a cap of 8 only while the safe set isn't complete; plus the prophylaxis threat search (150k nodes per user-to-move position), timed separately | — |
 | C1 Cache pre-load | Load the Lichess evaluation database (CC0) into `position_evals`, converting with `cp_to_ep` | Hit rate per ply; verdicts unchanged where hit |
 | C2 Tiered search | A cheap pass on every ply; the full MultiPV only on candidate moments (offers, narrow safe sets, top-N chaos candidates) | Lens verdicts identical on ≥ 95% of moves; Brilliant set identical |
 | C3 Recent-first window | Analyse the newest N games first; older history on request | Time to first read |
