@@ -19,11 +19,16 @@ server.
    - **the browser**: Stockfish WASM, for on-demand Phase 1 and the position setter.
 2. The invariant is narrowed, not dropped:
    - routers still never import `chess.engine`;
-   - every result written from outside `apps/api` goes through an authenticated API endpoint as the player,
-     under RLS, never with the service-role key;
+   - clients never write to the database directly. They submit results to an authenticated `apps/api`
+     endpoint as the player; the API checks the job belongs to that player and writes the player's own rows
+     server-side. `position_evals` keeps its current RLS (authenticated read, service-role write), so no
+     client-facing insert policy is added;
    - classification and lens rules stay in one place: `apps/api/app/services` and `app/lenses`. Clients
      return raw engine lines, and the server applies the rules.
-3. Results from clients never enter the shared `position_evals` cache unless they pass a server spot check.
+3. Client results stay **scoped to the submitting player**. A row enters the shared `position_evals` cache
+   only after the server has re-searched that row itself. Sampling a batch is not enough: a forger can corrupt
+   a few chosen rows and expect none to be sampled, and a poisoned shared row reaches every player who meets
+   that position.
 4. The Node and the browser engine are opt-in. Self-hosting and the cloud tier keep working without them.
 
 ## Consequences
@@ -36,8 +41,9 @@ server.
 
 ### Negative / trade-offs
 
-- A new distributable (installer, updates, code signing) and a new attack surface: forged results. Forged
-  results only affect the forger's own data, plus the cache spot check.
+- A new distributable (installer, updates, code signing) and a new attack surface: forged results. Because
+  client rows stay player-scoped until the server verifies them one by one, a forgery only affects the
+  forger's own data. The cost is that client work only fills the shared cache at the server's verify rate.
 - GPL/AGPL source-offer duties for distributed binaries ([LEGAL.md](../LEGAL.md)).
 - Maia-2 on the client means a heavy dependency (PyTorch or ONNX Runtime), so ask before adding it.
 

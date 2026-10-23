@@ -11,7 +11,8 @@ decisions.
 2. **Free should cost Sarce almost nothing.** The free tier runs on the shared cache and on the player's own
    device ([COMPUTE.md](./COMPUTE.md), ADR 0008). That keeps it sustainable at any scale.
 3. **Open source is the moat, not the weakness.** AGPL means a competitor who hosts a modified Sarce must
-   publish their changes. The brand, the hosted convenience and the community stay yours ([LEGAL.md](./LEGAL.md)).
+   offer its corresponding source to every user of that service, who may then share it further. The brand,
+   the hosted convenience and the community stay yours ([LEGAL.md](./LEGAL.md)).
 4. **No ads, no selling data, no dark patterns.** No upsells written as nags; the coaching tone applies to
    pricing pages too.
 
@@ -20,7 +21,7 @@ decisions.
 | | **Free** | **Sarce Plus** | **Coach** |
 | --- | --- | --- | --- |
 | Who | Everyone | Players who want everything done for them | Coaches, clubs, schools |
-| Analysis | Recent games; full history via your own Sarce Node or browser | Full history analysed in the cloud; new games read within minutes | Plus for every student |
+| Analysis | Recent games; full history via your own Sarce Node (the browser engine is on-demand only, not for backfills) | Full history analysed in the cloud; new games read within minutes | Plus for every student |
 | Style read, Brilliant %, fingerprint | ✅ | ✅ | ✅ |
 | Phone without a desktop | Recent games | Everything | Everything |
 | Opponent prep, scouting | Limited (e.g. 3 per month) | Unlimited | Unlimited |
@@ -65,9 +66,11 @@ spread it over the first weeks of a subscription, or run it on the player's Node
 
 ## Order
 
-1. Deploy a hosted beta (free), run the pilot, and ask what players would pay for (BENCHMARK Part D).
-2. Before taking any money:
+1. Before a hosted beta stores anyone's games: the privacy notice, minimum age, and PDPC registration and
+   hosting region ([LEGAL.md](./LEGAL.md)), confirmed with counsel. The alternative is a beta that collects
+   nothing, where each tester self-hosts.
+2. Deploy the hosted beta (free), run the pilot, and ask what players would pay for (BENCHMARK Part D).
+3. Before taking any money:
    - CLA and trademark ([LEGAL.md](./LEGAL.md));
-   - an answer from Chess.com legal;
-   - the privacy notice and PDPC registration.
-3. Launch Supporters first (no promises to keep), then Plus, then Coach.
+   - an answer from Chess.com legal.
+4. Launch Supporters first (no promises to keep), then Plus, then Coach.

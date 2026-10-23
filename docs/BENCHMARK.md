@@ -33,11 +33,18 @@ different labelling model, and Sarce's Brilliant is deliberately stricter (ADR 0
 ### Pipeline
 
 1. Pull N games: 50 for one player, 2,000 for the open-database sample (stratified by 200-point band, like M4).
-2. Run each PGN through the normal analysis (Phase 1, Brilliant rules, then the lenses when
-   `POSITION_EVALS_ENABLED`). Run it **in memory or against a scratch user**, never a real library.
+2. Run each PGN through the normal analysis (Phase 1, Brilliant rules, then the lenses). Set
+   `POSITION_EVALS_ENABLED=true` explicitly for every run (it defaults to off, and without it there are no lens
+   verdicts), and record its value, the human model and `ANALYSIS_NODES` with the results. Run it **in memory or
+   against a scratch user**, never a real library.
 3. Join per ply:
    - Lichess: eval, judgement (Inaccuracy / Mistake / Blunder where flagged), and accuracy;
    - Sarce: eval, quality, `is_brilliant`, and lens verdicts.
+
+   Normalise first. Lichess evals are from White's point of view and describe the position *after* the ply;
+   Sarce's `eval_before` / `eval_after` are from the Sarce user's point of view. Convert both to the mover's
+   point of view and compare post-move evals with post-move evals, or every black-side sample flips sign and
+   shifts by one ply.
 4. Time every stage (Phase 1 search, MultiPV evals, human model, lenses) and count cache hits.
 
 ### Metrics
@@ -73,7 +80,11 @@ list that feeds the Brilliant copy ([REVIEW_2026-10.md](./REVIEW_2026-10.md) §4
 The Chess.com Published-Data API is read-only and has no Game Review data. It only carries an optional
 `accuracies` field when a review was already run. So Chess.com's per-move labels are collected by hand.
 
-1. Review about 30 recent games on Chess.com: mixed results, including at least 10 with a Brilliant or Great move.
+1. Review two samples on Chess.com:
+   - **metrics sample:** about 30 games picked at random from recent history. Precision, recall, accuracy
+     correlation and label prevalence come from this sample only;
+   - **examples sample:** about 10 extra games that contain a Brilliant or Great move, for qualitative
+     disagreement examples. Don't mix them into the metrics, or positives are oversampled.
 2. Record the labels in `apps/api/scripts/out/benchmark/chesscom_labels.csv`:
 
    ```text
@@ -96,14 +107,28 @@ which is gitignored. Don't commit it.
 
 ## Part C — Cost and cheaper analysis
 
-Run on the same 50 games, recording CPU per game and how much the results change against the baseline:
+Run on the same 50 games, recording CPU per game and how much the results change against the baseline.
+`evaluate_position()` reuses `position_evals` rows by position and node budget, so give each option a **fresh
+cache** (an empty scratch database or a separate namespace). Part A's rows must not turn C0 into cache reads,
+and one option must not reuse another's rows. Report cold-cache and warm-cache numbers separately.
 
 | Option | What changes | Acceptance |
 | --- | --- | --- |
-| C0 Baseline | Current settings: Phase 1 depth 18; MultiPV 4 → 8 at 1.5M nodes per ply | — |
+| C0 Baseline | Current settings: Phase 1 depth 18; MultiPV 4 at 1.5M nodes per ply, widened adaptively to a cap of 8 only while the safe set isn't complete; plus the prophylaxis threat search (150k nodes per user-to-move position), timed separately | — |
 | C1 Cache pre-load | Load the Lichess evaluation database (CC0) into `position_evals`, converting with `cp_to_ep` | Hit rate per ply; verdicts unchanged where hit |
 | C2 Tiered search | A cheap pass on every ply; the full MultiPV only on candidate moments (offers, narrow safe sets, top-N chaos candidates) | Lens verdicts identical on ≥ 95% of moves; Brilliant set identical |
 | C3 Recent-first window | Analyse the newest N games first; older history on request | Time to first read |
+
+**C1 row contract.** Lichess keys positions by four-field FENs (no halfmove or fullmove counters), while
+`position_evals.fen_key()` keeps the halfmove clock, and reads match `(fen_key, nodes)` exactly. A straight
+import produces rows nothing reads. Before C1 runs, decide and write down:
+
+- the key: rekey each import to every halfmove value it applies to, or add a four-field lookup used only
+  when the halfmove clock is far from the fifty-move limit (where it can't change the result);
+- `nodes`: the budget the import is filed under, since reads filter on `settings.analysis_nodes`;
+- `engine_version`: a marker such as `lichess-evaldb-<month>`, never a Sarce Stockfish version;
+- `multipv` and `safe_set_complete`: the evaluation database's line count, and `false` unless the lines
+  close the safe set.
 
 Keep node limits fixed within each tier, because results must stay reproducible
 (`services/position_evals.py`). A mixed-budget search was tried before and dropped for that reason.
@@ -120,8 +145,11 @@ Keep node limits fixed within each tier, because results must stay reproducible
   - Did each fingerprint move the way the player said they were aiming for?
   - Would they keep using it?
   - What would they pay for (see [SUSTAINABILITY.md](./SUSTAINABILITY.md))?
-- **Proposed success bar:** ≥ 70% "sounds like me" across all reads, and at least half the players would
-  keep using it.
+- **Proposed success bar** (per player first, so one heavy user can't dominate):
+  - each player answers at least 10 reads, or is reported separately as incomplete;
+  - report every player's "sounds like me" rate with a Wilson interval, then the median across players;
+  - success: the median player is at ≥ 70%, and at least half the players would keep using it. With 5–10
+    players this is a pilot signal, not a statistical result.
 
 ---
 

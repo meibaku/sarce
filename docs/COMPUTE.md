@@ -20,6 +20,7 @@ Per analysed game, the current pipeline runs:
 | --- | --- | --- |
 | Shared MultiPV evals (lenses and Phase 1) | `ANALYSIS_NODES=1,500,000`, MultiPV 4, widened to 8 when the safe set isn't closed | every ply, both sides |
 | Phase 1 fallback (no shared lines) | depth 18, MultiPV 3, plus two evals after the move | every user ply |
+| Prophylaxis threat search | 150,000 nodes, null-move search (`evaluate_game_threats()`) | every uncached position with the user to move |
 | Human model (Maia-2) | ~28 ms per position per call (ADR 0002 spike) | each position × Elo rungs |
 | Lenses, signals, tagger | pure Python over stored data | negligible |
 
@@ -55,6 +56,9 @@ almost six days on one core. That is why the order of work matters more than the
 
 - `position_evals` is already keyed by `(fen_key, nodes)`, so a position analysed for anyone is never searched
   again at the same budget.
+- **Known gap:** `engine_version` is stored but neither part of the key nor checked on read, so after a
+  Stockfish upgrade the cache keeps serving the old engine's rows. Add the version to the key, or reject
+  mismatched rows on read, before the cache is shared widely (the style science plan's data-foundation work).
 - **Pre-load the Lichess evaluation database** (CC0 bulk export). Convert cp → EP with `ep.cp_to_ep`. This
   covers openings well and middlegames poorly; Part C measures the hit rate.
 - **Lichess cloud-eval** (`/api/cloud-eval`) is for "a few positions here and there". Use it in interactive

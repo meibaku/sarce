@@ -10,8 +10,11 @@ before a public or paid launch. Get a lawyer to confirm the items marked ⚖️.
 - **As the copyright holder, you aren't bound by your own licence.** That only holds while you own all the
   code. Today, CONTRIBUTING.md accepts contributions "under the AGPL-3.0" with no further grant, so after the
   first outside contribution:
-  - any hosted Sarce that includes that code must publish its source like anyone else;
-  - you can't relicense, dual-license, or keep paid features closed without every contributor's consent;
+  - any hosted Sarce that includes that code must offer its source to its users like anyone else;
+  - you can't relicense, dual-license, or keep paid features closed in any work that includes or is combined
+    with that contribution without the contributor's consent. Modules you wrote alone and that don't include
+    it stay yours, but keeping that separation clean is hard in practice, so have counsel confirm the
+    intended architecture;
   - the App Store problem below gets harder.
 - **Recommendation:** add a Contributor Licence Agreement (CLA) now, while you're the only author. Either an
   Apache-style individual CLA, or a lighter DCO plus a licence grant to you. Use a CLA bot on PRs. ⚖️
@@ -41,7 +44,7 @@ before a public or paid launch. Get a lawyer to confirm the items marked ⚖️.
 | Maia-3 | AGPL | Rejected in ADR 0002; would only be usable as a separate process. |
 | Lichess open database and evaluation database | CC0 | Free to use, store and redistribute. Attribution isn't required but is good manners. |
 | Lichess API | Lichess API terms | Make one request at a time and respect `429`. Cloud-eval is for occasional positions only. Use OAuth for anything signed-in. |
-| Chess.com Published-Data API | Chess.com's PubAPI page | Read-only, public data only. Set a `User-Agent` with contact info (`services/chess_com.py` already does). See §3. |
+| Chess.com Published-Data API | Chess.com's PubAPI page | Read-only, public data only. Set a `User-Agent` with contact info. `services/chess_com.py` sends it on the archive-list request, but game downloads still send a plain `Sarce/0.1`; fix that before any hosted use. See §3. |
 | pgnmentor.com reference games | Site terms | Game scores are facts; the collection is pgnmentor's. Sarce stores derived axis values and selected positions only. Don't redistribute the PGN files. |
 | YouTube transcripts | YouTube Terms of Service | Already private per user (PRODUCT_SPEC Phase 2). Never pool or republish transcript text. |
 | Claude API (vision, summaries) | Anthropic terms | Opt-in already. Say in the privacy notice that screenshots and transcripts go to Anthropic for processing. |
@@ -89,14 +92,18 @@ Most relevant while the operator is in Dar es Salaam. ⚖️ Confirm everything 
 
 If you serve the EU/UK or the US:
 
-- **GDPR / UK GDPR:** you need a lawful basis, a privacy notice and erasure. Opponent profiling relies on
-  legitimate interest, with a balancing test.
+- **GDPR / UK GDPR:** you need a lawful basis, a privacy notice and erasure. Record the lawful basis for each
+  processing purpose separately. For opponent profiling, legitimate interests is one candidate, but it needs a
+  documented purpose, necessity and balancing assessment before it can be relied on. ⚖️
 - **COPPA (US, under 13).**
 
 ### What the product should do before launch
 
-1. **Minimum age.** Launch 16+ (or 13+ with parental consent where the law allows). Chess has many junior
-   players; don't build scouting reports on accounts you know are minors.
+1. **Minimum age.** Under Tanzania's PDPA a minor's data needs a parent's or guardian's prior consent, and
+   Tanzanian law treats under-18s as children. So launch **18+** unless verified guardian consent is built for
+   every under-18 user. Elsewhere the threshold may be lower (for example 16, or 13 with parental consent),
+   but the strictest market you serve sets it. Chess has many junior players; don't build scouting reports on
+   accounts you know are minors. ⚖️
 2. **Privacy notice plus in-app data export and deletion.** "Delete my account" must also remove derived data:
    style vectors, lens scores, scouting reports about you, and shared links.
 3. **Scouting reports profile third parties.** Keep them private to the requester; never publish or share them
