@@ -31,7 +31,7 @@ class ChessComClient:
 
     async def fetch_games_from_archive(self, archive_url: str) -> list[dict]:
         async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
-            res = await client.get(archive_url, headers={"User-Agent": "Sarce/0.1"})
+            res = await client.get(archive_url, headers={"User-Agent": USER_AGENT})
             res.raise_for_status()
             data = res.json()
 
