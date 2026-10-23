@@ -14,7 +14,8 @@
 | [CODE_REVIEW.md](./CODE_REVIEW.md) | Human + Greptile review; foundation guardrails |
 | [CHAOS_PLAN.md](./CHAOS_PLAN.md) | Chaos lens milestones M0–M8 |
 | [VALIDATION.md](./VALIDATION.md) | M4 chaos validation results |
-| [REVIEW_2026-10.md](./REVIEW_2026-10.md) | Trajectory and maths review, findings F1–F11, next six weeks |
+| [REVIEW_2026-10.md](./REVIEW_2026-10.md) | Trajectory and maths review, findings F1–F12, next six weeks |
+| [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) | Every review suggestion as ordered work items, with owner decisions |
 | [BENCHMARK.md](./BENCHMARK.md) | Lichess and Chess.com comparison, cost, style pilot |
 | [COMPUTE.md](./COMPUTE.md) | Analysis cost model; cache, Sarce Node, browser, cloud |
 | [LEGAL.md](./LEGAL.md) | Licensing, third-party terms, privacy (not legal advice) |
