@@ -28,7 +28,8 @@ from datetime import datetime, timedelta
 
 from app.db.supabase import get_supabase
 from app.services.reference_axes import AXES, axis_values, references
-from app.services.home import MIN_GAMES, PAGE, HomeService, format_time_control, window_brilliant
+from app.services.home import MIN_GAMES, PAGE, HomeService, format_time_control, rolling_brilliant, window_brilliant
+from app.services.uncertainty import MIN_EVENTS, gated
 from app.services.summary import clock_label, move_label
 
 WEEKS = 12
@@ -75,6 +76,29 @@ def trait_values(moves: list[dict], lens: list[dict]) -> dict[str, float | None]
         "Clock": sum(r["verdict"] not in ("rushed", "lingered") for r in timed) / len(timed) if timed else None,
         "Foresight": sum(r["verdict"] != "let_through" for r in threats) / len(threats) if threats else None,
     }
+
+
+def trait_events(moves: list[dict], lens: list[dict]) -> dict[str, int]:
+    """How many observations each trait rests on (its denominator), for the MIN_EVENTS rule (review F4)."""
+    count = lambda name, ok=lambda r: True: sum(1 for r in lens if r["lens"] == name and ok(r))  # noqa: E731
+    chaos = count("chaos")
+    return {
+        "Sacrifice": len(moves),
+        "Chaos": chaos,
+        "Calm": len(moves),
+        "Initiative": chaos,
+        "Defence": count("survival", lambda r: r["verdict"] in ("survived", "missed")),
+        "Grip": count("squeeze"),
+        "Fight": count("swindle"),
+        "Clock": count("clock"),
+        "Foresight": count("prophylaxis"),
+    }
+
+
+def gated_traits(moves: list[dict], lens: list[dict]) -> tuple[dict[str, float | None], dict[str, int]]:
+    """Trait values with any resting on fewer than MIN_EVENTS events dashed (None), and the counts behind them."""
+    values, events = trait_values(moves, lens), trait_events(moves, lens)
+    return {t: gated(v, events[t]) for t, v in values.items()}, events
 
 
 def heat_levels(row: list[float | None]) -> list[int]:
@@ -174,9 +198,10 @@ class YouService:
             weekly_moves[w].extend(by_game_moves.get(g["id"], []))
             weekly_lens[w].extend(by_game_lens.get(g["id"], []))
 
-        weekly_traits = [trait_values(weekly_moves[w], weekly_lens[w]) for w in range(WEEKS)]
+        # Weeks and totals resting on fewer than MIN_EVENTS events are dashed rather than drawn (review F4).
+        weekly_traits = [gated_traits(weekly_moves[w], weekly_lens[w])[0] for w in range(WEEKS)]
         rows = {t: [weekly_traits[w][t] for w in range(WEEKS)] for t in TRAITS}
-        overall = trait_values(moves, lens)
+        overall, events = gated_traits(moves, lens)
         enough = len(games) >= MIN_GAMES
 
         all_brilliant = window_brilliant(games)
@@ -198,7 +223,10 @@ class YouService:
             "brilliant": {
                 "pct": all_brilliant["pct"],
                 "spread": all_brilliant["spread"],
+                "lo": all_brilliant["lo"],
+                "hi": all_brilliant["hi"],
                 "weekly": weekly_pct,
+                "rolling": rolling_brilliant(games),
                 "from": first_pct if enough else None,
                 "brilliantMoves": brilliant_moves,
                 "yourMoves": len(moves),
@@ -209,6 +237,9 @@ class YouService:
             "fingerprint": {
                 "traits": TRAITS,
                 "levels": [heat_levels(rows[t]) for t in TRAITS],
+                # Events behind each trait across the window; traits under MIN_EVENTS are dashed.
+                "events": events,
+                "minEvents": MIN_EVENTS,
                 "sentence": fingerprint_sentence(rows) if enough else "Fills in after five analysed games.",
             },
             "axes": [

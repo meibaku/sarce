@@ -309,6 +309,9 @@ export interface HomeApi {
   brilliant: {
     pct: number | null;
     spread: number | null;
+    /** Wilson 95% interval, in percent (review F4). */
+    lo?: number | null;
+    hi?: number | null;
     games: number;
     goalLo: number;
     goalHi: number;
@@ -399,7 +402,12 @@ export interface YouApi {
   brilliant: {
     pct: number | null;
     spread: number | null;
+    /** Wilson 95% interval for Brilliant %, in percent (review F4). */
+    lo?: number | null;
+    hi?: number | null;
     weekly: (number | null)[];
+    /** Brilliant % over rolling 20-game windows, oldest first, each with its interval. */
+    rolling?: { pct: number; lo: number; hi: number; games: number; endAt: string | null }[];
     from: number | null;
     brilliantMoves: number;
     yourMoves: number;
@@ -408,7 +416,8 @@ export interface YouApi {
     findRateRule?: boolean;
   } | null;
   styleSchema?: number;
-  fingerprint: { traits: string[]; levels: number[][]; sentence: string } | null;
+  /** `events`: observations behind each trait; below `minEvents` a trait is dashed (review F4). */
+  fingerprint: { traits: string[]; levels: number[][]; sentence: string; events?: Record<string, number>; minEvents?: number } | null;
   /** `refs` holds each scored reference player's value on the axis (data/reference_axes.json). */
   axes: { name: string; you: number | null; refs?: Record<string, number | null> }[] | null;
   references?: Record<string, { games: number; model: string | null }>;
@@ -472,7 +481,8 @@ export interface RecapApi {
   games: number;
   feltLikeYou: number;
   bars: { gameId: string; styleRead: number; you: boolean }[];
-  brilliant: { pct: number | null; spread: number | null; games: number; change: number | null };
+  /** `trend` is "up"/"down" only when this week's and last week's intervals separate (review F4). */
+  brilliant: { pct: number | null; spread: number | null; lo?: number | null; hi?: number | null; games: number; change: number | null; trend?: "up" | "down" | null };
   best: { gameId: string; ply: number; label: string } | null;
   lastFocus: { id: string; label: string | null; line: string | null } | null;
   streakWeeks: number;
