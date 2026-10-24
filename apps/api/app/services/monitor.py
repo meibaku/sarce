@@ -120,6 +120,12 @@ def track_game(game_id: str):
         background(_idle, slot, int((now() - tracker.started).total_seconds()))
 
 
+def busy_games() -> set[str]:
+    """Games this process is analysing right now (one tracker per running analysis)."""
+    with _slots_lock:
+        return {t.game_id for t in _slots.values()}
+
+
 def background(fn, *args) -> None:
     """Run a best-effort monitor write off the caller's thread (the API's event loop must never wait on it)."""
     threading.Thread(target=fn, args=args, daemon=True).start()

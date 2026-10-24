@@ -292,9 +292,14 @@ function Throughput({ history }: { history: MonitorHistory }) {
               </line>
             );
           })}
-        {lines.map((series, i) => (
-          <polyline key={machines[i]} points={pts(series)} fill="none" stroke={SERIES[i % SERIES.length]} strokeWidth="1.5" strokeLinejoin="round" />
-        ))}
+        {lines.map((series, i) =>
+          series.length === 1 ? (
+            // A single point draws no line: a dot, so a machine that just started still shows.
+            <circle key={machines[i]} cx={x(series[0][0])} cy={y(series[0][1])} r="2.5" fill={SERIES[i % SERIES.length]} />
+          ) : (
+            <polyline key={machines[i]} points={pts(series)} fill="none" stroke={SERIES[i % SERIES.length]} strokeWidth="1.5" strokeLinejoin="round" />
+          ),
+        )}
         <polyline points={pts(total)} fill="none" stroke="var(--color-ink)" strokeWidth="2.25" strokeLinejoin="round" />
         {total.map(([t, v]) => (
           <circle key={t} cx={x(t)} cy={y(v)} r="3" fill="var(--color-ink)">

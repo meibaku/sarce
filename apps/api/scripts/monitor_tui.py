@@ -251,7 +251,8 @@ class MonitorApp(App):
         box = self.query_one("#throughput", VerticalScroll)
         # The bucket still filling is left out: it would always read as a drop.
         bucket_s = history.get("bucketMin", 10) * 60
-        current = datetime.now(timezone.utc).timestamp() // bucket_s * bucket_s
+        to = datetime.fromisoformat(history["to"]).timestamp() if history.get("to") else datetime.now(timezone.utc).timestamp()
+        current = to // bucket_s * bucket_s  # the server's clock, like the buckets themselves
         series_by = {
             m: [float(v) for t, v in sorted(s.items()) if datetime.fromisoformat(t).timestamp() < current] or [0.0]
             for m, s in history.get("series", {}).items()

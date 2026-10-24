@@ -453,6 +453,21 @@ class AnalysisService:
             logger.info("Requeued %d games interrupted mid-analysis", len(rows))
         return len(rows)
 
+    @staticmethod
+    def requeue_orphans(suspects: set[str]) -> set[str]:
+        """
+        Games marked 'processing' that no analysis in this process is running: a claim whose database answer was
+        lost (committed, but the call raised), so no call owns it to hand back. Requeued once seen on two sweeps in
+        a row, conditionally, so a game that finished or was released in between is left alone. Returns this
+        sweep's suspects for the next one. Only the process that analyses games runs it.
+        """
+        rows = get_supabase().table("games").select("id").eq("analysis_status", "processing").limit(500).execute().data or []
+        orphans = {r["id"] for r in rows} - monitor.busy_games()
+        for game_id in orphans & suspects:
+            get_supabase().table("games").update({"analysis_status": "pending"}).eq("id", game_id).eq("analysis_status", "processing").execute()
+            logger.warning("Requeued game %s: 'processing' with no analysis running", game_id)
+        return orphans - suspects
+
     async def finish_node_games(self) -> int:
         """
         Analyses the games paired nodes have finished searching (ADR 0010): every position is cached, so each takes

@@ -124,3 +124,14 @@ def test_engine_timeouts_are_retried_a_few_times_then_marked_failed(monkeypatch)
         statuses.append(db.status)
     # Back to the queue twice, then failed: a game that always fails cannot hold a worker forever.
     assert statuses == ["pending"] * (analysis.MAX_ATTEMPTS - 1) + ["failed"]
+
+
+def test_orphaned_processing_games_are_requeued_on_the_second_sweep(monkeypatch):
+    # "lost": its claim committed but the answer never came back, so nobody owns it; "busy" is being analysed here.
+    db = FakeGames({"lost": "processing", "busy": "processing", "done": "complete"})
+    monkeypatch.setattr(analysis, "get_supabase", lambda: db)
+    monkeypatch.setattr(analysis.monitor, "busy_games", lambda: {"busy"})
+    suspects = AnalysisService.requeue_orphans(set())
+    assert suspects == {"lost"} and db.rows["lost"] == "processing"  # one sweep could be a claim mid-flight
+    assert AnalysisService.requeue_orphans(suspects) == set()
+    assert db.rows == {"lost": "pending", "busy": "processing", "done": "complete"}
