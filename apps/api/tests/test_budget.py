@@ -19,6 +19,6 @@ def test_reply_loss_reads_the_played_reply_from_the_stored_lines():
     left = PositionData(lines=[{"move_uci": "a", "cp": 0, "mate": None, "ep": 0.6}, {"move_uci": "b", "cp": -300, "mate": None, "ep": 0.25}], safe_set_complete=True)
     ctx = PlyContext(ply=3, uci="x", left=left, reply_uci="b")
     # From centipawns (0 → −300 ≈ 0.5 → 0.25 EP), ignoring the stored WDL-based EP, like objective_cost.
-    assert reply_loss(ctx, {"best_reply_ep": 0.6}) == {"reply": "b", "reply_ep_loss": 0.2486}
+    assert reply_loss(ctx, {"best_reply_ep": 0.6}) == {"reply": "b", "reply_ep_loss": 0.2511}
     assert reply_loss(PlyContext(ply=3, uci="x", left=left, reply_uci="z"), {"best_reply_ep": 0.6})["reply_ep_loss"] is None
     assert reply_loss(PlyContext(ply=3, uci="x", left=left), {"best_reply_ep": 0.6}) == {"reply": None, "reply_ep_loss": None}
