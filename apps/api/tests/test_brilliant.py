@@ -78,7 +78,7 @@ class TestBrilliantMove:
                 move,
                 eval_before=0.0,
                 eval_after=0.0,
-                best_eval=0.26,
+                best_eval=0.4,  # 0.04 expected points below the best: over rule v4's 0.03 (ADR 0009)
             )
             is False
         )
@@ -115,3 +115,34 @@ class TestBrilliantMove:
         legal = list(board.legal_moves)
         if len(legal) == 1:
             assert has_reasonable_alternatives(board, legal[0]) is False
+
+
+class TestRuleV4:
+    """ADR 0009: sound, not lost and not forced in expected points."""
+
+    BOARD = chess.Board("rnb1kb1r/pppp1ppp/5n2/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQkq - 0 3")
+    MOVE = chess.Move.from_uci("h5f7")
+
+    def clauses(self, before, after, best, alternatives=None):
+        from app.services.brilliant import brilliant_clauses
+
+        return brilliant_clauses(self.BOARD, self.MOVE, before, after, best, alternatives=alternatives)
+
+    def test_the_same_pawns_cost_less_when_the_game_is_one_sided(self):
+        # Half a pawn below the best: unsound when level, sound at +4 where it barely moves the result.
+        assert self.clauses(0.0, -0.5, 0.0)["sound"] is False
+        assert self.clauses(4.0, 3.5, 4.0)["sound"] is True
+
+    def test_a_move_that_searched_better_than_best_is_sound(self):
+        assert self.clauses(0.0, 0.6, 0.0)["sound"] is True
+
+    def test_no_brilliant_when_already_lost(self):
+        assert self.clauses(-6.0, -6.0, -6.0)["not_lost"] is False
+        assert self.clauses(-1.0, -1.0, -1.0)["not_lost"] is True
+
+    def test_forced_when_every_other_move_is_clearly_worse(self):
+        alternatives = [("h5f7", 0.5), ("h5h4", -1.5), ("d1e2", -2.0)]
+        assert self.clauses(0.5, 0.5, 0.5, alternatives)["not_forced"] is False
+        assert self.clauses(0.5, 0.5, 0.5, [("h5f7", 0.5), ("h5h4", 0.3)])["not_forced"] is True
+        # No lines for any other move: more than one legal move is enough.
+        assert self.clauses(0.5, 0.5, 0.5, [("h5f7", 0.5)])["not_forced"] is True

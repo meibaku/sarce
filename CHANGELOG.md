@@ -4,6 +4,26 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Fixed
+- Tal benchmark (review F6): `process_tal_benchmark` now runs the same pipeline as a player's games (the shared
+  engine search, classification, then the find-rate and real-offer post-pass), on an evenly spaced sample across
+  the career, skipping games Tal isn't in. It used to classify the first N games with no find-rate rule and fell
+  back to a guessed colour
+
+### Added
+- A personal next band (plan 1.3): Home and Settings show a dashed step on the Brilliant gauge, from just above your
+  likely range (its 95% upper bound) to half as much again, on the way to the goal band, with one line naming it.
+  Web and Expo; `/users/home` returns `nextLo`/`nextHi`. Hidden within half a point of the goal
+- `scripts/trait_overlap.py` and `docs/TRAIT_OVERLAP.md` (review F10a): the nine traits' correlation over 81 windows of
+  20 games. No pair moves together (|r| > 0.8; the strongest is Initiative–Grip at −0.77), so all nine stay; Calm's
+  narrow range is already handled by the per-trait fingerprint scale
+- `brilliant_clauses()`: each Brilliant clause on its own (real sacrifice, sound, not already winning, not
+  forced, hard to find); `is_brilliant_move` is now built on it
+- `services/brilliant_benchmark.py` and `scripts/benchmark_brilliant_v3.py`: Brilliant % under rule v3 with a
+  game-level bootstrap interval, and the first clause stopping each real sacrifice, for a reference player (engine)
+  and for you (stored data, seconds). Locally (1,626 games): your Brilliant is 0.02% (0.01–0.04%). Of 489 real
+  sacrifices, 440 failed "sound" and 31 came when already winning; 11 reached the find-rate clause
+
 ### Added
 - `docs/IMPLEMENTATION_PLAN.md`: every suggestion from the October review and its companion docs as ordered work
   items (phases 1–5), with size, dependencies, ADR/engine/data needs and the decisions only the owner can make.
@@ -15,6 +35,21 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   longer counts as "gave air" and a won position where every move still wins is no longer "critical". Squeeze's
   room count stays in centipawns (documented: EP compresses on the losing side). Lens versions → 2; re-score with
   `scripts/rescore_lenses.py` (stored data, no engine)
+- Brilliant rule v4 (ADR 0009, review F5): sound = at most 0.03 expected points below the best move (one-sided);
+  no Brilliant when already lost (under 0.10 EP); "not forced" = another move kept you within 0.10 EP of the best,
+  not just "more than one legal move". The post-pass re-judges every stored move from scratch, so rule changes
+  promote as well as demote; style vectors → version 5. "Why this move?" builds its checklist from the same
+  clauses. Locally: 3 Brilliant moves in 30,756 (0.01%) against 6 under v3
+- Ratings on the human model's scale (review F1): Maia-2 is conditioned on Lichess ratings, so every Chess.com
+  rating is converted first (`services/rating_map.py`, from the public ChessGoals survey, July 2026) wherever it
+  meets the model: lens ladder, chaos map, Review's "who falls for this", Why this move. A Chess.com rapid 660
+  opponent is now judged as the ~1,170 player they are, not the bottom rung. Chaos and survival lens versions bump
+- The Brilliant find-rate clause is judged at your own rating, converted and to the nearest 100, instead of the
+  opponent's at 400-point rungs (review F11a, ADR 0004 addendum); `games.user_rating` is a new generated column
+  from the PGN. Style vectors → version 4
+- Traps (review F7, the winner's curse): Your traps and the trap atlas rank by a cautious estimate, the 95% lower
+  bound of how often a trap catches opponents, so a lucky 3 of 3 can't outrank 30 of 40. Your traps show "likely at
+  least N%" next to the raw rate; the atlas returns `seen` with each trap
 - Honest uncertainty (review F4), in a new `services/uncertainty.py`:
   - Brilliant % shows its Wilson 95% range ("likely 3.2–5.0%") on Home, You and Recap, web and phone.
   - The You trend is Brilliant % over rolling 20-game windows, drawn as a line in its shaded range, instead of one
@@ -150,6 +185,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   service must share its source; compatible with python-chess (GPL-3.0+)
 
 ### Removed
+- Style profile (review F11b): the one-word style label ("Sacrificial tactician", "Balanced improver", …) is gone.
+  Its thresholds were hand-cut and never validated, and no screen showed it; style is the fingerprint on You
 - The pre-v1 dashboard at `/lab` and the components only it used (ADR 0005); the Brilliant headline contract now
   checks Home; sign-in status moved to Settings
 

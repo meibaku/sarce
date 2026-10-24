@@ -17,6 +17,7 @@ from app.config import settings
 from app.db.supabase import get_supabase
 from app.services.baseline import BaselineService, EMPTY_DISTRIBUTION
 from app.services.brilliant_find_rate import BrilliantFindRate
+from app.services.rating_map import opponent_model_elo
 from app.services.human_model import (
     SupabaseProbStore,
     cached_move_probs,
@@ -224,13 +225,17 @@ class AnalysisService:
             await asyncio.to_thread(
                 self._store_chaos_raw_data,
                 game_id, row["pgn"], board, moves, user_color, classified,
-                row.get("opponent_rating"),
+                opponent_model_elo(row),
             )
-            # The find-rate rule may have changed Brilliant %, so refresh the baseline.
-            await self.baseline.recompute_baseline(
-                user_id=row.get("user_id"),
-                chess_com_username=row.get("chess_com_username"),
-            )
+        else:
+            # Without the Chaos Lens pass the full rule still runs (human-model probabilities from the cache, or
+            # computed on a miss), so every game carries the current rule's version, not v1 (ADR 0009).
+            await asyncio.to_thread(self._apply_find_rate, game_id)
+        # The rule may have changed Brilliant %, so refresh the baseline.
+        await self.baseline.recompute_baseline(
+            user_id=row.get("user_id"),
+            chess_com_username=row.get("chess_com_username"),
+        )
 
         return {
             "gameId": game_id,
@@ -324,7 +329,7 @@ class AnalysisService:
         sb = get_supabase()
         query = (
             sb.table("games")
-            .select("id, pgn, user_color, opponent_rating, chaos_data_status")
+            .select("id, pgn, user_color, opponent_rating, source, time_control, chaos_data_status")
             .eq("analysis_status", "complete")
             .or_("chaos_data_status.is.null,chaos_data_status.eq.failed")
             .limit(limit)
@@ -347,7 +352,7 @@ class AnalysisService:
             await asyncio.to_thread(
                 self._store_chaos_raw_data,
                 game["id"], game["pgn"], board, moves,
-                game.get("user_color") or "white", moves_res.data, game.get("opponent_rating"),
+                game.get("user_color") or "white", moves_res.data, opponent_model_elo(game),
             )
             # Games that stopped after Phase 1 also missed the idea tagger: catch it up too.
             if settings.idea_tagger_enabled:

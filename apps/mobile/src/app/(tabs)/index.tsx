@@ -88,8 +88,19 @@ export default function Home() {
                 </T>
               )}
             </View>
-            <Gauge value={quiet ? null : data.brilliant.pct} lo={data.brilliant.goalLo} hi={data.brilliant.goalHi} spread={data.brilliant.spread} />
-            {!quiet && data.brilliant.gapLine && <T size={13} tone="ink2">{data.brilliant.gapLine}</T>}
+            <Gauge
+              value={quiet ? null : data.brilliant.pct}
+              lo={data.brilliant.goalLo}
+              hi={data.brilliant.goalHi}
+              spread={data.brilliant.spread}
+              next={!quiet && data.brilliant.nextLo != null && data.brilliant.nextHi != null ? { lo: data.brilliant.nextLo, hi: data.brilliant.nextHi } : null}
+            />
+            {!quiet && data.brilliant.gapLine && (
+              <T size={13} tone="ink2">
+                {data.brilliant.gapLine}
+                {data.brilliant.nextLo != null && data.brilliant.nextHi != null ? ` Next band: ${data.brilliant.nextLo}–${data.brilliant.nextHi}%, just above what your games show now.` : ""}
+              </T>
+            )}
             {!quiet && data.stats && (
               <View style={[s.row, { marginTop: 4, borderTopWidth: 1, borderColor: color.hair, paddingTop: 10 }]}>
                 <Stat label="style streak" value={data.stats.streak == null ? null : `${data.stats.streak} game${data.stats.streak === 1 ? "" : "s"}`} />

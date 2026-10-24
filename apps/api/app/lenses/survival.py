@@ -12,7 +12,7 @@ from app.lenses.chaos import is_decided, nearest_elo, position_chaos
 
 class SurvivalLens:
     name = "survival"
-    version = "1"
+    version = "2"  # 2: opponent rating on the human model's scale (review F1)
 
     def score(self, ctx: PlyContext) -> LensResult | None:
         if ctx.faced is None or is_decided(ctx.ep_before):
