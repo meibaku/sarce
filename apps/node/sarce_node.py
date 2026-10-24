@@ -251,7 +251,8 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
                 flush()
             finally:
                 stop.set()
-            gw.call_retrying("/nodes/done", {"gameId": game_id, "positions": len(evals.rows) - len(job["evals"])})
+            # Positions searched or looked up: the same measure the server's own analysis reports.
+            gw.call_retrying("/nodes/done", {"gameId": game_id, "positions": progress["positions"]})
             last_seconds = round(time.monotonic() - started)
             done_today += 1
             print(f"[{name}] {game_id}: {len(moves)} plies in {last_seconds}s", flush=True)

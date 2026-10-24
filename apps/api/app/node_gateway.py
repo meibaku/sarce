@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.services import monitor
 from app.services.nodes import NodeService, bundle, signature, token_ok
@@ -44,10 +44,35 @@ class DoneRequest(NodeRequest):
     positions: int = 0
 
 
+class MachineReport(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    cpu: float | None = Field(default=None, ge=0, le=100)
+    memUsed: float | None = Field(default=None, ge=0, le=1)
+    memTotalGb: float | None = Field(default=None, ge=0, le=4096)
+    uptimeS: int | None = Field(default=None, ge=0)
+
+
+class EngineReport(BaseModel):
+    """One engine's status file, typed: a malformed report is refused before anything is written."""
+
+    model_config = ConfigDict(extra="ignore")
+    engine: int = Field(ge=0, le=63)
+    state: str = Field(default="unknown", max_length=20)
+    gameId: str | None = Field(default=None, max_length=40)
+    done: int = Field(default=0, ge=0)
+    total: int = Field(default=0, ge=0)
+    startedAt: float | None = None
+    progressAt: float | None = None
+    cpu: float | None = Field(default=None, ge=0)
+    rssMb: float | None = Field(default=None, ge=0)
+    gamesToday: int = Field(default=0, ge=0)
+    lastGameSeconds: int | None = Field(default=None, ge=0)
+
+
 class ReportRequest(NodeRequest):
-    machine: dict = Field(default_factory=dict)
-    engines: list[dict] = Field(default_factory=list, max_length=64)
-    bundle: str | None = None
+    machine: MachineReport = Field(default_factory=MachineReport)
+    engines: list[EngineReport] = Field(default_factory=list, max_length=64)
+    bundle: str | None = Field(default=None, max_length=40)
     startedAt: float | None = None  # epoch seconds: when the node process started (a change is a restart)
 
 
@@ -81,7 +106,9 @@ def split_node(node: str) -> tuple[str, int | None]:
 @app.post("/nodes/report")
 async def report(body: ReportRequest):
     """A node's machine and engine snapshots, every few seconds (the analysis monitor)."""
-    await asyncio.to_thread(monitor.node_report, body.node, body.machine, body.engines, body.bundle, body.startedAt)
+    await asyncio.to_thread(
+        monitor.node_report, body.node, body.machine.model_dump(), [e.model_dump() for e in body.engines], body.bundle, body.startedAt
+    )
     return {"ok": True}
 
 
@@ -99,10 +126,11 @@ async def heartbeat(body: DoneRequest):
 
 @app.post("/nodes/done")
 async def done(body: DoneRequest):
-    await asyncio.to_thread(service.done, body.gameId, body.node)
-    machine, engine = split_node(body.node)
-    await asyncio.to_thread(monitor.bump, machine, 1, body.positions)
-    await asyncio.to_thread(monitor.event, "node_game_done", machine, engine, body.gameId, positions=body.positions)
+    first = await asyncio.to_thread(service.done, body.gameId, body.node)
+    if first:  # a retry of the same acknowledgement isn't a second game
+        machine, engine = split_node(body.node)
+        await asyncio.to_thread(monitor.bump, machine, 1, body.positions)
+        await asyncio.to_thread(monitor.event, "node_game_done", machine, engine, body.gameId, positions=body.positions)
     return {"ok": True}
 
 

@@ -36,7 +36,7 @@ EVENTS = "analysis_events"
 
 current: contextvars.ContextVar[Tracker | None] = contextvars.ContextVar("analysis_tracker", default=None)
 _sampler = Sampler()
-_slots: set[int] = set()
+_slots: dict[int, "Tracker"] = {}  # busy server slots, refreshed by every tick so a long search still shows
 _slots_lock = threading.Lock()
 _active_alerts: set[str] = set()
 STARTED_AT = datetime.now(timezone.utc)
@@ -107,23 +107,32 @@ def track_game(game_id: str):
     """Mark a server analysis slot busy with this game for the duration (the context reaches worker threads)."""
     with _slots_lock:
         slot = next(i for i in range(1000) if i not in _slots)
-        _slots.add(slot)
-    tracker = Tracker(game_id, slot)
+        tracker = Tracker(game_id, slot)
+        _slots[slot] = tracker
     token = current.set(tracker)
-    tracker.write(force=True)
+    background(tracker.write, True)  # never a database round trip on the API's event loop
     try:
         yield tracker
     finally:
         current.reset(token)
         with _slots_lock:
-            _slots.discard(slot)
-        try:
-            get_supabase().table("engine_snapshots").upsert({
-                "machine": MACHINE, "engine": slot, "state": "idle", "game_id": None, "done": 0, "total": 0,
-                "last_game_s": int((now() - tracker.started).total_seconds()), "updated_at": now().isoformat(),
-            }, on_conflict="machine,engine").execute()
-        except Exception:
-            pass
+            _slots.pop(slot, None)
+        background(_idle, slot, int((now() - tracker.started).total_seconds()))
+
+
+def background(fn, *args) -> None:
+    """Run a best-effort monitor write off the caller's thread (the API's event loop must never wait on it)."""
+    threading.Thread(target=fn, args=args, daemon=True).start()
+
+
+def _idle(slot: int, seconds: int) -> None:
+    try:
+        get_supabase().table("engine_snapshots").upsert({
+            "machine": MACHINE, "engine": slot, "state": "idle", "game_id": None, "done": 0, "total": 0,
+            "last_game_s": seconds, "updated_at": now().isoformat(),
+        }, on_conflict="machine,engine").execute()
+    except Exception:
+        pass
 
 
 class CountingStore:
@@ -142,6 +151,23 @@ class CountingStore:
         self.store.put(row)
 
 
+class CountingEngine:
+    """Wraps the engine: positions searched without a store lookup (decided ones) count towards progress too."""
+
+    def __init__(self, engine) -> None:
+        self.engine = engine
+
+    @property
+    def engine_version(self) -> str:
+        return self.engine.engine_version
+
+    def analyse(self, board, nodes: int, multipv: int):
+        tracker = current.get()
+        if tracker:
+            tracker.position(board.fen().rsplit(" ", 1)[0])
+        return self.engine.analyse(board, nodes=nodes, multipv=multipv)
+
+
 def engine_started(pid: int | None) -> None:
     """Called when a Stockfish process opens inside a tracked game, so its CPU and memory can be read."""
     tracker = current.get()
@@ -152,6 +178,10 @@ def engine_started(pid: int | None) -> None:
 # --- the API's tick: the server's machine snapshot, alerts, retention ---------------------------------------------
 
 def tick(engines: int) -> None:
+    with _slots_lock:
+        busy = list(_slots.values())
+    for tracker in busy:
+        tracker.write(force=True)  # fresh CPU and memory, and proof of life during a long search
     sb = get_supabase()
     stats = _sampler.machine()
     sb.table("machine_snapshots").upsert({
@@ -297,6 +327,23 @@ def events(limit: int = 100, machine: str | None = None) -> list[dict]:
     if machine:
         q = q.eq("machine", machine)
     return q.execute().data or []
+
+
+def game_finished(game_id: str, seconds: int, positions: int, moves: int | None) -> None:
+    """A server analysis ended: counted for this machine, unless a node had searched it (then the node got the count)."""
+    if searched_by_node(game_id):
+        event("finished_from_node", game_id=game_id, seconds=seconds)
+    else:
+        bump(MACHINE, 1, positions)
+        event("game_done", game_id=game_id, seconds=seconds, moves=moves, positions=positions)
+
+
+def searched_by_node(game_id: str) -> bool:
+    try:
+        rows = get_supabase().table("node_leases").select("done_at").eq("game_id", game_id).limit(1).execute().data or []
+        return bool(rows and rows[0].get("done_at"))
+    except Exception:
+        return False
 
 
 def node_report(machine: str, stats: dict, engines: list[dict], bundle: str | None, started_epoch: float | None) -> None:
