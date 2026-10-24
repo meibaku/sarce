@@ -280,6 +280,18 @@ export interface ScoutingReport {
     openingsAsBlack: { name: string; games: number }[];
     motifsPer100Moves: Record<string, number>;
     ideasPerGame: Record<string, number>;
+    /** Their most frequent opening positions where they went wrong (plan 3.7); null without an engine. */
+    whereTheyGoWrong?: {
+      fen: string;
+      line: string;
+      seen: number;
+      wrong: number;
+      lostEp: number;
+      slip: string | null;
+      best: string;
+      pFail: number;
+      elo: number;
+    }[] | null;
   };
 }
 
