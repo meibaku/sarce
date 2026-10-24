@@ -10,7 +10,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   - `docs/BENCHMARK.md`: Lichess and Chess.com comparison, cost measurement, style pilot;
   - `docs/COMPUTE.md` and ADR 0008 (proposed): shared cache, Sarce Node, browser engine, cloud;
   - `docs/LEGAL.md`: licensing, CLA, trademark, third-party terms, privacy (Tanzania PDPA, GDPR, minors);
-  - `docs/SUSTAINABILITY.md`: free / Plus / Coach tiers.
+  - `docs/SUSTAINABILITY.md`: free / Plus / Coach tiers;
+  - `docs/COMPETITIVE.md` and `apps/api/scripts/compare_scoring_models.py`: pricing and scoring models compared with Lichess, Chess.com, Aimchess, DecodeChess, Chessigma, Chess DNA, Maia, Noctie and ChessBase; the same eval drops through each published scoring rule (Sarce agrees with the Chess.com proxy on 7 of 13);
+  - `docs/STYLE_SCIENCE_PLAN.md`: milestones S0–S15 from the October research report, each with plan and build prompts for Claude Code.
 - README phase table: Phases 2 and 3 marked complete
 
 ### Fixed

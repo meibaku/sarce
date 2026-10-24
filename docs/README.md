@@ -13,9 +13,11 @@
 | [QUALITY_GATES.md](./QUALITY_GATES.md) | CI, tests, branch rules, rulesets |
 | [CODE_REVIEW.md](./CODE_REVIEW.md) | Human + Greptile review; foundation guardrails |
 | [CHAOS_PLAN.md](./CHAOS_PLAN.md) | Chaos lens milestones M0–M8 |
+| [STYLE_SCIENCE_PLAN.md](./STYLE_SCIENCE_PLAN.md) | Next milestone plan S0–S15, with Claude Code prompts |
 | [VALIDATION.md](./VALIDATION.md) | M4 chaos validation results |
 | [REVIEW_2026-10.md](./REVIEW_2026-10.md) | Trajectory and maths review, findings F1–F11, next six weeks |
 | [BENCHMARK.md](./BENCHMARK.md) | Lichess and Chess.com comparison, cost, style pilot |
+| [COMPETITIVE.md](./COMPETITIVE.md) | Pricing and scoring models vs Lichess, Chess.com, Aimchess and others; scoring-model test |
 | [COMPUTE.md](./COMPUTE.md) | Analysis cost model; cache, Sarce Node, browser, cloud |
 | [LEGAL.md](./LEGAL.md) | Licensing, third-party terms, privacy (not legal advice) |
 | [SUSTAINABILITY.md](./SUSTAINABILITY.md) | How Sarce pays for itself |

@@ -4,7 +4,7 @@
 [VALIDATION.md](./VALIDATION.md) records M4.
 
 Sarce isn't trying to out-engine Chess.com or Lichess. All three run Stockfish. The benchmark answers
-four narrower questions:
+five narrower questions:
 
 | # | Question | Part |
 | --- | --- | --- |
@@ -12,6 +12,7 @@ four narrower questions:
 | 2 | **Difference.** What does Sarce see that they don't: sound chaos, squeezed or gave-air moves, real offers? | A |
 | 3 | **Cost.** How many CPU-seconds does one game cost? This decides the hosting model ([COMPUTE.md](./COMPUTE.md)). | A, C |
 | 4 | **Usefulness.** Do players recognise themselves, and does their style move the way they want? | D |
+| 5 | **Convergent and discriminant validity.** Do Sarce's lenses agree with Aimchess where they should, and differ where Sarce measures style? | E |
 
 The goal is to explain differences, not to match. Chess.com's algorithm is closed, Lichess uses a
 different labelling model, and Sarce's Brilliant is deliberately stricter (ADR 0004, ADR 0007).
@@ -159,12 +160,36 @@ Keep node limits fixed within each tier, because results must stay reproducible
 
 ---
 
+## Part E — Aimchess comparison (manual, one report a month)
+
+Aimchess doesn't publish its formulas, so this compares what each product measures on the same games
+(full table in [COMPETITIVE.md](./COMPETITIVE.md) §7).
+
+1. Generate an Aimchess report (free: one 40-game report a month) and record its six area scores in
+   `apps/api/scripts/out/benchmark/aimchess_scores.csv`:
+
+   ```text
+   player,date,games,openings,tactics,endings,advantage_capitalization,resourcefulness,time_management
+   ```
+
+2. Run the same 40 games through Sarce, and record the traits and lens summaries.
+3. **Convergent check:**
+   - Grip ↔ Advantage Capitalization, Fight/Defence ↔ Resourcefulness, Clock ↔ Time Management should agree in
+     direction;
+   - use Spearman correlation across pilot players, or top/bottom-area agreement for one player.
+4. **Discriminant check:** Chaos, Sacrifice and Brilliant should correlate only weakly with every Aimchess area.
+   If they correlate strongly, they're skill measures under another name (STYLE_SCIENCE_PLAN S8).
+
+Run it for each pilot player once a month during Part D.
+
+---
+
 ## Order
 
 1. Part A for one player, cost numbers included.
 2. Part C, options C1 and C2 (they need A's numbers).
 3. Part B once the 30 labelled games exist.
-4. Part D after the first hosted deployment.
+4. Part D after the first hosted deployment, with Part E running alongside it, once a month for each player.
 
 ## Results
 
