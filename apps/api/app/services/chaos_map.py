@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 import chess
 import chess.pgn
 
+from app.services.rating_map import opponent_model_elo
 from app.config import settings
 from app.db.supabase import get_supabase
 from app.services.bots import p_fail_and_stake
@@ -126,7 +127,7 @@ def chaos_move(position: dict, engine, model, elo: int) -> dict | None:
 
 def opponent_rung(games: list[dict]) -> int:
     """The human-model rung nearest your recent opponents' average rating (1200 when unknown)."""
-    ratings = [g["opponent_rating"] for g in games[:RATING_GAMES] if g.get("opponent_rating")]
+    ratings = [r for r in (opponent_model_elo(g) for g in games[:RATING_GAMES]) if r]  # model scale (review F1)
     avg = sum(ratings) / len(ratings) if ratings else 1200
     return min(LADDER, key=lambda r: abs(r - avg))
 
@@ -185,7 +186,7 @@ class ChaosMapService:
 
         sb = get_supabase()
         games = (
-            sb.table("games").select("pgn, user_color, opponent_rating").eq("user_id", owner_id).neq("source", "sarce_bot")
+            sb.table("games").select("pgn, user_color, opponent_rating, source, time_control").eq("user_id", owner_id).neq("source", "sarce_bot")
             .order("played_at", desc=True).limit(GAMES_READ).execute().data
             or []
         )

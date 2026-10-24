@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from app.services.rating_map import opponent_model_elo
 from app.db.supabase import get_supabase
 from app.services.distraction import flagged_plies
 from app.services.home import format_time_control, is_calibrated, pick_moments
@@ -114,7 +115,7 @@ class ReviewService:
         sb = get_supabase()
         rows = (
             sb.table("games")
-            .select("id, pgn, opponent, opponent_rating, result, time_control, user_color, clocks_ms")
+            .select("id, pgn, opponent, opponent_rating, source, result, time_control, user_color, clocks_ms")
             .eq("id", game_id)
             .limit(1)
             .execute()
@@ -135,7 +136,7 @@ class ReviewService:
         by_ply = {m["ply"]: m for m in moves}
         clocks = game.get("clocks_ms") or []
         calibrated = is_calibrated(game.get("time_control"))
-        opponent_elo = game.get("opponent_rating")
+        opponent_elo = opponent_model_elo(game)  # the human model's scale (review F1)
 
         moments = []
         for m in pick_moments(moves, lens_by_ply, limit=MAX_REVIEW_MOMENTS, checkin=flagged_plies(game, moves, lens_rows)):

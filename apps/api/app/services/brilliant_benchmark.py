@@ -1,6 +1,6 @@
 """
-Brilliant % under the current rules (v3) for a reference player and for you, with a game-level interval and the
-clause that stops each near-miss (review F6).
+Brilliant % under the current rule (v4, ADR 0009) for a reference player and for you, with a game-level interval
+and the clause that stops each near-miss (review F6).
 
 A reference game goes through exactly the pipeline a player's game does: one shared engine search per position
 (`game_lines`, the app's node budget), classification, then the find-rate (ADR 0004) and real-offer (ADR 0007)
@@ -19,8 +19,8 @@ from collections import Counter
 import chess
 import chess.pgn
 
-from app.services.brilliant import CLAUSES, brilliant_clauses
-from app.services.brilliant_find_rate import apply_rule, rung_for
+from app.services.brilliant import BOARD_CLAUSES, CLAUSES, alternatives_from_row, best_eval_from_row, brilliant_clauses
+from app.services.brilliant_find_rate import apply_rule, mover_rung, rung_for
 from app.services.move_classifier import MoveClassifier
 from app.services.position_evals import game_lines
 from app.services.reference import _matches_player_name
@@ -50,6 +50,18 @@ def player_color(game: chess.pgn.Game, player: str) -> str | None:
     return None
 
 
+def reference_rung(game: chess.pgn.Game, color: str) -> int:
+    """
+    The find-rate rung for a reference game, as for your games (the mover's own rating, nearest 100; ADR 0004
+    addendum). Over-the-board Elo sits close to Lichess's scale at master level, so it is used as is. Old games
+    often have no Elo: then the opponent's, then the ladder's top rung.
+    """
+    own = game.headers.get("WhiteElo" if color == "white" else "BlackElo", "")
+    other = game.headers.get("BlackElo" if color == "white" else "WhiteElo", "")
+    raw = own if own.isdigit() else other
+    return int(round(int(raw) / 100.0)) * 100 if raw.isdigit() else rung_for(2400)
+
+
 def first_failure(clauses: dict[str, bool | None]) -> str | None:
     """The first clause, in CLAUSES order, that is False; None when none fails."""
     return next((c for c in CLAUSES if clauses.get(c) is False), None)
@@ -57,14 +69,14 @@ def first_failure(clauses: dict[str, bool | None]) -> str | None:
 
 def outcome(clauses: dict[str, bool | None]) -> str:
     """
-    Where a real sacrifice ends up under rule v3: the first failing clause, "no_evals" when soundness can't be judged
+    Where a real sacrifice ends up under the rule: the first failing clause, "no_evals" when it can't be judged
     (Brilliant needs evaluations), else "brilliant". A missing human-model probability keeps the move Brilliant,
     exactly as the find-rate post-pass does.
     """
     failed = first_failure(clauses)
     if failed:
         return failed
-    if clauses.get("sound") is None or clauses.get("not_already_winning") is None:
+    if any(clauses.get(c) is None for c in ("sound", "not_lost", "not_already_winning")):
         return "no_evals"
     return "brilliant"
 
@@ -74,17 +86,6 @@ def even_sample(corpus: list[str], n: int) -> list[str]:
     if len(corpus) <= n:
         return list(corpus)
     return [corpus[i * len(corpus) // n] for i in range(n)]
-
-
-def stored_best_eval(m: dict) -> float | None:
-    """
-    The best move's evaluation for a stored move. `cp_loss` is clamped at zero, so it can't recover a played move
-    that searched better than the best line; the stored PV can (the engine's choice scores its own eval_after).
-    """
-    if m.get("uci") and m.get("uci") == m.get("best_uci"):
-        return m.get("eval_after")
-    pv = m.get("pv") or []
-    return pv[0].get("eval") if pv else None
 
 
 def benchmark_game(pgn_text: str, player: str, engine, model) -> dict | None:
@@ -101,8 +102,7 @@ def benchmark_game(pgn_text: str, player: str, engine, model) -> dict | None:
     board, moves = game.board(), list(game.mainline_moves())
     lines = game_lines(board, moves, engine, MemoryEvalStore())
     classified = MoveClassifier().classify_game(board, moves, color, lines=lines)
-    raw = game.headers.get("BlackElo" if color == "white" else "WhiteElo", "")
-    elo = rung_for(int(raw) if raw.isdigit() else None)
+    elo = reference_rung(game, color)
 
     boards: list[chess.Board] = []
     temp = board.copy()
@@ -123,11 +123,13 @@ def benchmark_game(pgn_text: str, player: str, engine, model) -> dict | None:
     for m in updated:
         ply = m["ply"]
         move = chess.Move.from_uci(m["uci"])
-        clauses = brilliant_clauses(boards[ply], move, m.get("eval_before"), m.get("eval_after"), m.get("best_eval"))
+        clauses = brilliant_clauses(
+            boards[ply], move, m.get("eval_before"), m.get("eval_after"), m.get("best_eval"), alternatives=alternatives_from_row(m)
+        )
         if not clauses["real_sacrifice"]:
             continue
         candidates += 1
-        if all(clauses[c] for c in CLAUSES[:4]):
+        if all(clauses[c] for c in BOARD_CLAUSES):
             clauses["hard_to_find"] = None if m.get("is_brilliant") else False
         stopped[outcome(clauses)] += 1
     return {
@@ -178,8 +180,8 @@ def player_report(owner_id: str, games_read: int = 2000) -> dict:
     The same summary for your analysed games, from stored data: Brilliant % with its game-level interval, and the
     first clause that stopped each of your real sacrifices. No engine; human-model probabilities come from the cache.
 
-    Brilliant is recomputed from the clauses rather than read from `is_brilliant`, so games classified before the
-    find-rate or real-offer rules (or whose post-pass failed) are judged by rule v3 like the rest.
+    Brilliant is recomputed from the clauses rather than read from `is_brilliant`, so games classified under an
+    older rule (or whose post-pass failed) are judged by the current rule like the rest.
     """
     from app.config import settings
     from app.db.supabase import get_supabase
@@ -190,7 +192,7 @@ def player_report(owner_id: str, games_read: int = 2000) -> dict:
     games: list[dict] = []
     while len(games) < games_read:  # paged: PostgREST caps a response at 1,000 rows
         batch = (
-            sb.table("games").select("id, pgn, opponent_rating").eq("user_id", owner_id).eq("analysis_status", "complete")
+            sb.table("games").select("id, pgn, opponent_rating, user_rating, source, time_control").eq("user_id", owner_id).eq("analysis_status", "complete")
             .neq("source", "sarce_bot").order("played_at", desc=True).order("id")
             .range(len(games), min(games_read, len(games) + 1000) - 1).execute().data
             or []
@@ -205,7 +207,7 @@ def player_report(owner_id: str, games_read: int = 2000) -> dict:
         moves: list[dict] = []
         while True:  # paged: PostgREST caps a response at 1,000 rows
             batch = (
-                sb.table("game_moves").select("game_id, ply, uci, eval_before, eval_after, best_uci, pv, signals")
+                sb.table("game_moves").select("game_id, ply, uci, eval_before, eval_after, cp_loss, best_uci, pv, signals")
                 .in_("game_id", [g["id"] for g in part]).order("id").range(len(moves), len(moves) + 999).execute().data
                 or []
             )
@@ -222,14 +224,14 @@ def player_report(owner_id: str, games_read: int = 2000) -> dict:
             stopped: Counter[str] = Counter()
             candidates = [m for m in mine if "real_sacrifice" in (m.get("signals") or [])]
             plies = boards_before(g.get("pgn") or "") if candidates else []
-            elo = rung_for(g.get("opponent_rating"))
+            elo = mover_rung(g)
             for m in candidates:
                 if m["ply"] >= len(plies):
                     continue
                 board, move = plies[m["ply"]]
-                best_eval = stored_best_eval(m)
-                clauses = brilliant_clauses(board, move, m.get("eval_before"), m.get("eval_after"), best_eval)
-                if all(clauses[c] for c in CLAUSES[:4]):
+                best_eval, alternatives = best_eval_from_row(m), alternatives_from_row(m)
+                clauses = brilliant_clauses(board, move, m.get("eval_before"), m.get("eval_after"), best_eval, alternatives=alternatives)
+                if all(clauses[c] for c in BOARD_CLAUSES):
                     clauses["hard_to_find"] = brilliant_clauses(
                         board, move, m["eval_before"], m["eval_after"], best_eval, cached_move_probs(board, elo, model, store)
                     )["hard_to_find"]

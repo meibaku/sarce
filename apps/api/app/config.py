@@ -116,7 +116,7 @@ class Settings(BaseSettings):
     idea_tagger_enabled: bool = False
 
     # Brilliant detection thresholds (tunable)
-    brilliant_eval_margin: float = 0.3
+    brilliant_eval_margin: float = 0.3  # retired by rule v4 (ADR 0009: soundness is brilliant.SOUND_EP_LOSS)
     brilliant_winning_margin: float = 3.0
 
     @property
