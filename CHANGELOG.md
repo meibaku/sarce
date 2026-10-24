@@ -31,6 +31,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - The Brilliant find-rate clause is judged at your own rating, converted and to the nearest 100, instead of the
   opponent's at 400-point rungs (review F11a, ADR 0004 addendum); `games.user_rating` is a new generated column
   from the PGN. Style vectors → version 4
+- Traps (review F7, the winner's curse): Your traps and the trap atlas rank by a cautious estimate, the 95% lower
+  bound of how often a trap catches opponents, so a lucky 3 of 3 can't outrank 30 of 40. Your traps show "likely at
+  least N%" next to the raw rate; the atlas returns `seen` with each trap
 - Honest uncertainty (review F4), in a new `services/uncertainty.py`:
   - Brilliant % shows its Wilson 95% range ("likely 3.2–5.0%") on Home, You and Recap, web and phone.
   - The You trend is Brilliant % over rolling 20-game windows, drawn as a line in its shaded range, instead of one
@@ -166,6 +169,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   service must share its source; compatible with python-chess (GPL-3.0+)
 
 ### Removed
+- Style profile (review F11b): the one-word style label ("Sacrificial tactician", "Balanced improver", …) is gone.
+  Its thresholds were hand-cut and never validated, and no screen showed it; style is the fingerprint on You
 - The pre-v1 dashboard at `/lab` and the components only it used (ADR 0005); the Brilliant headline contract now
   checks Home; sign-in status moved to Settings
 

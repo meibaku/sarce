@@ -4,6 +4,9 @@ Rating-band trap atlas — Chaos Lens M6 (docs/CHAOS_PLAN.md): "ideas that work 
 A trap is a position where the reply most often played at a rating band loses a lot of
 expected points. Built from observations collected by scripts/validate_chaos.py on
 finished public games; it never stores who played them.
+
+Traps are ranked by expected loss times a cautious share: the Wilson lower bound of how often the common reply is
+played (review F7), so a position seen three times can't top the list on luck alone.
 """
 
 from __future__ import annotations
@@ -11,10 +14,12 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 
 from app.db.supabase import get_supabase
+from app.services.uncertainty import wilson
 
 TABLE = "trap_atlas"
 MIN_EP_LOSS = 0.20  # the common reply must lose at least this much
 MIN_FREQUENCY = 3  # times the position was seen at the band
+MAX_SCAN = 1000  # traps read per query before ranking (PostgREST's response cap)
 
 
 def build_traps(
@@ -58,7 +63,14 @@ def build_traps(
                 "eco": first.get("eco"),
             }
         )
-    return sorted(traps, key=lambda t: (-t["ep_loss"] * t["common_reply_share"], t["fen_key"]))
+    return sorted(traps, key=lambda t: (-rank_score(t), t["fen_key"]))
+
+
+def rank_score(trap: dict) -> float:
+    """Expected loss times the Wilson lower bound of the common reply's share (seen `frequency` times)."""
+    n = int(trap["frequency"])
+    interval = wilson(round(float(trap["common_reply_share"]) * n), n)
+    return float(trap["ep_loss"]) * (interval[0] if interval else 0.0)
 
 
 def _mean(values) -> float | None:
@@ -72,6 +84,7 @@ def to_api(row: dict) -> dict:
         "band": row["band"],
         "speed": row["speed"],
         "frequency": row["frequency"],
+        "seen": row["frequency"],  # "seen n times", next to the share (review F7)
         "commonReplyUci": row["common_reply_uci"],
         "commonReplyShare": float(row["common_reply_share"]),
         "epLoss": float(row["ep_loss"]),
@@ -97,5 +110,8 @@ class TrapAtlasService:
             query = query.eq("band", band)
         if eco:
             query = query.ilike("eco", f"{eco}%")
-        res = query.order("ep_loss", desc=True).limit(limit).execute()
-        return [to_api(row) for row in res.data or []]
+        # Rank every matching trap by the shrunk score (review F7): truncating by raw loss first could drop a
+        # well-seen trap behind rare ones. A band holds hundreds of traps, well under one response.
+        res = query.order("ep_loss", desc=True).limit(MAX_SCAN).execute()
+        rows = sorted(res.data or [], key=lambda r: (-rank_score(r), r["fen_key"]))[:limit]
+        return [to_api(row) for row in rows]
