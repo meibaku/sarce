@@ -30,6 +30,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   F2, F4 and F12 are marked done; F6 moves to the front after F4 showed Brilliant at 0.01% under rule v3
 
 ### Changed
+- `docs/IMPLEMENTATION_PLAN.md`: Phase 1 progress (1.1, 1.3 part, 1.4–1.10, 4.7 done; Tal under rule v4 and the band
+  decision open); a squeeze test where the stored WDL-based EP decides the verdict, not the centipawn score
 - Lenses in one unit (review F8): squeeze, swindle, clock and prophylaxis judge edges and costs in expected points
   like chaos, not centipawns. Thresholds equal the old ones in a level position, so a pawn given back at +8 no
   longer counts as "gave air" and a won position where every move still wins is no longer "critical". Squeeze's

@@ -1,7 +1,7 @@
 """Squeeze lens (app/lenses/squeeze.py): converting an advantage by taking the opponent's options away."""
 
 from app.lenses.base import PlyContext, PositionData
-from app.lenses.squeeze import SqueezeLens, line_cp, room
+from app.lenses.squeeze import SqueezeLens, line_cp, line_points, room
 from app.services.ep import cp_to_ep
 
 
@@ -47,3 +47,14 @@ def test_giving_back_a_pawn_from_a_big_edge_is_not_air():
     # +8 to +6.5 is still winning comfortably: in expected points it costs almost nothing (review F8).
     r = SqueezeLens().score(ctx(800, [-650, -660]))
     assert r.verdict != "gave_air" and r.details["cost_ep"] < 0.05
+
+
+def test_stored_ep_wins_over_the_centipawn_score():
+    # Stockfish's WDL can disagree with the logistic curve: the lens must read the stored EP (review F8).
+    # Same +4 → +2.5 scores; the stored EP says the edge barely moved (0.95 → 0.93), so it isn't "air".
+    faced = PositionData(lines=[{"move_uci": "m0", "cp": 400, "mate": None, "ep": 0.95}, {"move_uci": "m1", "cp": 320, "mate": None, "ep": 0.94}], safe_set_complete=True)
+    left = PositionData(lines=[{"move_uci": "r0", "cp": -250, "mate": None, "ep": 0.07}], safe_set_complete=True)
+    r = SqueezeLens().score(PlyContext(ply=20, uci="m0", faced=faced, left=left))
+    assert r.verdict != "gave_air" and r.details["cost_ep"] == 0.02
+    # From centipawns alone the same move would cost about 0.1 EP: air.
+    assert line_points({"cp": 400, "mate": None}) - line_points({"cp": 250, "mate": None}) > 0.09

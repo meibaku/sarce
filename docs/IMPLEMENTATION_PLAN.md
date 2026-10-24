@@ -16,6 +16,18 @@ work items with an order, a size, dependencies, and who has to decide what. Writ
 | F2 | Sacrifice trait counts real sacrifices only; axis per 1,000 moves; references rescored board-only | #158 |
 | F4 | Wilson ranges, rolling 20-game trend, "up/down" only when ranges separate, traits dashed under 30 events | #159 |
 | §3.6 (part) | `feat/chaos-sorted-games` superseded and closed (#89 → #139) | #139 |
+| 1.1 F6a | Reference benchmark runs the player pipeline (shared search, classification, find-rate + real offer), even career sample, game-level bootstrap, clause breakdown | #161 |
+| 1.4–1.5 F1, F11a | Ratings converted to the human model's scale (ChessGoals table, `rating_map.py`); find-rate at your own rating, nearest 100; `games.user_rating` | #164 |
+| 1.6 F5 | ADR 0009, rule v4: sound ≤ 0.03 EP (one-sided), no Brilliant when lost (< 0.10 EP), not forced = an alternative within 0.10 EP; post-pass re-judges from scratch | #165 |
+| 1.7 F8 | Squeeze, swindle, clock and prophylaxis in EP (squeeze's room count stays in cp, documented) | #169 |
+| 1.8 F7 | Your traps and the trap atlas rank by the Wilson lower bound | #162 |
+| 1.9 F10a | Trait correlation over 81 windows: no pair above 0.8, all nine stay (`docs/TRAIT_OVERLAP.md`) | #166 |
+| 1.10 F11b | Unvalidated one-word style label removed | #163 |
+| 1.3 (part) | Personal next band on the gauge (Home, Settings, Expo) | #167 |
+| 4.7 | #54 and #55 closed as superseded (branches kept) | — |
+
+**Still open in Phase 1:** 1.2 (Tal's 200 games under rule v4, running locally) and the band half of 1.3. The
+owner decided to rebase the band on Tal's measured range (ADR once the number lands).
 
 **What F2 and F4 revealed** (shapes the order below):
 
