@@ -30,7 +30,8 @@ Changing any of these needs an ADR in `docs/adr/` first:
 
 - **Brilliant** stays a first-class move tier, and **Brilliant %** stays the headline metric.
 - Engine is a mirror, not a judge — no punitive user-facing copy (`philosophy-check` guards this).
-- Stockfish runs **server-side only** (`apps/api`); routers never import `chess` / `chess.engine`.
+- Stockfish runs **server-side only** (`apps/api`), or on a paired Sarce Node running the server's own code through
+  the token-protected node gateway (ADR 0010, `docs/NODES.md`); routers never import `chess` / `chess.engine`.
 - `apps/web` never uses the Supabase service-role key; nothing secret goes in `NEXT_PUBLIC_*`.
 - New tables enable RLS. Schema changes are a **new** migration — never edit an old one.
 - Bump `style_vectors.version` when the style schema's meaning changes.

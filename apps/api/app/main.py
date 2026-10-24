@@ -11,6 +11,18 @@ from app.services.sync import sync_loop
 from app.services.job_queue import JobQueue, analysis_handlers, worker_loop
 
 
+async def node_finisher_loop(poll_s: float = 20) -> None:
+    """Every `poll_s`, analyse what paired nodes finished searching (fast: all cached)."""
+    while True:
+        try:
+            await games.analysis_service.finish_node_games()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            pass  # the next pass tries again
+        await asyncio.sleep(poll_s)
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """Run the analysis job worker alongside the API when the queue is enabled."""
@@ -24,6 +36,10 @@ async def lifespan(_app: FastAPI):
     if settings.job_queue_enabled:
         handlers = analysis_handlers(games.analysis_service.analyze_pending)
         worker = asyncio.create_task(worker_loop(JobQueue(), handlers, settings.job_poll_seconds))
+    finisher = None
+    if settings.node_token:
+        # Paired nodes (ADR 0010): games they finished searching are analysed here from the cache.
+        finisher = asyncio.create_task(node_finisher_loop())
     syncer = None
     if settings.auto_sync_enabled:
         syncer = asyncio.create_task(
@@ -36,6 +52,8 @@ async def lifespan(_app: FastAPI):
             worker.cancel()
         if syncer:
             syncer.cancel()
+        if finisher:
+            finisher.cancel()
         play.bot_service.close()
 
 app = FastAPI(

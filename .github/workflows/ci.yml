@@ -104,10 +104,10 @@ jobs:
         shell: bash
         run: |
           test -d supabase/migrations
-          sql=$(cat supabase/migrations/*.sql)
-          echo "$sql" | grep -q "games"
-          echo "$sql" | grep -q "brilliant"
-          echo "$sql" | grep -q "style_vectors"
+          # grep the files directly: `echo "$sql" | grep -q` breaks the pipe under pipefail once the SQL passes 64 KB.
+          grep -q "games" supabase/migrations/*.sql
+          grep -q "brilliant" supabase/migrations/*.sql
+          grep -q "style_vectors" supabase/migrations/*.sql
 
       - name: Verify philosophy docs exist
         shell: bash
