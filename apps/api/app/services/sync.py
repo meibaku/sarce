@@ -56,6 +56,11 @@ class SyncService:
                 except Exception as exc:
                     errors.append(f"Lichess: {exc}")
             store.record_sync(owner_id, datetime.now(timezone.utc).isoformat(), errors)
+            if imported:
+                # Games that first arrive through the sync are timed too (plan 3.1); a no-op once recorded.
+                from app.services.importer import mark_first_import
+
+                mark_first_import(owner_id)
             # At least one game per analysis worker, so a sync keeps every engine busy.
             analysed = await analyse(user_id=owner_id, limit=max(ANALYSE_PER_SYNC, settings.workers))
             return {"fetched": imported, "analysed": len(analysed or []), "errors": errors}
@@ -95,9 +100,19 @@ class SyncService:
             "lastSyncErrors": prefs.get("lastSyncErrors") or [],
             "pending": count("pending"),
             "processing": count("processing"),
+            "firstReadSeconds": first_read_seconds(prefs),
             "autoSync": settings.auto_sync_enabled,
             "chaosPass": settings.position_evals_enabled,
         }
+
+
+def first_read_seconds(prefs: dict) -> int | None:
+    """Seconds from the first import to the first completed analysis (plan 3.1); None until both happened."""
+    start, done = prefs.get("firstImportAt"), prefs.get("firstReadAt")
+    if not start or not done:
+        return None
+    delta = datetime.fromisoformat(done) - datetime.fromisoformat(start)
+    return max(0, int(delta.total_seconds()))
 
 
 def owners_to_sync(local_user_id: str | None) -> list[str]:

@@ -27,7 +27,7 @@ DEFAULTS = {
     "aiHelp": False,
 }
 # Written by the sync, never by the player.
-INTERNAL = {"lastSyncedAt": None, "lastSyncErrors": []}
+INTERNAL = {"lastSyncedAt": None, "lastSyncErrors": [], "firstImportAt": None, "firstReadAt": None}
 USERNAME = re.compile(r"^[A-Za-z0-9_-]{2,30}$")
 CHOICES = {
     "questionBudget": {0, 1, 2},
@@ -111,6 +111,15 @@ class SettingsStore:
         rows = get_supabase().table("profiles").select("settings").eq("id", owner_id).limit(1).execute().data or []
         prefs = {**((rows[0].get("settings") if rows else None) or {}), "lastSyncedAt": at, "lastSyncErrors": errors[:3]}
         get_supabase().table("profiles").update({"settings": prefs}).eq("id", owner_id).execute()
+
+    def record_once(self, owner_id: str, key: str, at: str) -> bool:
+        """
+        Stores a milestone (`firstImportAt`, `firstReadAt`) the first time only, atomically in the database
+        (`record_profile_milestone`), so it can't race a settings save. True when it was written.
+        """
+        assert key in ("firstImportAt", "firstReadAt")
+        res = get_supabase().rpc("record_profile_milestone", {"owner": owner_id, "milestone": key, "at": at}).execute()
+        return bool(res.data)
 
     def kept(self, owner_id: str, user_id: str | None) -> dict:
         sb = get_supabase()
