@@ -66,18 +66,38 @@ def their_level(parsed_games: list[dict], source: str) -> int:
     return int(round(avg / 100.0)) * 100
 
 
+def reply_ep(board: chess.Board, uci: str, engine) -> float | None:
+    """The mover's expected points after a reply the engine didn't list: the position after it, searched."""
+    move = chess.Move.from_uci(uci)
+    if move not in board.legal_moves:
+        return None
+    after = board.copy(stack=False)
+    after.push(move)
+    if after.is_checkmate():
+        return 1.0
+    if after.is_game_over():
+        return 0.5
+    lines = engine.analyse(after, nodes=NODES, multipv=1)
+    return None if not lines else 1 - lines[0]["ep"]
+
+
 def score_position(entry: dict, engine, model, elo: int) -> dict | None:
     """Their record in one position: how often they went wrong, what it cost, and what holds."""
     board = chess.Board(entry["fen"])
     lines = engine.analyse(board, nodes=NODES, multipv=LINES)
     if not lines:
         return None
-    best_ep, worst_ep = lines[0]["ep"], lines[-1]["ep"]
+    best_ep = lines[0]["ep"]
     ep_of = {ln["move_uci"]: ln["ep"] for ln in lines}
-    wrong, lost, slips = 0, 0.0, Counter()
+    wrong, lost, slips, loss_of = 0, 0.0, Counter(), {}
     for uci, n in entry["replies"].items():
-        # A reply outside the engine's lines is at least as bad as the weakest line shown.
-        loss = best_ep - ep_of.get(uci, worst_ep)
+        ep = ep_of.get(uci)
+        if ep is None:
+            ep = reply_ep(board, uci, engine)  # outside the top lines: searched on its own, never assumed safe
+        if ep is None:
+            continue
+        loss = best_ep - ep
+        loss_of[uci] = loss
         if loss > SAFE_TOL:
             wrong += n
             lost += loss * n
@@ -89,8 +109,9 @@ def score_position(entry: dict, engine, model, elo: int) -> dict | None:
         "line": entry["line"],
         "seen": entry["seen"],
         "wrong": wrong,
-        "lostEp": round(lost / wrong, 3) if wrong else 0.0,
+        "lostEp": round(lost / wrong, 3) if wrong else 0.0,  # average over every wrong reply
         "slip": board.san(chess.Move.from_uci(slip)) if slip else None,
+        "slipLossEp": round(loss_of[slip], 3) if slip else None,  # what the usual slip itself gives up
         "best": board.san(chess.Move.from_uci(lines[0]["move_uci"])),
         "pFail": round(p_fail, 3),
         "elo": elo,

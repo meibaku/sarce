@@ -17,6 +17,8 @@ def test_frequent_positions_with_the_player_to_move():
 
 class FakeEngine:
     def analyse(self, board, nodes, multipv):
+        if multipv == 1:  # a reply outside the lines, searched from the opponent's side
+            return [{"move_uci": "x", "ep": 0.9}]
         return [{"move_uci": "g8f6", "ep": 0.5}, {"move_uci": "f8c5", "ep": 0.48}, {"move_uci": "c6d4", "ep": 0.3}]
 
 
@@ -28,7 +30,10 @@ class FakeModel:
 def test_score_counts_replies_that_gave_ground():
     entry = {"fen": "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3", "line": "e4 e5 Nf3 Nc6 Bc4", "seen": 3, "replies": Counter({"c6d4": 2, "g8f6": 1})}
     s = oc.score_position(entry, FakeEngine(), FakeModel(), 1200)
-    assert s["wrong"] == 2 and s["lostEp"] == 0.2 and s["slip"] == "Nd4" and s["best"] == "Nf6" and s["elo"] == 1200
+    assert s["wrong"] == 2 and s["lostEp"] == 0.2 and s["slip"] == "Nd4" and s["slipLossEp"] == 0.2 and s["best"] == "Nf6" and s["elo"] == 1200
+    # A reply the engine didn't list is searched, not assumed safe: h7h6 here leaves the mover 0.1.
+    s2 = oc.score_position({**entry, "replies": Counter({"h7h6": 2})}, FakeEngine(), FakeModel(), 1200)
+    assert s2["wrong"] == 2 and s2["slip"] == "h6" and s2["slipLossEp"] == 0.4
 
 
 def test_their_level_is_their_opponents_converted():

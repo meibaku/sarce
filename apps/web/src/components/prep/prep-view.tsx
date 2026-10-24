@@ -149,8 +149,8 @@ export function PrepView() {
                   items={report.whereTheyGoWrong.map(
                     (w) =>
                       `After ${w.line || "the opening"}: ${w.wrong} of ${w.seen} times wrong` +
-                      (w.slip ? `, usually ${w.slip}` : "") +
-                      ` (gives up ${w.lostEp.toFixed(2)}). ${w.best} holds; ${Math.round(w.pFail * 100)}% at ${w.elo} miss it.`,
+                      (w.slip ? `, usually ${w.slip}${w.slipLossEp != null ? ` (gives up ${w.slipLossEp.toFixed(2)})` : ""}` : "") +
+                      `. ${w.best} holds; ${Math.round(w.pFail * 100)}% at ${w.elo} miss it.`,
                   )}
                 />
               )}

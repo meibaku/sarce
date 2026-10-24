@@ -92,7 +92,7 @@ export default function Prep() {
                 <Label>Where they go wrong</Label>
                 {r.report.whereTheyGoWrong.map((w) => (
                   <T key={w.fen} size={13} tone="ink2">
-                    {`After ${w.line || "the opening"}: ${w.wrong} of ${w.seen} times wrong${w.slip ? `, usually ${w.slip}` : ""}. ${w.best} holds.`}
+                    {`After ${w.line || "the opening"}: ${w.wrong} of ${w.seen} times wrong${w.slip ? `, usually ${w.slip}` : ""}. ${w.best} holds; ${Math.round(w.pFail * 100)}% at ${w.elo} miss it.`}
                   </T>
                 ))}
               </>

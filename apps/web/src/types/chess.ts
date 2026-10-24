@@ -288,6 +288,8 @@ export interface ScoutingReport {
       wrong: number;
       lostEp: number;
       slip: string | null;
+      /** What the usual slip itself gives up; `lostEp` averages every wrong reply. */
+      slipLossEp?: number | null;
       best: string;
       pFail: number;
       elo: number;
