@@ -71,6 +71,7 @@ def fake_db(monkeypatch, move_row):
         "game_moves": [move_row],
         "move_lens_scores": [],
         "human_probs": [{"probs": {"c4f7": 0.05}}],
+        "brilliant_reports": [],
     }
     monkeypatch.setattr(explain, "get_supabase", lambda: SimpleNamespace(table=lambda t: FakeTable(tables[t])))
 

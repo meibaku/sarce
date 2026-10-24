@@ -363,11 +363,21 @@ export interface WhyApi {
   badge: string;
   isBrilliant: boolean;
   brilliant: { rule: string; passed: boolean; detail: string }[];
+  /** You already reported another site's Brilliant for this move. */
+  reported?: boolean;
   evalBefore: number | null;
   evalAfter: number | null;
   best: string | null;
   chaos: { verdict: string | null; faced: boolean; pFail: number[] | null; rungs: number[]; safeReplies: string[] };
   lines: { title: string; note: string; eval: string; kind: "played" | "engine" | "brilliant"; steps: { san: string; uci: string; fen: string }[] }[];
+}
+
+/** "Chess.com called this Brilliant" (plan 3.3): stored with the clause Sarce's rule stopped at. */
+export async function reportBrilliant(gameId: string, ply: number, source: "chess_com" | "lichess" = "chess_com") {
+  return fetchApi<{ clause: string; line: string }>(`/games/${gameId}/moves/${ply}/brilliant-report`, {
+    method: "POST",
+    body: JSON.stringify({ source }),
+  });
 }
 
 /** "Why this move?": the badge's reason, the Brilliant checks with numbers, and playable lines. */

@@ -88,10 +88,14 @@ export type WhyApi = {
   badge: string;
   isBrilliant: boolean;
   brilliant: { rule: string; passed: boolean; detail: string }[];
+  reported?: boolean;
   chaos: { faced: boolean; pFail: number[] | null; rungs: number[]; safeReplies: string[] };
   lines: { title: string; note: string; eval: string; kind: string; steps: { san: string; fen: string }[] }[];
 };
 export const getWhy = (gameId: string, ply: number) => api<WhyApi>(`/games/${gameId}/moves/${ply}/why`);
+/** "Chess.com called this Brilliant" (plan 3.3): stored with the clause Sarce's rule stopped at. */
+export const reportBrilliant = (gameId: string, ply: number) =>
+  api<{ clause: string; line: string }>(`/games/${gameId}/moves/${ply}/brilliant-report`, post({ source: "chess_com" }));
 /** Your chaos map (the web's ChaosMapPosition in apps/web/src/lib/api.ts). `problem` = P_fail × stake. */
 export type ChaosMapPosition = {
   key: string;

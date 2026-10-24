@@ -11,6 +11,12 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- Brilliant disagreements, part 2 (plan 3.3): "Chess.com called this Brilliant" in Why this move? (web, Expo) stores
+  a report with the clause Sarce's rule stopped at (new `brilliant_reports` table, RLS, no free text) and tells you
+  which condition made the difference; `scripts/brilliant_reports.py` counts them by clause for Benchmark B.
+  From the review of part 1: the find-rate copy says "more often than the 20% cutoff", the definition counts the
+  sacrifice after what the move captures, Expo shows almost-Brilliant moves on games with no moments and links
+  `!!` to the definition
 - Brilliant disagreements, part 1 (plan 3.3): a real sacrifice that misses exactly one Brilliant clause is marked
   "almost Brilliant" (`near_brilliant:<clause>` signal, set by the rule pass) and Review names the clause ("it gave a
   little more than the best move"), web and Expo. Every `!!` links to a public page, `/brilliant`, that lists the six

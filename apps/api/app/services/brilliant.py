@@ -145,6 +145,11 @@ CLAUSES = ("real_sacrifice", "sound", "not_lost", "not_already_winning", "not_fo
 BOARD_CLAUSES = CLAUSES[:-1]  # judged at classification; the find-rate clause needs the human model (post-pass)
 
 
+def first_failure(clauses: dict[str, bool | None]) -> str | None:
+    """The first clause, in CLAUSES order, that is False; None when none fails."""
+    return next((c for c in CLAUSES if clauses.get(c) is False), None)
+
+
 def best_eval_from_row(m: dict) -> float | None:
     """
     The best move's evaluation for a stored `game_moves` row, as classification compared it: eval_after plus the
@@ -222,7 +227,7 @@ NEAR_COPY = {
     "not_lost": "the game was already lost",
     "not_already_winning": "you were already winning",
     "not_forced": "every other move was clearly worse, so it was forced",
-    "hard_to_find": "most players at your rating would find it",
+    "hard_to_find": f"players at your rating play it more often than the {round(FIND_RATE_MAX * 100)}% Brilliant cutoff",
 }
 
 
@@ -239,7 +244,7 @@ def definition() -> dict:
     return {
         "rule": "v4",
         "clauses": [
-            {"id": "real_sacrifice", "title": "A real sacrifice", "text": f"You offer at least {MIN_BRILLIANT_SACRIFICE_VALUE} points of material (a minor piece or more) that is really on offer: attacked by something cheaper, or undefended. Pawns alone don't count."},
+            {"id": "real_sacrifice", "title": "A real sacrifice", "text": f"You offer at least {MIN_BRILLIANT_SACRIFICE_VALUE} points of material (a minor piece or more), counted after subtracting anything the move captures, and it is really on offer: attacked by something cheaper, or undefended. Pawns alone don't count."},
             {"id": "sound", "title": "It holds up", "text": f"The move costs at most {SOUND_EP_LOSS:.2f} expected points against the best move: no more than {round(SOUND_EP_LOSS * 100)} points off your winning chances."},
             {"id": "not_lost", "title": "The game is still open", "text": f"You still had at least {round(LOST_EP * 100)}% winning chances before the move."},
             {"id": "not_already_winning", "title": "Not already won", "text": f"You weren't already more than {settings.brilliant_winning_margin:g} pawns up."},

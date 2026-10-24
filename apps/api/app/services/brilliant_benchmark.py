@@ -19,7 +19,7 @@ from collections import Counter
 import chess
 import chess.pgn
 
-from app.services.brilliant import BOARD_CLAUSES, CLAUSES, alternatives_from_row, best_eval_from_row, brilliant_clauses
+from app.services.brilliant import BOARD_CLAUSES, CLAUSES, alternatives_from_row, best_eval_from_row, brilliant_clauses, first_failure  # noqa: F401
 from app.services.brilliant_find_rate import apply_rule, mover_rung, rung_for
 from app.services.move_classifier import MoveClassifier
 from app.services.position_evals import game_lines
@@ -60,11 +60,6 @@ def reference_rung(game: chess.pgn.Game, color: str) -> int:
     other = game.headers.get("BlackElo" if color == "white" else "WhiteElo", "")
     raw = own if own.isdigit() else other
     return int(round(int(raw) / 100.0)) * 100 if raw.isdigit() else rung_for(2400)
-
-
-def first_failure(clauses: dict[str, bool | None]) -> str | None:
-    """The first clause, in CLAUSES order, that is False; None when none fails."""
-    return next((c for c in CLAUSES if clauses.get(c) is False), None)
 
 
 def outcome(clauses: dict[str, bool | None]) -> str:

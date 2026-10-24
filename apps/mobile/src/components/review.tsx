@@ -10,7 +10,7 @@ import { Board } from "@/components/board";
 import { Badge, Card, Choice, Edge, Label, Link, Loading, Primary, Screen, T, Uncalibrated, s } from "@/components/ui";
 import { Mascot } from "@/components/mascot";
 import { WhyCard } from "@/components/why";
-import { getReview, saveIntent, savePosition } from "@/lib/api";
+import { WEB_BASE, getReview, saveIntent, savePosition } from "@/lib/api";
 import { color, font } from "@/lib/theme";
 import { useLoad } from "@/lib/use-load";
 
@@ -48,7 +48,11 @@ export function ReviewBody({ gameId, back }: { gameId: string; back?: boolean })
     return <Screen title={title} back={back}>{failed ? <Edge kind="offline" action="Try again" onAction={reload} /> : <Loading />}</Screen>;
   }
   if (data.moments.length === 0) {
-    return <Screen title={title} back={back}><Edge kind="analysing" /></Screen>;
+    return (
+      <Screen title={title} back={back}>
+        {data.almostBrilliant && data.almostBrilliant.length > 0 ? <AlmostBrilliant items={data.almostBrilliant} /> : <Edge kind="analysing" />}
+      </Screen>
+    );
   }
 
   const m = data.moments[Math.min(index, data.moments.length - 1)];
@@ -105,18 +109,8 @@ export function ReviewBody({ gameId, back }: { gameId: string; back?: boolean })
         />
       )}
 
-      {data.almostBrilliant && data.almostBrilliant.length > 0 && (
-        // Real sacrifices one clause short of Brilliant (plan 3.3).
-        <Card>
-          <Label>Almost Brilliant</Label>
-          {data.almostBrilliant.map((a) => (
-            <View key={a.ply} style={s.row}>
-              <T mono weight="medium" size={12}>{a.label}</T>
-              <T size={12} tone="ink2" style={{ flex: 1 }}>{a.line}</T>
-            </View>
-          ))}
-        </Card>
-      )}
+      {m.glyph === "!!" && <Link label="Sarce Brilliant · what that means ↗" onPress={() => Linking.openURL(`${WEB_BASE}/brilliant`)} />}
+      {data.almostBrilliant && data.almostBrilliant.length > 0 && <AlmostBrilliant items={data.almostBrilliant} />}
 
       {data.theirIdeas && data.theirIdeas.length > 0 && (
         // Prophylaxis lens: real threats taken away with a quiet move, or let through.
@@ -236,5 +230,20 @@ export function ReviewBody({ gameId, back }: { gameId: string; back?: boolean })
       </View>
       {toast && <T mono size={11} tone="muted">{toast}</T>}
     </Screen>
+  );
+}
+
+/** Real sacrifices one clause short of Brilliant (plan 3.3), the clause named. */
+function AlmostBrilliant({ items }: { items: NonNullable<ReviewApi["almostBrilliant"]> }) {
+  return (
+    <Card>
+      <Label>Almost Brilliant</Label>
+      {items.map((a) => (
+        <View key={a.ply} style={s.row}>
+          <T mono weight="medium" size={12}>{a.label}</T>
+          <T size={12} tone="ink2" style={{ flex: 1 }}>{a.line}</T>
+        </View>
+      ))}
+    </Card>
   );
 }
