@@ -74,3 +74,31 @@ def test_route():
     with patch("app.routers.users.you_service.you", return_value={"games": 0}) as svc:
         assert client.get("/users/you").json() == {"games": 0}
     svc.assert_called_once()
+
+
+def test_time_gap_names_only_traits_whose_ranges_separate():
+    from app.services.you import TRAITS, time_gap
+
+    def cls(**over):
+        base = {t: {"value": 0.5, "lo": 0.45, "hi": 0.55, "events": 400} for t in TRAITS}
+        for t, (v, lo, hi) in over.items():
+            base[t] = {"value": v, "lo": lo, "hi": hi, "events": 400}
+        return base
+
+    by_class = {"bullet": cls(Chaos=(0.30, 0.26, 0.34), Calm=(0.52, 0.47, 0.57)), "rapid": cls(Chaos=(0.15, 0.12, 0.18))}
+    gap = time_gap(by_class, {"bullet": 900, "rapid": 600, "blitz": 2})
+    assert gap["classes"] == ["bullet", "rapid"]
+    assert [t["trait"] for t in gap["traits"]] == ["Chaos"]  # Calm overlaps: not named
+    assert gap["sentence"] == "In bullet you set problems more often."
+    same = time_gap({"bullet": cls(), "rapid": cls()}, {"bullet": 900, "rapid": 600})
+    assert same["traits"] == [] and "overlap" in same["sentence"]
+    assert time_gap({"bullet": cls()}, {"bullet": 900, "rapid": 1}) is None
+
+
+def test_class_traits_gate_and_range():
+    from app.services.you import class_traits
+
+    moves = [{"signals": ["real_sacrifice"] if i < 3 else []} for i in range(100)]
+    traits = class_traits(moves, [])
+    assert traits["Sacrifice"]["value"] == 0.03 and 0 < traits["Sacrifice"]["lo"] < 0.03 < traits["Sacrifice"]["hi"]
+    assert traits["Chaos"]["value"] is None and traits["Initiative"]["lo"] is None

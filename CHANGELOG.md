@@ -11,6 +11,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- Fingerprints by time control (plan 3.8): You's "By time control" card shows the nine traits for the chosen class,
+  each with its 95% range, and one sentence naming where your two main classes differ beyond noise ("In rapid you
+  set problems more often; in bullet you keep a winning position tight more often"). Each class reads up to 100 of
+  its own newest games, reaching past the 500-game window when recent games are all one speed. Web and Expo
 - A personal next band (plan 1.3): Home and Settings show a dashed step on the Brilliant gauge, from just above your
   likely range (its 95% upper bound) to half as much again, on the way to the goal band, with one line naming it.
   Web and Expo; `/users/home` returns `nextLo`/`nextHi`. Hidden within half a point of the goal

@@ -29,13 +29,15 @@ from datetime import datetime, timedelta
 from app.db.supabase import get_supabase
 from app.services.reference_axes import AXES, axis_values, references
 from app.services.home import MIN_GAMES, PAGE, HomeService, format_time_control, rolling_brilliant, window_brilliant
-from app.services.uncertainty import MIN_EVENTS, gated
+from app.services.uncertainty import MIN_EVENTS, direction, gated, wilson
 from app.services.summary import clock_label, move_label
 
 WEEKS = 12
 TRAITS = ["Sacrifice", "Chaos", "Calm", "Initiative", "Defence", "Grip", "Fight", "Clock", "Foresight"]
 STEADY = 0.1  # relative change below which a trait counts as "holding steady"
 CHUNK = 100  # game ids per request, to keep URLs short
+CLASS_GAMES = 100  # per time class for the side-by-side fingerprint (plan 3.8)
+TOP_UP_SCAN = 3000  # how far back to look for them
 
 
 def time_class(raw: str | None) -> str:
@@ -99,6 +101,66 @@ def gated_traits(moves: list[dict], lens: list[dict]) -> tuple[dict[str, float |
     """Trait values with any resting on fewer than MIN_EVENTS events dashed (None), and the counts behind them."""
     values, events = trait_values(moves, lens), trait_events(moves, lens)
     return {t: gated(v, events[t]) for t, v in values.items()}, events
+
+
+# Traits that are a share of events get a Wilson range; Initiative is a mean score and gets none.
+SHARE_TRAITS = {"Sacrifice", "Chaos", "Calm", "Defence", "Grip", "Fight", "Clock", "Foresight"}
+# How the gap sentence names a trait ("In bullet you … more often than in rapid"). Styles, never "worse".
+TRAIT_PHRASE = {
+    "Sacrifice": "sacrifice",
+    "Chaos": "set problems",
+    "Calm": "keep the game calm",
+    "Initiative": "keep the pressure on",
+    "Defence": "hold when a problem is set for you",
+    "Grip": "keep a winning position tight",
+    "Fight": "fight back from losing positions",
+    "Clock": "match your time to the position",
+    "Foresight": "stop their ideas",
+}
+
+
+def class_traits(moves: list[dict], lens: list[dict]) -> dict[str, dict]:
+    """The nine traits for one time class: value (dashed under MIN_EVENTS), its 95% range where it's a share, events."""
+    values, events = gated_traits(moves, lens)
+    out = {}
+    for t in TRAITS:
+        v, n = values[t], events[t]
+        rng = wilson(v * n, n) if v is not None and t in SHARE_TRAITS else None
+        out[t] = {
+            "value": None if v is None else round(v, 3),
+            "lo": None if rng is None else round(rng[0], 3),
+            "hi": None if rng is None else round(rng[1], 3),
+            "events": n,
+        }
+    return out
+
+
+def time_gap(by_class: dict[str, dict], games_by_class: dict[str, int]) -> dict | None:
+    """
+    Where your two most-played time classes differ beyond noise (their ranges don't overlap, review F4): up to
+    three traits, largest relative difference first, and one sentence. None when nothing separates.
+    """
+    played = sorted((c for c, n in games_by_class.items() if n >= MIN_GAMES), key=lambda c: -games_by_class[c])[:2]
+    if len(played) < 2:
+        return None
+    a, b = played
+    found = []
+    for t in TRAITS:
+        x, y = by_class[a][t], by_class[b][t]
+        if x["lo"] is None or y["lo"] is None:
+            continue
+        way = direction((y["lo"], y["hi"]), (x["lo"], x["hi"]))  # "up" = higher in `a`
+        if way:
+            hi_cls, lo_cls = (a, b) if way == "up" else (b, a)
+            ratio = max(x["value"], y["value"]) / max(1e-9, min(x["value"], y["value"]))
+            found.append({"trait": t, "more": hi_cls, "less": lo_cls, "ratio": round(ratio, 2)})
+    if not found:
+        return {"classes": [a, b], "traits": [], "sentence": f"Your {a} and {b} traits overlap: the same player at both speeds."}
+    found.sort(key=lambda f: -f["ratio"])
+    top = found[:3]
+    parts = [f"in {f['more']} you {TRAIT_PHRASE[f['trait']]} more often" for f in top[:2]]
+    sentence = "; ".join(parts)
+    return {"classes": [a, b], "traits": top, "sentence": sentence[0].upper() + sentence[1:] + "."}
 
 
 def heat_levels(row: list[float | None]) -> list[int]:
@@ -166,25 +228,7 @@ class YouService:
         if not games:
             return {"games": 0, **goal, "brilliant": None, "fingerprint": None, "axes": None, "timeControls": [], "survival": None, "sacrifices": None}
 
-        ids = [g["id"] for g in games]
-        moves, lens = [], []
-        for start in range(0, len(ids), CHUNK):
-            part = ids[start : start + CHUNK]
-            moves += self._paged(lambda: sb.table("game_moves").select("game_id, ply, san, quality, signals, is_brilliant").in_("game_id", part).order("id"))
-            lens += self._paged(
-                lambda: sb.table("move_lens_scores").select(LENS_COLUMNS).in_("game_id", part).in_("lens", ["chaos", "survival", "squeeze", "swindle", "clock", "prophylaxis"]).order("game_move_id")
-            )
-        for r in lens:
-            # Only these keys of `details` are read; selecting them alone keeps the blob off the wire.
-            if "details" not in r:
-                r["details"] = {k: r.pop(k, None) for k in DETAIL_KEYS}
-
-        by_game_moves: dict[str, list[dict]] = {}
-        for m in moves:
-            by_game_moves.setdefault(m["game_id"], []).append(m)
-        by_game_lens: dict[str, list[dict]] = {}
-        for r in lens:
-            by_game_lens.setdefault(r["game_id"], []).append(r)
+        moves, lens, by_game_moves, by_game_lens = self._load([g["id"] for g in games])
 
         end = datetime.fromisoformat(games[0]["played_at"].replace("Z", "+00:00")) + timedelta(seconds=1)
         weekly_moves: list[list[dict]] = [[] for _ in range(WEEKS)]
@@ -217,6 +261,13 @@ class YouService:
         schema = max((version(g) for g in games), default=1)
 
         mine, refs = axis_values(overall), references()
+        # Each time class gets up to CLASS_GAMES of its own newest games, reaching past the window when the
+        # recent games are all one speed (plan 3.8).
+        extra = self._class_top_up(scoped, games)
+        _, _, extra_moves, extra_lens = self._load([g["id"] for g in extra])
+        time_controls, gap = self._time_controls(
+            games + extra, {**by_game_moves, **extra_moves}, {**by_game_lens, **extra_lens}
+        )
         return {
             "games": len(games),
             **goal,
@@ -251,7 +302,8 @@ class YouService:
                 for name in AXES
             ],
             "references": {player: {"games": ref.get("games", 0), "model": ref.get("model")} for player, ref in refs.items()},
-            "timeControls": self._time_controls(games),
+            "timeControls": time_controls,
+            "timeGap": gap,
             "survival": self._survival(games, by_game_lens, by_game_moves, end, overall["Defence"], enough),
             "grip": self._grip(games, by_game_lens, by_game_moves),
             "fight": self._fight(games, by_game_lens, by_game_moves),
@@ -359,6 +411,52 @@ class YouService:
         rows = LibraryService().sacrifices(user_id, username, limit=10_000)
         return {"played": len(rows), "held": sum(r["held"] for r in rows), "withNotes": sum(1 for r in rows if r["note"])}
 
+    def _load(self, ids: list[str]) -> tuple[list[dict], list[dict], dict, dict]:
+        """Your moves and the lens rows the traits read, for these games, and both grouped by game."""
+        sb = get_supabase()
+        moves, lens = [], []
+        for start in range(0, len(ids), CHUNK):
+            part = ids[start : start + CHUNK]
+            moves += self._paged(lambda: sb.table("game_moves").select("game_id, ply, san, quality, signals, is_brilliant").in_("game_id", part).order("id"))
+            lens += self._paged(
+                lambda: sb.table("move_lens_scores").select(LENS_COLUMNS).in_("game_id", part).in_("lens", ["chaos", "survival", "squeeze", "swindle", "clock", "prophylaxis"]).order("game_move_id")
+            )
+        for r in lens:
+            # Only these keys of `details` are read; selecting them alone keeps the blob off the wire.
+            if "details" not in r:
+                r["details"] = {k: r.pop(k, None) for k in DETAIL_KEYS}
+        by_game_moves: dict[str, list[dict]] = {}
+        for m in moves:
+            by_game_moves.setdefault(m["game_id"], []).append(m)
+        by_game_lens: dict[str, list[dict]] = {}
+        for r in lens:
+            by_game_lens.setdefault(r["game_id"], []).append(r)
+        return moves, lens, by_game_moves, by_game_lens
+
+    @staticmethod
+    def _class_top_up(scoped, window: list[dict]) -> list[dict]:
+        """Older games for any time class with fewer than CLASS_GAMES in the window, newest first (read in pages)."""
+        need = {c: CLASS_GAMES - sum(1 for g in window if time_class(g.get("time_control")) == c) for c in ("bullet", "blitz", "rapid")}
+        if all(n <= 0 for n in need.values()):
+            return []
+        sb, extra, offset = get_supabase(), [], len(window)
+        while offset < TOP_UP_SCAN and any(n > 0 for n in need.values()):
+            batch = scoped(
+                sb.table("games").select("id, played_at, time_control, game_analyses(brilliant_pct, total_moves)")
+                .eq("analysis_status", "complete").neq("source", "sarce_bot").order("played_at", desc=True).order("id")
+            ).range(offset, offset + PAGE - 1).execute().data or []
+            for g in batch:
+                c = time_class(g.get("time_control"))
+                if need[c] > 0:
+                    a = g.pop("game_analyses", None)
+                    g["analysis"] = a[0] if isinstance(a, list) and a else a
+                    extra.append(g)
+                    need[c] -= 1
+            if len(batch) < PAGE:
+                break
+            offset += PAGE
+        return extra
+
     @staticmethod
     def _paged(build) -> list[dict]:
         rows: list[dict] = []
@@ -369,13 +467,18 @@ class YouService:
                 return rows
 
     @staticmethod
-    def _time_controls(games: list[dict]) -> list[dict]:
-        out = []
+    def _time_controls(games: list[dict], by_game_moves: dict, by_game_lens: dict) -> tuple[list[dict], dict | None]:
+        """Brilliant and the nine traits per time class, and where your two main classes differ (plan 3.8)."""
+        out, by_class, counts = [], {}, {}
         for cls in ("bullet", "blitz", "rapid"):
             subset = [g for g in games if time_class(g.get("time_control")) == cls]
             card = window_brilliant(subset)
-            out.append({"class": cls, "games": len(subset), "pct": card["pct"], "spread": card["spread"], "calibrated": cls == "bullet"})
-        return out
+            traits = class_traits(
+                [m for g in subset for m in by_game_moves.get(g["id"], [])], [r for g in subset for r in by_game_lens.get(g["id"], [])]
+            )
+            by_class[cls], counts[cls] = traits, len(subset)
+            out.append({"class": cls, "games": len(subset), "pct": card["pct"], "spread": card["spread"], "calibrated": cls == "bullet", "traits": traits})
+        return out, time_gap(by_class, counts)
 
     @staticmethod
     def _survival(games, by_game_lens, by_game_moves, end, defence, enough) -> dict | None:
