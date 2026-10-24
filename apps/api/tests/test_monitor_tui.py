@@ -51,3 +51,23 @@ def test_dashboard_renders_and_follows_the_selected_engine():
             assert app.selected is None and app.machine_filter == "desk"
 
     asyncio.run(run())
+
+
+def test_startup_errors_show_and_dotted_hostnames_chart():
+    class Down:
+        def get(self, path):
+            raise OSError("refused")
+
+    async def run():
+        app = monitor_tui.MonitorApp(Down())
+        async with app.run_test(size=(160, 45)) as pilot:
+            await pilot.pause(0.5)
+            assert "refused" in str(app.query_one("#kpis").render())
+            app._apply_slow({"bucketMin": 10, "series": {"worker.example.com": {"a": 1}}}, [])
+            await pilot.pause(0.1)
+            assert len(app.query("Sparkline")) == 1
+            app._apply_slow({"bucketMin": 10, "series": {}}, [])
+            await pilot.pause(0.1)
+            assert len(app.query("Sparkline")) == 0
+
+    asyncio.run(run())

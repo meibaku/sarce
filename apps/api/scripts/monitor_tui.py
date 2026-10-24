@@ -115,6 +115,7 @@ class MonitorApp(App):
         self.problem: str | None = None
         self.machine_filter: str | None = None
         self.selected: str | None = None  # "machine:engine"
+        self.charts: dict[str, tuple[Static, Sparkline]] = {}  # by machine; hostnames aren't valid widget ids
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -167,6 +168,8 @@ class MonitorApp(App):
         self.problem = message
         if self.snap:
             self._render_kpis()
+        else:  # nothing to show yet: the reason, not an endless "Connecting…"
+            self.query_one("#kpis", Static).update(Text(message or "Connecting…", "yellow"))
 
     # Rendering: cells are updated in place, so rows keep their place and the cursor stays put.
     def _apply_snapshot(self, snap: dict) -> None:
@@ -238,7 +241,7 @@ class MonitorApp(App):
         for key, cells in rows.items():
             if key in existing:
                 for col, value in cells.items():
-                    table.update_cell(key, col, value)
+                    table.update_cell(key, col, value, update_width=True)  # an idle "–" becomes a long game line
             else:
                 table.add_row(*cells.values(), key=key)
 
@@ -249,15 +252,18 @@ class MonitorApp(App):
         width = max((len(v) for v in series_by.values()), default=1)
         for machine, values in sorted(series_by.items()):
             values = [0.0] * (width - len(values)) + values  # every series ends now: a shared time axis
-            label_id, spark_id = f"lbl-{machine}", f"spk-{machine}"
             peak = int(max(values))
             label = f"{machine}  ·  last {values[-1]:.0f}  ·  peak {peak}  ·  over {dur(len(values) * history.get('bucketMin', 10) * 60)}"
-            if box.query(f"#{spark_id}"):
-                box.query_one(f"#{label_id}", Static).update(label)
-                box.query_one(f"#{spark_id}", Sparkline).data = values
+            if machine in self.charts:
+                caption, spark = self.charts[machine]
+                caption.update(label)
+                spark.data = values
             else:
-                box.mount(Static(label, id=label_id))
-                box.mount(Sparkline(values, summary_function=max, id=spark_id))
+                self.charts[machine] = (Static(label), Sparkline(values, summary_function=max))
+                box.mount(*self.charts[machine])
+        for machine in set(self.charts) - set(series_by):  # nothing from it in 24 h: its chart goes too
+            for widget in self.charts.pop(machine):
+                widget.remove()
         self._render_side()
 
     def _render_side(self) -> None:
