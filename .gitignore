@@ -57,3 +57,6 @@ stockfish/
 
 # Chaos validation outputs (docs/CHAOS_PLAN.md, M4)
 apps/api/scripts/out/
+
+# Local Brilliant benchmark reports (scripts/benchmark_brilliant_v3.py); they hold your own numbers
+apps/api/data/reference_brilliant.json

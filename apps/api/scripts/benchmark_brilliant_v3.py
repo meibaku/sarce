@@ -24,6 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.config import settings
+from app.services.brilliant_find_rate import RULE
 from app.services.brilliant_benchmark import benchmark_game, even_sample, player_report, summarize
 from app.services.human_model import get_human_model
 from app.services.reference import ReferenceService
@@ -34,7 +35,7 @@ OUT = Path(__file__).resolve().parents[1] / "data" / "reference_brilliant.json"
 
 def save(key: str, summary: dict, **extra) -> None:
     data = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
-    data[key] = {**summary, "rule": "v3 (find-rate-20 + real offer)", "computedAt": datetime.now(timezone.utc).date().isoformat(), **extra}
+    data[key] = {**summary, "rule": RULE, "computedAt": datetime.now(timezone.utc).date().isoformat(), **extra}
     OUT.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 

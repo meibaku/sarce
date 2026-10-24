@@ -227,11 +227,15 @@ class AnalysisService:
                 game_id, row["pgn"], board, moves, user_color, classified,
                 opponent_model_elo(row),
             )
-            # The find-rate rule may have changed Brilliant %, so refresh the baseline.
-            await self.baseline.recompute_baseline(
-                user_id=row.get("user_id"),
-                chess_com_username=row.get("chess_com_username"),
-            )
+        else:
+            # Without the Chaos Lens pass the full rule still runs (human-model probabilities from the cache, or
+            # computed on a miss), so every game carries the current rule's version, not v1 (ADR 0009).
+            await asyncio.to_thread(self._apply_find_rate, game_id)
+        # The rule may have changed Brilliant %, so refresh the baseline.
+        await self.baseline.recompute_baseline(
+            user_id=row.get("user_id"),
+            chess_com_username=row.get("chess_com_username"),
+        )
 
         return {
             "gameId": game_id,
