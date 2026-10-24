@@ -19,6 +19,7 @@ from app.services.uncertainty import wilson
 TABLE = "trap_atlas"
 MIN_EP_LOSS = 0.20  # the common reply must lose at least this much
 MIN_FREQUENCY = 3  # times the position was seen at the band
+MAX_SCAN = 1000  # traps read per query before ranking (PostgREST's response cap)
 
 
 def build_traps(
@@ -109,7 +110,8 @@ class TrapAtlasService:
             query = query.eq("band", band)
         if eco:
             query = query.ilike("eco", f"{eco}%")
-        # Over-fetch by loss, then rank by the shrunk score so rare positions don't win on luck (review F7).
-        res = query.order("ep_loss", desc=True).limit(limit * 4).execute()
+        # Rank every matching trap by the shrunk score (review F7): truncating by raw loss first could drop a
+        # well-seen trap behind rare ones. A band holds hundreds of traps, well under one response.
+        res = query.order("ep_loss", desc=True).limit(MAX_SCAN).execute()
         rows = sorted(res.data or [], key=lambda r: (-rank_score(r), r["fen_key"]))[:limit]
         return [to_api(row) for row in rows]
