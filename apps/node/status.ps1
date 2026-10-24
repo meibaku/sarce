@@ -41,9 +41,9 @@ try {
                 $eta = if ($server.etaHours) { if ($server.etaHours -ge 48) { "{0:N1} days" -f ($server.etaHours / 24) } else { "{0:N1} h" -f $server.etaHours } } else { "-" }
                 $lines.Add(("           {0} left  |  {1} analysing now  |  {2} failed  |  about {3} to go" -f (N $q.pending), (N $q.processing), (N $q.failed), $eta))
                 $r = $server.rates
-                $lines.Add(("SPEED      {0} games/h in all  =  laptop {1}/h  +  nodes {2}/h" -f (N $r.allPerHour), (N $r.serverPerHour), (N $r.nodesPerHour)))
+                $lines.Add(("SPEED      {0} games/h finished  =  {1} by the laptop's engine  +  {2} searched by nodes" -f (N $r.allPerHour), (N $r.serverPerHour), (N $r.nodesPerHour)))
                 foreach ($m in $server.machines) {
-                    $lines.Add(("           {0,-18} {1} engines  {2,4}/h  {3,5} today  {4,7} positions today" -f $m.machine, $m.engines, (N $m.gamesLastHour), (N $m.gamesToday), (N $m.positionsToday)))
+                    $lines.Add(("           {0,-18} {1} engines  searched {2,4} in the last hour, {3,5} today  {4,7} positions today" -f $m.machine, $m.engines, (N $m.searchedLastHour), (N $m.searchedToday), (N $m.positionsToday)))
                 }
             }
         }

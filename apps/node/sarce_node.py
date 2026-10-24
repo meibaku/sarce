@@ -77,11 +77,46 @@ class Gateway:
 
 
 def write_status(name: str, data: dict) -> None:
-    """One small JSON file per writer, replaced atomically so the status window never reads half a file."""
-    STATUS_DIR.mkdir(exist_ok=True)
-    tmp = STATUS_DIR / f"{name}.tmp"
-    tmp.write_text(json.dumps({**data, "at": time.time()}), encoding="utf-8")
-    os.replace(tmp, STATUS_DIR / f"{name}.json")
+    """
+    One small JSON file per writer, replaced atomically so the status window never reads half a file. Never raises:
+    on Windows a replace can fail while the window has the file open, and a full disk mustn't stop the analysis.
+    """
+    try:
+        STATUS_DIR.mkdir(exist_ok=True)
+        tmp = STATUS_DIR / f"{name}.tmp"
+        tmp.write_text(json.dumps({**data, "day": time.strftime("%Y-%m-%d"), "at": time.time()}), encoding="utf-8")
+        for _ in range(3):
+            try:
+                os.replace(tmp, STATUS_DIR / f"{name}.json")
+                return
+            except PermissionError:
+                time.sleep(0.05)  # the window is reading it; the next snapshot will do if this one can't land
+    except OSError:
+        pass
+
+
+def games_today(index: int) -> int:
+    """This engine's count for today from its last snapshot, so a restart or an update doesn't zero the day."""
+    try:
+        last = json.loads((STATUS_DIR / f"engine-{index}.json").read_text(encoding="utf-8"))
+        return int(last.get("gamesToday") or 0) if last.get("day") == time.strftime("%Y-%m-%d") else 0
+    except (OSError, ValueError):
+        return 0
+
+
+class ProgressEngine:
+    """The engine, noting each position it searches: `game_lines` searches decided positions without the store."""
+
+    def __init__(self, engine, on_position) -> None:
+        self.engine, self.on_position = engine, on_position
+
+    @property
+    def engine_version(self) -> str:
+        return self.engine.engine_version
+
+    def analyse(self, board, nodes: int, multipv: int):
+        self.on_position(board.fen().rsplit(" ", 1)[0])
+        return self.engine.analyse(board, nodes=nodes, multipv=multipv)
 
 
 class RemoteStore:
@@ -89,11 +124,11 @@ class RemoteStore:
 
     def __init__(self, cached: dict[str, dict], flush, on_get=None) -> None:
         self.rows, self.pending, self.flush, self.last = dict(cached), [], flush, time.monotonic()
-        self.on_get = on_get  # called once per position looked up: the engine's progress through the game
+        self.on_get = on_get  # called with each position's key: the engine's progress through the game
 
     def get(self, key: str, nodes: int) -> dict | None:
         if self.on_get:
-            self.on_get()
+            self.on_get(key)
         row = self.rows.get(key)
         return row if row and row.get("nodes") == nodes else None
 
@@ -124,9 +159,11 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
     name = f"{env['NODE']}-{index}"
     gw = Gateway(env["SERVER"], env["TOKEN"], name)
     keep_awake()
-    done_today, day, last_seconds = 0, time.strftime("%Y-%m-%d"), None
-    with StockfishEngine() as engine:
+    done_today, day, last_seconds = games_today(index), time.strftime("%Y-%m-%d"), None
+    with StockfishEngine() as real_engine:
         while True:
+            if time.strftime("%Y-%m-%d") != day:  # midnight, even while idle
+                done_today, day = 0, time.strftime("%Y-%m-%d")
             write_status(f"engine-{index}", {"engine": index, "state": "asking", "gamesToday": done_today, "lastGameSeconds": last_seconds})
             job = gw.call_retrying("/nodes/claim", {}).get("job")
             if not job:
@@ -134,7 +171,7 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
                 time.sleep(IDLE_S)
                 continue
             game_id, started, wall_start = job["gameId"], time.monotonic(), time.time()
-            progress = {"positions": 0, "threats": 0, "last": 0.0}
+            progress = {"positions": 0, "threats": 0, "last": 0.0, "seen": set()}
             total = max(1, job["pgn"].count(".") * 2)  # a rough count until the PGN is read below
 
             def report(phase: str) -> None:
@@ -146,13 +183,17 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
                     "threatsDone": progress["threats"], "startedAt": wall_start, "gamesToday": done_today, "lastGameSeconds": last_seconds,
                 })
 
-            def seen_position() -> None:
-                progress["positions"] += 1
-                report("searching")
+            def seen_position(key: str) -> None:
+                if key not in progress["seen"]:  # a position looked up and then searched counts once
+                    progress["seen"].add(key)
+                    progress["positions"] = len(progress["seen"])
+                    report("searching")
 
-            def seen_threat() -> None:
+            def seen_threat(key: str) -> None:
                 progress["threats"] += 1
                 report("threats")
+
+            engine = ProgressEngine(real_engine, seen_position)
 
             evals = RemoteStore(job["evals"], lambda: None, seen_position)
             threats = RemoteStore(job["threats"], lambda: None, seen_threat)
@@ -185,14 +226,12 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
                 total = len(moves) + 1
                 lines = game_lines(board, moves, engine, evals)
                 classified = MoveClassifier().classify_game(board, moves, job["userColor"], lines=lines)
-                evaluate_game_threats(board, moves, job["userColor"], classified, engine, threats)
+                evaluate_game_threats(board, moves, job["userColor"], classified, real_engine, threats)
                 flush()
             finally:
                 stop.set()
             gw.call_retrying("/nodes/done", {"gameId": game_id})
             last_seconds = round(time.monotonic() - started)
-            if time.strftime("%Y-%m-%d") != day:
-                done_today, day = 0, time.strftime("%Y-%m-%d")
             done_today += 1
             print(f"[{name}] {game_id}: {len(moves)} plies in {last_seconds}s", flush=True)
 
@@ -227,7 +266,11 @@ def main() -> int:
     keep_awake()
     status_shortcut()
     for old in STATUS_DIR.glob("engine-*.json") if STATUS_DIR.exists() else []:
-        old.unlink()  # engines from a previous run (or a larger WORKERS) shouldn't linger in the window
+        try:
+            if int(old.stem.split("-")[1]) >= workers:
+                old.unlink()  # engines from a larger WORKERS shouldn't linger in the window
+        except (OSError, ValueError):
+            pass
     procs = [mp.Process(target=worker, args=(i, env, config["settings"]), daemon=True) for i in range(workers)]
     for p in procs:
         p.start()

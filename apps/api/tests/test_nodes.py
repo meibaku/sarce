@@ -94,17 +94,19 @@ def test_bundle_signature_and_settings_in_the_version():
     nodes.bundle.cache_clear()
 
 
-def test_status_groups_engines_by_machine_and_estimates_time_left():
+def test_status_groups_engines_by_machine_and_splits_one_event():
     from datetime import timedelta
+    from types import SimpleNamespace
 
     now = nodes.now()
     recent = (now - timedelta(minutes=5)).isoformat()
     leases = [
-        {"node": "desk-0", "done_at": recent, "heartbeat_at": recent, "positions": 40},
-        {"node": "desk-1", "done_at": None, "heartbeat_at": now.isoformat(), "positions": 10},
-        {"node": "desk-2", "done_at": recent, "heartbeat_at": recent, "positions": 30},
+        {"game_id": "g1", "node": "desk-0", "done_at": recent, "heartbeat_at": recent, "positions": 40},
+        {"game_id": "g2", "node": "desk-1", "done_at": None, "heartbeat_at": now.isoformat(), "positions": 10},
+        {"game_id": "g3", "node": "desk-2", "done_at": recent, "heartbeat_at": recent, "positions": 30},
     ]
     counts = {"pending": 100, "processing": 1, "complete": 900, "failed": 0}
+    analysed = [{"id": f"x{i}"} for i in range(18)] + [{"id": "g1"}, {"id": "g3"}]
 
     class Q:
         def __init__(self, table):
@@ -121,16 +123,20 @@ def test_status_groups_engines_by_machine_and_estimates_time_left():
             self.filters["gt"] = col
             return self
 
+        def order(self, *a, **k):
+            return self
+
+        def range(self, a, b):
+            return self
+
         def limit(self, n):
             return self
 
         def execute(self):
-            from types import SimpleNamespace
-
             if self.table == "node_leases":
                 return SimpleNamespace(data=leases, count=None)
             if self.filters.get("gt") == "analysed_at":
-                return SimpleNamespace(data=[], count=20)
+                return SimpleNamespace(data=analysed, count=None)
             return SimpleNamespace(data=[], count=counts[self.filters["analysis_status"]])
 
     sb = MagicMock()
@@ -141,5 +147,24 @@ def test_status_groups_engines_by_machine_and_estimates_time_left():
     nodes._status = None
     assert s["queue"]["total"] == 1001 and s["etaHours"] == 5.0
     desk = s["machines"][0]
-    assert desk["machine"] == "desk" and desk["engines"] == 1 and desk["gamesLastHour"] == 2 and desk["positionsToday"] == 80
+    assert desk["machine"] == "desk" and desk["engines"] == 1 and desk["searchedLastHour"] == 2 and desk["positionsToday"] == 80
     assert s["rates"] == {"allPerHour": 20, "nodesPerHour": 2, "serverPerHour": 18}
+
+
+def test_the_node_modules_import_without_the_server_only_packages():
+    """The node installs only requirements-node.txt: the shared modules must not need supabase, httpx, fastapi."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    code = (
+        "import sys, importlib.abc\n"
+        "class B(importlib.abc.MetaPathFinder):\n"
+        "    def find_spec(self, name, path, target=None):\n"
+        "        if name.split('.')[0] in ('supabase', 'httpx', 'postgrest', 'fastapi', 'anthropic'): raise ImportError(name)\n"
+        "sys.meta_path.insert(0, B())\n"
+        "import app.services.move_classifier, app.services.position_evals, app.services.stockfish, app.services.threats\n"
+    )
+    api = Path(__file__).resolve().parents[1]
+    result = subprocess.run([sys.executable, "-c", code], cwd=api, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr[-500:]
