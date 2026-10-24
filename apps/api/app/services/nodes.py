@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import io
+import time
 import zipfile
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
@@ -27,6 +28,8 @@ from app.services.position_evals import fen_key
 from app.services.threats import THREAT_NODES
 
 TABLE = "node_leases"
+STATUS_S = 4  # how long the status summary is reused
+_status: tuple[float, dict] | None = None
 LEASE_S = 300  # no heartbeat for this long and the game goes back to the pool
 CHUNK = 60  # keys per `in` filter
 API_DIR = Path(__file__).resolve().parents[2]  # apps/api
@@ -144,16 +147,54 @@ class NodeService:
         ids = {r["id"] for r in pending}
         return [g for g in done if g in ids]
 
-    def status(self) -> list[dict]:
-        """Per node: games finished in the last hour and whether it's searching now (for Settings)."""
-        since = (now() - timedelta(hours=1)).isoformat()
-        rows = get_supabase().table(TABLE).select("node, done_at, heartbeat_at").gt("heartbeat_at", since).execute().data or []
-        out: dict[str, dict] = {}
-        for r in rows:
-            entry = out.setdefault(r["node"], {"node": r["node"], "gamesLastHour": 0, "active": False})
-            entry["gamesLastHour"] += 1 if r.get("done_at") else 0
-            entry["active"] = entry["active"] or not r.get("done_at")
-        return sorted(out.values(), key=lambda e: e["node"])
+    def status(self) -> dict:
+        """
+        The whole picture for a node's status window: the analysis queue, games per hour for each node and for the
+        server's own engine, and the time left at that pace. Cached STATUS_S, so windows refreshing every couple of
+        seconds cost the database one set of counts per few seconds.
+        """
+        global _status
+        if _status and time.monotonic() - _status[0] < STATUS_S:
+            return _status[1]
+        sb = get_supabase()
+
+        def count(status: str) -> int:
+            return sb.table("games").select("id", count="exact").eq("analysis_status", status).limit(1).execute().count or 0
+
+        queue = {s: count(s) for s in ("pending", "processing", "complete", "failed")}
+        hour_ago = (now() - timedelta(hours=1)).isoformat()
+        midnight = now().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        leases = sb.table(TABLE).select("node, done_at, heartbeat_at, positions").gt("heartbeat_at", midnight).execute().data or []
+        machines: dict[str, dict] = {}
+        for r in leases:
+            machine = r["node"].rsplit("-", 1)[0]  # desktop-fuer0cc-2 -> desktop-fuer0cc: one row per computer
+            m = machines.setdefault(machine, {"machine": machine, "engines": 0, "gamesLastHour": 0, "gamesToday": 0, "positionsToday": 0, "_engines": set()})
+            m["positionsToday"] += r.get("positions") or 0
+            if r.get("done_at"):
+                m["gamesToday"] += 1
+                m["gamesLastHour"] += 1 if r["done_at"] > hour_ago else 0
+            elif r["heartbeat_at"] > (now() - timedelta(seconds=LEASE_S)).isoformat():
+                m["_engines"].add(r["node"])
+        for m in machines.values():
+            m["engines"] = len(m.pop("_engines"))
+        analysed_last_hour = (
+            sb.table("games").select("id", count="exact").gt("analysed_at", hour_ago).limit(1).execute().count or 0
+        )
+        node_games = sum(m["gamesLastHour"] for m in machines.values())
+        per_hour = analysed_last_hour
+        result = {
+            "queue": {**queue, "total": sum(queue.values())},
+            "machines": sorted(machines.values(), key=lambda m: m["machine"]),
+            "rates": {
+                "allPerHour": per_hour,  # games completed in the last hour, by everyone
+                "nodesPerHour": node_games,
+                "serverPerHour": max(0, per_hour - node_games),  # the server's own engine
+            },
+            "etaHours": round(queue["pending"] / per_hour, 1) if per_hour else None,
+            "at": now().isoformat(),
+        }
+        _status = (time.monotonic(), result)
+        return result
 
 
 def signature(data: bytes) -> str:

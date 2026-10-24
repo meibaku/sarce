@@ -32,6 +32,9 @@ FLUSH_ROWS = 8
 FLUSH_S = 45
 IDLE_S = 60
 HEARTBEAT_S = 60
+STATUS_DIR = HERE.parent / "status"  # read by status.ps1 every couple of seconds; no token in here
+SERVER_POLL_S = 5
+VERSION_CHECK_S = 300
 
 
 def load_env() -> dict[str, str]:
@@ -73,13 +76,24 @@ class Gateway:
             wait = min(wait * 2, 120)
 
 
+def write_status(name: str, data: dict) -> None:
+    """One small JSON file per writer, replaced atomically so the status window never reads half a file."""
+    STATUS_DIR.mkdir(exist_ok=True)
+    tmp = STATUS_DIR / f"{name}.tmp"
+    tmp.write_text(json.dumps({**data, "at": time.time()}), encoding="utf-8")
+    os.replace(tmp, STATUS_DIR / f"{name}.json")
+
+
 class RemoteStore:
     """An EvalStore (position_evals.EvalStore) over the gateway: reads from the claim's rows, writes in batches."""
 
-    def __init__(self, cached: dict[str, dict], flush) -> None:
+    def __init__(self, cached: dict[str, dict], flush, on_get=None) -> None:
         self.rows, self.pending, self.flush, self.last = dict(cached), [], flush, time.monotonic()
+        self.on_get = on_get  # called once per position looked up: the engine's progress through the game
 
     def get(self, key: str, nodes: int) -> dict | None:
+        if self.on_get:
+            self.on_get()
         row = self.rows.get(key)
         return row if row and row.get("nodes") == nodes else None
 
@@ -110,15 +124,38 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
     name = f"{env['NODE']}-{index}"
     gw = Gateway(env["SERVER"], env["TOKEN"], name)
     keep_awake()
+    done_today, day, last_seconds = 0, time.strftime("%Y-%m-%d"), None
     with StockfishEngine() as engine:
         while True:
+            write_status(f"engine-{index}", {"engine": index, "state": "asking", "gamesToday": done_today, "lastGameSeconds": last_seconds})
             job = gw.call_retrying("/nodes/claim", {}).get("job")
             if not job:
+                write_status(f"engine-{index}", {"engine": index, "state": "idle", "gamesToday": done_today, "lastGameSeconds": last_seconds})
                 time.sleep(IDLE_S)
                 continue
-            game_id, started = job["gameId"], time.monotonic()
-            evals = RemoteStore(job["evals"], lambda: None)
-            threats = RemoteStore(job["threats"], lambda: None)
+            game_id, started, wall_start = job["gameId"], time.monotonic(), time.time()
+            progress = {"positions": 0, "threats": 0, "last": 0.0}
+            total = max(1, job["pgn"].count(".") * 2)  # a rough count until the PGN is read below
+
+            def report(phase: str) -> None:
+                if time.monotonic() - progress["last"] < 1:  # at most once a second
+                    return
+                progress["last"] = time.monotonic()
+                write_status(f"engine-{index}", {
+                    "engine": index, "state": phase, "gameId": game_id, "done": progress["positions"], "total": total,
+                    "threatsDone": progress["threats"], "startedAt": wall_start, "gamesToday": done_today, "lastGameSeconds": last_seconds,
+                })
+
+            def seen_position() -> None:
+                progress["positions"] += 1
+                report("searching")
+
+            def seen_threat() -> None:
+                progress["threats"] += 1
+                report("threats")
+
+            evals = RemoteStore(job["evals"], lambda: None, seen_position)
+            threats = RemoteStore(job["threats"], lambda: None, seen_threat)
 
             def flush() -> None:
                 if evals.pending or threats.pending:
@@ -145,6 +182,7 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
                 continue
             try:
                 board, moves = game.board(), list(game.mainline_moves())
+                total = len(moves) + 1
                 lines = game_lines(board, moves, engine, evals)
                 classified = MoveClassifier().classify_game(board, moves, job["userColor"], lines=lines)
                 evaluate_game_threats(board, moves, job["userColor"], classified, engine, threats)
@@ -152,7 +190,24 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
             finally:
                 stop.set()
             gw.call_retrying("/nodes/done", {"gameId": game_id})
-            print(f"[{name}] {game_id}: {len(moves)} plies in {time.monotonic() - started:.0f}s", flush=True)
+            last_seconds = round(time.monotonic() - started)
+            if time.strftime("%Y-%m-%d") != day:
+                done_today, day = 0, time.strftime("%Y-%m-%d")
+            done_today += 1
+            print(f"[{name}] {game_id}: {len(moves)} plies in {last_seconds}s", flush=True)
+
+
+def status_shortcut() -> None:
+    """A "Sarce Node status" launcher on the shared Desktop, so anyone at the machine can open the live window."""
+    if sys.platform != "win32":
+        return
+    try:
+        desktop = Path(os.environ.get("PUBLIC", r"C:\Users\Public")) / "Desktop"
+        launcher = desktop / "Sarce Node status.cmd"
+        script = HERE / "status.ps1"
+        launcher.write_text(f'@echo off\r\npowershell -NoProfile -ExecutionPolicy Bypass -File "{script}"\r\n', encoding="ascii")
+    except OSError:
+        pass  # no shared Desktop: run node\status.ps1 directly
 
 
 def main() -> int:
@@ -170,19 +225,32 @@ def main() -> int:
     workers = max(1, int(env.get("WORKERS", "3")))
     print(f"Sarce Node {env['NODE']}: {workers} engines, server {env['SERVER']}, bundle {local}", flush=True)
     keep_awake()
+    status_shortcut()
+    for old in STATUS_DIR.glob("engine-*.json") if STATUS_DIR.exists() else []:
+        old.unlink()  # engines from a previous run (or a larger WORKERS) shouldn't linger in the window
     procs = [mp.Process(target=worker, args=(i, env, config["settings"]), daemon=True) for i in range(workers)]
     for p in procs:
         p.start()
+    last_check, last_ok = time.monotonic(), None
     while True:
-        time.sleep(300)
+        time.sleep(SERVER_POLL_S)
+        # The laptop's picture of the whole queue, for the status window (the gateway caches it).
         try:
-            if gw.call("/nodes/config")["version"] != local:
-                print("the server was updated: restarting with the new bundle", flush=True)
-                for p in procs:
-                    p.terminate()
-                return UPDATE_EXIT
-        except Exception:
-            pass  # server down: the workers wait for it themselves
+            summary = gw.call("/nodes/status", timeout=10)
+            last_ok = time.time()
+            write_status("server", {"ok": True, "lastOk": last_ok, "server": env["SERVER"], "node": env["NODE"], "bundle": local, "engines": workers, **summary})
+        except Exception as exc:
+            write_status("server", {"ok": False, "lastOk": last_ok, "server": env["SERVER"], "node": env["NODE"], "bundle": local, "engines": workers, "error": str(exc)[:120]})
+        if time.monotonic() - last_check >= VERSION_CHECK_S:
+            last_check = time.monotonic()
+            try:
+                if gw.call("/nodes/config")["version"] != local:
+                    print("the server was updated: restarting with the new bundle", flush=True)
+                    for p in procs:
+                        p.terminate()
+                    return UPDATE_EXIT
+            except Exception:
+                pass  # server down: the workers wait for it themselves
         for i, p in enumerate(procs):
             if not p.is_alive():
                 procs[i] = mp.Process(target=worker, args=(i, env, config["settings"]), daemon=True)

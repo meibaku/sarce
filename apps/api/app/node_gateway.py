@@ -80,4 +80,5 @@ async def done(body: DoneRequest):
 
 @app.get("/nodes/status")
 async def status():
-    return {"nodes": await asyncio.to_thread(service.status)}
+    """Queue, speed per machine and time left, for the node's status window (cached a few seconds)."""
+    return await asyncio.to_thread(service.status)

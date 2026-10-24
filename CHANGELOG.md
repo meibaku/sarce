@@ -11,6 +11,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- A live status window on each Sarce Node ("Sarce Node status" on its Desktop, `node/status.ps1`), redrawn every 2 s:
+  the link, the whole queue (done, left, percent, time to go), games per hour per machine, each engine's game with a
+  progress bar, CPU and memory, and the last log line. It reads files the node writes; `/nodes/status` is cached
 - Sarce Nodes (ADR 0010, `docs/NODES.md`): helper computers search games for the server. A node leases a pending
   game from the token-protected node gateway (`app/node_gateway.py`, its own process on a private address), searches
   every position with the server's own code and Stockfish 18, and sends the rows back in batches; the server then

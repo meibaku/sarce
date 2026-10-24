@@ -92,3 +92,54 @@ def test_bundle_signature_and_settings_in_the_version():
     with patch.object(nodes.settings, "analysis_nodes", 2_000_000):
         assert nodes.bundle()[1] != version  # a settings change is a new version: nodes restart with it
     nodes.bundle.cache_clear()
+
+
+def test_status_groups_engines_by_machine_and_estimates_time_left():
+    from datetime import timedelta
+
+    now = nodes.now()
+    recent = (now - timedelta(minutes=5)).isoformat()
+    leases = [
+        {"node": "desk-0", "done_at": recent, "heartbeat_at": recent, "positions": 40},
+        {"node": "desk-1", "done_at": None, "heartbeat_at": now.isoformat(), "positions": 10},
+        {"node": "desk-2", "done_at": recent, "heartbeat_at": recent, "positions": 30},
+    ]
+    counts = {"pending": 100, "processing": 1, "complete": 900, "failed": 0}
+
+    class Q:
+        def __init__(self, table):
+            self.table, self.filters = table, {}
+
+        def select(self, *a, **k):
+            return self
+
+        def eq(self, col, val):
+            self.filters[col] = val
+            return self
+
+        def gt(self, col, val):
+            self.filters["gt"] = col
+            return self
+
+        def limit(self, n):
+            return self
+
+        def execute(self):
+            from types import SimpleNamespace
+
+            if self.table == "node_leases":
+                return SimpleNamespace(data=leases, count=None)
+            if self.filters.get("gt") == "analysed_at":
+                return SimpleNamespace(data=[], count=20)
+            return SimpleNamespace(data=[], count=counts[self.filters["analysis_status"]])
+
+    sb = MagicMock()
+    sb.table.side_effect = Q
+    nodes._status = None
+    with patch("app.services.nodes.get_supabase", return_value=sb):
+        s = nodes.NodeService().status()
+    nodes._status = None
+    assert s["queue"]["total"] == 1001 and s["etaHours"] == 5.0
+    desk = s["machines"][0]
+    assert desk["machine"] == "desk" and desk["engines"] == 1 and desk["gamesLastHour"] == 2 and desk["positionsToday"] == 80
+    assert s["rates"] == {"allPerHour": 20, "nodesPerHour": 2, "serverPerHour": 18}
