@@ -64,6 +64,8 @@ Order matters: F6 and F1 change what Brilliant and chaos mean, and everything la
 
 ## Phase 3 — Product (from REVIEW §3–§6)
 
+Detailed plan, waves and PR order: [PHASE3_PLAN.md](./PHASE3_PLAN.md).
+
 | # | Item | Approach | Size | Needs | Depends on |
 | --- | --- | --- | --- | --- | --- |
 | 3.1 | **Time to first read (§3.2)** | On sign-up, analyse the newest 20 games first (the queue is already newest-first; make sign-up import feed it in that order), then backfill. Measure the time | S | — | — |
