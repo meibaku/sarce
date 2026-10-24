@@ -34,6 +34,7 @@ export interface HomeData {
     trend?: string;
     goalLo: number;
     goalHi: number;
+    next?: { lo: number; hi: number } | null;
     gapLine: string;
     streak: string | null;
     soundRatio: string | null;
@@ -122,8 +123,12 @@ export function HomeView({ data }: { data: HomeData }) {
                 goalLo={brilliant.goalLo}
                 goalHi={brilliant.goalHi}
                 spread={brilliant.spread ?? undefined}
+                next={brilliant.next}
               />
-              <span className="text-[13px] leading-[1.5] text-muted">{brilliant.gapLine}</span>
+              <span className="text-[13px] leading-[1.5] text-muted">
+                {brilliant.gapLine}
+                {brilliant.next && ` Next band: ${brilliant.next.lo}–${brilliant.next.hi}%, just above what your games show now.`}
+              </span>
               <div className="flex flex-wrap gap-5 border-t border-hair pt-[10px]">
                 <Stat label="style streak" value={brilliant.streak} />
                 <Stat label="sound : unsound" value={brilliant.soundRatio} />

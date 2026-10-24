@@ -11,6 +11,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- A personal next band (plan 1.3): Home and Settings show a dashed step on the Brilliant gauge, from just above your
+  likely range (its 95% upper bound) to half as much again, on the way to the goal band, with one line naming it.
+  Web and Expo; `/users/home` returns `nextLo`/`nextHi`. Hidden within half a point of the goal
 - `scripts/trait_overlap.py` and `docs/TRAIT_OVERLAP.md` (review F10a): the nine traits' correlation over 81 windows of
   20 games. No pair moves together (|r| > 0.8; the strongest is Initiative–Grip at −0.77), so all nine stay; Calm's
   narrow range is already handled by the per-trait fingerprint scale

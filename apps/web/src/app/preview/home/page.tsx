@@ -37,11 +37,13 @@ const SAMPLE: HomeData = {
   ],
 };
 
-export default async function PreviewHome({ searchParams }: { searchParams: Promise<{ quiet?: string }> }) {
-  const { quiet } = await searchParams;
+export default async function PreviewHome({ searchParams }: { searchParams: Promise<{ quiet?: string; next?: string }> }) {
+  const { quiet, next } = await searchParams;
+  // ?next=1: the personal next band (plan 1.3) on the gauge; the default stays the handoff frame.
+  const data = next ? { ...SAMPLE, brilliant: { ...SAMPLE.brilliant, next: { lo: 5.3, hi: 6 } } } : SAMPLE;
   return (
     <AppShell title="home" account="kestrel_9 · Chess.com + Lichess · synced 2 min ago">
-      <HomeView data={quiet ? { ...SAMPLE, quietUntil: "Oct 23" } : SAMPLE} />
+      <HomeView data={quiet ? { ...data, quietUntil: "Oct 23" } : data} />
     </AppShell>
   );
 }

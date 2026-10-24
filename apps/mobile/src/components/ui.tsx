@@ -148,9 +148,24 @@ export function Uncalibrated() {
 /** Brilliant % on the 0–15 scale with the goal band; dashed when it rests on fewer than five games. */
 /**
  * Brilliant gauge, as the web StyleGauge (docs/DESIGN.md): a 10px ink-outlined track on 0–15%, the goal band in
- * accent tint, an optional ±spread hatch, a 2px ink marker at the value, and 0 / lo / hi / 15% under it.
+ * accent tint, an optional dashed next band (plan 1.3), an optional ±spread hatch, a 2px ink marker at the value,
+ * and 0 / lo / hi / 15% under it.
  */
-export function Gauge({ value, lo, hi, spread, compact }: { value: number | null; lo: number; hi: number; spread?: number | null; compact?: boolean }) {
+export function Gauge({
+  value,
+  lo,
+  hi,
+  spread,
+  next,
+  compact,
+}: {
+  value: number | null;
+  lo: number;
+  hi: number;
+  spread?: number | null;
+  next?: { lo: number; hi: number } | null;
+  compact?: boolean;
+}) {
   const at = (v: number) => (Math.max(0, Math.min(15, v)) / 15) * 100;
   const pct = (v: number) => `${at(v)}%` as const;
   const h = compact ? 8 : 10;
@@ -159,6 +174,11 @@ export function Gauge({ value, lo, hi, spread, compact }: { value: number | null
     <View style={{ gap: 6 }} accessibilityLabel={`Brilliant: ${value == null ? "not enough games yet" : `${value.toFixed(1)}%`}, goal ${lo}–${hi}%`}>
       <View style={{ height: h, borderWidth: 1.5, borderColor: color.ink, borderRadius: compact ? 5 : 6, backgroundColor: color.surface }}>
         <View style={{ position: "absolute", top: -1.5, bottom: -1.5, left: pct(lo), width: `${((hi - lo) / 15) * 100}%`, backgroundColor: color.accentTint, borderWidth: 1.5, borderColor: color.accent }} />
+        {next && (
+          <View
+            style={{ position: "absolute", top: -1.5, bottom: -1.5, left: pct(next.lo), width: `${((next.hi - next.lo) / 15) * 100}%`, minWidth: 3, borderWidth: 1.5, borderStyle: "dashed", borderColor: color.accent }}
+          />
+        )}
         {hatch && (
           <View style={{ position: "absolute", top: 1, bottom: 1, left: `${hatch.from}%`, width: `${hatch.to - hatch.from}%`, flexDirection: "row", gap: 2, overflow: "hidden" }}>
             {Array.from({ length: 40 }, (_, i) => (

@@ -31,6 +31,7 @@ export function toHomeData(api: HomeApi): HomeData | null {
       range: brilliant.lo != null && brilliant.hi != null ? `likely ${brilliant.lo.toFixed(1)}–${brilliant.hi.toFixed(1)}%` : undefined,
       goalLo: brilliant.goalLo,
       goalHi: brilliant.goalHi,
+      next: brilliant.nextLo != null && brilliant.nextHi != null ? { lo: brilliant.nextLo, hi: brilliant.nextHi } : null,
       gapLine: brilliant.gapLine ?? "",
       streak: stats?.streak == null ? null : `${stats.streak} game${stats.streak === 1 ? "" : "s"}`,
       soundRatio: stats?.soundRatio == null ? null : `${stats.soundRatio.toFixed(1)} : 1`,

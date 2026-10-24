@@ -26,6 +26,7 @@ function inDays(days: number) {
 export function SettingsView({
   data,
   brilliant,
+  next = null,
   onExport,
   onChange,
   sync,
@@ -33,6 +34,8 @@ export function SettingsView({
 }: {
   data: SettingsApi;
   brilliant: number | null;
+  /** Your next band (plan 1.3), from Home; null until there's a range or once it reaches the goal. */
+  next?: { lo: number; hi: number } | null;
   onExport: () => void;
   sync?: SyncStatus | null;
   onSyncNow?: () => void;
@@ -56,7 +59,12 @@ export function SettingsView({
               <Stepper label="from" value={data.goalLo} min={0} max={data.goalHi - 1} suffix="%" onChange={(v) => onChange({ goalLo: v })} />
               <Stepper label="to" value={data.goalHi} min={data.goalLo + 1} max={15} suffix="%" onChange={(v) => onChange({ goalHi: v })} />
             </div>
-            <StyleGauge compact value={brilliant} goalLo={data.goalLo} goalHi={data.goalHi} />
+            <StyleGauge compact value={brilliant} goalLo={data.goalLo} goalHi={data.goalHi} next={next} />
+            {next && (
+              <span className="text-[12px] leading-[1.5] text-muted">
+                Your next band is {next.lo}–{next.hi}% (dashed): one step above your likely range, on the way to the goal.
+              </span>
+            )}
             <span className="font-mono text-[11px] text-muted">references: Tal · change in You</span>
           </section>
 
