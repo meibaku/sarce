@@ -5,6 +5,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Fixed
+- Sarce Node engines exit when the node's main process is gone: on Windows a hard-killed parent left them running as
+  orphans on the old bundle, doubling up with the next start
 - Tal benchmark (review F6): `process_tal_benchmark` now runs the same pipeline as a player's games (the shared
   engine search, classification, then the find-rate and real-offer post-pass), on an evenly spaced sample across
   the career, skipping games Tal isn't in. It used to classify the first N games with no find-rate rule and fell
