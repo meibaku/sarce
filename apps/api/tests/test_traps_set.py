@@ -42,3 +42,9 @@ def test_score_trap_counts_replies_far_below_the_best():
 @patch("app.routers.users.traps_set_service.get", return_value=[{"move": "Bc4"}])
 def test_get_route(mock_get):
     assert client.get("/users/traps-set").json() == {"traps": [{"move": "Bc4"}], "building": False}
+
+
+def test_likely_rate_shrinks_small_samples():
+    # Ranked by the Wilson lower bound: 30 of 40 beats a perfect 3 of 3 (review F7).
+    assert traps_set.likely_rate(30, 40) > traps_set.likely_rate(3, 3)
+    assert traps_set.likely_rate(0, 0) == 0.0
