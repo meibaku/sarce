@@ -172,7 +172,14 @@ class AnalysisService:
             return None
 
         board, moves = parsed
-        sb.table("games").update({"analysis_status": "processing"}).eq("id", game_id).execute()
+        if row.get("analysis_status") == "pending":
+            # Claim it atomically: the queue and the node-finisher can reach the same pending game at once, and two
+            # analyses of one game collide on its lens rows. Whoever flips pending -> processing first does it.
+            claimed = sb.table("games").update({"analysis_status": "processing"}).eq("id", game_id).eq("analysis_status", "pending").execute()
+            if not claimed.data:
+                return None
+        else:
+            sb.table("games").update({"analysis_status": "processing"}).eq("id", game_id).execute()
         tracker = monitor.current.get()
         if tracker:
             tracker.phase("searching", total=len(moves) + 1)
