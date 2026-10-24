@@ -17,15 +17,18 @@ cable, your LAN, or a private overlay such as Tailscale), never on a public addr
 
 ## 1. On the server (once)
 
-1. Put a pairing token in the server's `.env`: `NODE_TOKEN=<a long random string>`. Every node needs it.
-2. Allow the gateway's port through the firewall, from the cable only. In PowerShell **as Administrator**:
+1. Check the server reads the engine cache: `POSITION_EVALS_ENABLED=true` in its `.env` (the Chaos Lens pass).
+   With it off, the server does its own depth-based searches and ignores everything a node stores, so nodes wait
+   and say why.
+2. Put a pairing token in the server's `.env`: `NODE_TOKEN=<a long random string>`. Every node needs it.
+3. Allow the gateway's port through the firewall, from the cable only. In PowerShell **as Administrator**:
 
    ```powershell
    New-NetFirewallRule -DisplayName "Sarce node gateway" -Direction Inbound -Protocol TCP -LocalPort 8002 `
      -RemoteAddress 192.168.137.0/24 -InterfaceAlias Ethernet -Action Allow
    ```
 
-3. Run the gateway next to the API, bound to the cable's address only (the API stays on localhost):
+4. Run the gateway next to the API, bound to the cable's address only (the API stays on localhost):
 
    ```bash
    cd apps/api
@@ -57,8 +60,14 @@ roughly 15–20% more throughput. Change `WORKERS` in `C:\SarceNode\node.env` an
 
 ## Updates
 
-When the server's code changes, the node notices within 5 minutes, downloads the new bundle from the gateway and
-restarts itself. There's nothing to do on the desktop.
+When the server's code or its search settings change, the node notices within 5 minutes and downloads the new
+bundle from the gateway. It checks the bundle's signature (an HMAC with the pairing token), swaps it in only once
+it's complete, and restarts. There's nothing to do on the desktop.
+
+## Finishing games
+
+The main API (with `NODE_TOKEN` set) analyses every 20 seconds the games nodes have finished searching. Every
+position is cached by then, so each takes seconds, even with automatic sync off.
 
 ## Checking
 

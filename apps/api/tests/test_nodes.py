@@ -58,7 +58,7 @@ def test_server_analysis_skips_games_a_node_is_searching():
     from app.services.analysis import AnalysisService
 
     sb = MagicMock()
-    sb.table.return_value.select.return_value.eq.return_value.order.return_value.limit.return_value.execute.return_value.data = [{"id": "a"}, {"id": "b"}]
+    sb.table.return_value.select.return_value.eq.return_value.order.return_value.limit.return_value.not_.in_.return_value.execute.return_value.data = [{"id": "b"}]
     service = AnalysisService()
     seen = []
 
@@ -69,3 +69,26 @@ def test_server_analysis_skips_games_a_node_is_searching():
     with patch("app.services.analysis.get_supabase", return_value=sb), patch("app.services.nodes.live_leases", return_value={"a"}), patch.object(service, "analyze_game", side_effect=fake_analyze):
         asyncio.run(service.analyze_pending(limit=2))
     assert "a" not in seen
+
+
+def test_claim_waits_when_the_server_ignores_the_cache_and_uses_the_atomic_rpc():
+    with patch.object(nodes.settings, "position_evals_enabled", False):
+        assert nodes.NodeService().claim("desk-0") is None
+    sb = MagicMock()
+    sb.rpc.return_value.execute.return_value.data = None
+    with patch.object(nodes.settings, "position_evals_enabled", True), patch("app.services.nodes.get_supabase", return_value=sb):
+        assert nodes.NodeService().claim("desk-0") is None
+    sb.rpc.assert_called_once_with("claim_node_game", {"p_node": "desk-0", "p_lease_s": nodes.LEASE_S})
+
+
+def test_bundle_signature_and_settings_in_the_version():
+    import hashlib
+    import hmac as h
+
+    data, version = nodes.bundle()
+    with patch.object(nodes.settings, "node_token", "s3cret"):
+        assert nodes.signature(data) == h.new(b"s3cret", data, hashlib.sha256).hexdigest()
+    nodes.bundle.cache_clear()
+    with patch.object(nodes.settings, "analysis_nodes", 2_000_000):
+        assert nodes.bundle()[1] != version  # a settings change is a new version: nodes restart with it
+    nodes.bundle.cache_clear()

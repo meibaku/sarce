@@ -44,12 +44,19 @@ if (-not $hasPython) {
 }
 if (-not (Test-Path "$Root\venv\Scripts\python.exe")) { & py -3.12 -m venv "$Root\venv" }
 
-# 2. The code bundle and its packages
+# 2. The code bundle (its signature checked against the token) and its packages
+$res = Invoke-WebRequest -Uri "$Server/nodes/bundle.zip" -Headers @{ "X-Sarce-Node" = $Token } -UseBasicParsing
+$bytes = $res.RawContentStream.ToArray()
+$hmac = [System.Security.Cryptography.HMACSHA256]::new([Text.Encoding]::UTF8.GetBytes($Token))
+$hex = -join ($hmac.ComputeHash($bytes) | ForEach-Object { $_.ToString("x2") })
+if ($hex -ne [string]$res.Headers["X-Sarce-Signature"]) { throw "The bundle's signature doesn't match the token: not installing." }
 $zip = Join-Path $Root "bundle.zip"
-Invoke-WebRequest -Uri "$Server/nodes/bundle.zip" -Headers @{ "X-Sarce-Node" = $Token } -OutFile $zip -UseBasicParsing
-foreach ($dir in "api", "node") { if (Test-Path "$Root\$dir") { Remove-Item -Recurse -Force "$Root\$dir" } }
+[IO.File]::WriteAllBytes($zip, $bytes)
+foreach ($item in "api", "node", "VERSION") { if (Test-Path "$Root\$item") { Remove-Item -Recurse -Force "$Root\$item" } }
 Expand-Archive -Path $zip -DestinationPath $Root -Force
 Remove-Item $zip
+# The runner lives outside node\, so an update (which replaces node\) never removes what the boot task starts.
+Copy-Item "$Root\node\run-node.ps1" "$Root\run-node.ps1" -Force
 & "$Root\venv\Scripts\python.exe" -m pip install --quiet --disable-pip-version-check --upgrade pip
 & "$Root\venv\Scripts\python.exe" -m pip install --quiet --disable-pip-version-check -r "$Root\node\requirements-node.txt"
 
@@ -82,7 +89,7 @@ STOCKFISH_PATH=$($sfExe.FullName)
 icacls "$Root\node.env" /inheritance:r /grant:r "Administrators:F" "SYSTEM:F" | Out-Null
 
 # 5. Start at boot, as SYSTEM, and come back after a crash; the machine must not sleep while it works.
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$Root\node\run-node.ps1`""
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$Root\run-node.ps1`""
 $trigger = New-ScheduledTaskTrigger -AtStartup
 $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable `

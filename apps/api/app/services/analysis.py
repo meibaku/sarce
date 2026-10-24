@@ -399,6 +399,21 @@ class AnalysisService:
             logger.info("Requeued %d games interrupted mid-analysis", len(rows))
         return len(rows)
 
+    async def finish_node_games(self) -> int:
+        """
+        Analyses the games paired nodes have finished searching (ADR 0010): every position is cached, so each takes
+        seconds. Run by the main API in a loop when NODE_TOKEN is set, whatever the sync settings.
+        """
+        from app.services.nodes import NodeService
+
+        ids = await asyncio.to_thread(NodeService().finished_games)
+        for game_id in ids:
+            try:
+                await self.analyze_game(game_id)
+            except Exception:
+                logger.exception("Finishing node game %s failed", game_id)
+        return len(ids)
+
     async def analyze_pending(
         self,
         user_id: str | None = None,
@@ -424,8 +439,8 @@ class AnalysisService:
         if chess_com_username:
             query = query.eq("chess_com_username", chess_com_username)
 
-        res = query.execute()
-        # Games a paired node is searching right now are left to it (ADR 0010); they come back cached.
+        # Games a paired node is searching right now are left to it (ADR 0010); they come back cached. Excluded
+        # before the limit, so a leased newest game doesn't leave the batch empty.
         try:
             from app.services.nodes import live_leases
 
@@ -433,7 +448,8 @@ class AnalysisService:
         except Exception:
             leased = set()  # no lease table yet: nothing is leased
         if leased:
-            res.data = [g for g in (res.data or []) if g["id"] not in leased]
+            query = query.not_.in_("id", sorted(leased))
+        res = query.execute()
         # Several games at once, each with its own single-threaded engine in a worker thread:
         # results stay deterministic (node-limited, fresh hash) and an 8-core PC does ~N× the work.
         gate = asyncio.Semaphore(settings.workers)

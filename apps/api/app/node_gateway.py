@@ -15,7 +15,7 @@ import asyncio
 from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from pydantic import BaseModel, Field
 
-from app.services.nodes import NodeService, bundle, token_ok
+from app.services.nodes import NodeService, bundle, signature, token_ok
 
 service = NodeService()
 
@@ -50,7 +50,8 @@ async def config():
 @app.get("/nodes/bundle.zip")
 async def get_bundle():
     data, version = bundle()
-    return Response(content=data, media_type="application/zip", headers={"X-Sarce-Version": version})
+    # Signed with the pairing token: a node refuses a bundle someone on the network swapped in.
+    return Response(content=data, media_type="application/zip", headers={"X-Sarce-Version": version, "X-Sarce-Signature": signature(data)})
 
 
 @app.post("/nodes/claim")
@@ -62,6 +63,13 @@ async def claim(body: NodeRequest):
 @app.post("/nodes/rows")
 async def rows(body: RowsRequest):
     return {"stored": await asyncio.to_thread(service.put_rows, body.gameId, body.node, body.evals, body.threats)}
+
+
+@app.post("/nodes/heartbeat")
+async def heartbeat(body: DoneRequest):
+    """Keeps a lease alive through long stretches with nothing to cache (decided positions)."""
+    await asyncio.to_thread(service.put_rows, body.gameId, body.node, [], [])
+    return {"ok": True}
 
 
 @app.post("/nodes/done")

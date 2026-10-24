@@ -32,7 +32,7 @@ CHUNK = 60  # keys per `in` filter
 API_DIR = Path(__file__).resolve().parents[2]  # apps/api
 NODE_DIR = API_DIR.parent / "node"  # apps/node
 # The settings a node must mirror so its searches are the server's (sent with /config, applied before import).
-MIRRORED = ("analysis_nodes", "analysis_multipv", "analysis_multipv_cap", "safe_set_tol")
+MIRRORED = ("analysis_nodes", "analysis_multipv", "analysis_multipv_cap", "safe_set_tol", "ep_decided_low", "ep_decided_high")
 
 
 def now() -> datetime:
@@ -76,9 +76,11 @@ def cached_rows(table: str, keys: list[str], nodes: int) -> dict[str, dict]:
 
 class NodeService:
     def config(self) -> dict:
-        """What a node needs before it starts: the bundle version and the settings its searches must use."""
+        """What a node needs before it starts: the version (code and settings) and the settings to search with."""
         return {
             "version": bundle()[1],
+            # False when the server ignores the engine caches (POSITION_EVALS_ENABLED off): nodes then wait.
+            "ready": settings.position_evals_enabled,
             "stockfish": "18",
             "settings": {name.upper(): str(getattr(settings, name)) for name in MIRRORED},
             "threatNodes": THREAT_NODES,
@@ -88,33 +90,21 @@ class NodeService:
     def claim(self, node: str) -> dict | None:
         """
         This node's unfinished game if it still has one (a restart after a power cut), else the newest pending game
-        nobody is searching. Returns the game and the rows already cached for it, so finished positions aren't redone.
+        nobody is searching, taken atomically in the database (`claim_node_game`), with the rows already cached for
+        it, so finished positions aren't redone. None when there's nothing to do or the server doesn't read the
+        cache (POSITION_EVALS_ENABLED off: a node's work would be wasted).
         """
+        if not settings.position_evals_enabled:
+            return None
         sb = get_supabase()
-        mine = sb.table(TABLE).select("game_id").eq("node", node).is_("done_at", "null").execute().data or []
-        game = None
-        for lease in mine:
-            rows = sb.table("games").select("id, pgn, user_color, analysis_status").eq("id", lease["game_id"]).limit(1).execute().data or []
-            if rows and rows[0]["analysis_status"] == "pending":
-                game = rows[0]
-                break
-            sb.table(TABLE).update({"done_at": now().isoformat()}).eq("game_id", lease["game_id"]).execute()
-        if game is None:
-            busy = live_leases()
-            done = {r["game_id"] for r in sb.table(TABLE).select("game_id").not_.is_("done_at", "null").execute().data or []}
-            candidates = (
-                sb.table("games").select("id, pgn, user_color, analysis_status").eq("analysis_status", "pending")
-                .order("played_at", desc=True).limit(50).execute().data
-                or []
-            )
-            game = next((g for g in candidates if g["id"] not in busy and g["id"] not in done and g.get("pgn")), None)
-            if game is None:
-                return None
-        stamp = now().isoformat()
-        sb.table(TABLE).upsert(
-            {"game_id": game["id"], "node": node, "leased_at": stamp, "heartbeat_at": stamp, "done_at": None},
-            on_conflict="game_id",
-        ).execute()
+        game_id = sb.rpc("claim_node_game", {"p_node": node, "p_lease_s": LEASE_S}).execute().data
+        if not game_id:
+            return None
+        rows = sb.table("games").select("id, pgn, user_color").eq("id", game_id).limit(1).execute().data or []
+        if not rows or not rows[0].get("pgn"):
+            self.done(game_id, node)
+            return None
+        game = rows[0]
         keys = position_keys(game["pgn"])
         return {
             "gameId": game["id"],
@@ -144,6 +134,16 @@ class NodeService:
         """The node has searched every position; the server's analysis will now find them all cached."""
         get_supabase().table(TABLE).update({"done_at": now().isoformat(), "heartbeat_at": now().isoformat()}).eq("game_id", game_id).eq("node", node).execute()
 
+    def finished_games(self) -> list[str]:
+        """Games a node has searched that the server hasn't analysed yet (the main API's finisher picks them up)."""
+        sb = get_supabase()
+        done = [r["game_id"] for r in sb.table(TABLE).select("game_id").not_.is_("done_at", "null").order("done_at", desc=True).limit(200).execute().data or []]
+        if not done:
+            return []
+        pending = sb.table("games").select("id").in_("id", done).eq("analysis_status", "pending").execute().data or []
+        ids = {r["id"] for r in pending}
+        return [g for g in done if g in ids]
+
     def status(self) -> list[dict]:
         """Per node: games finished in the last hour and whether it's searching now (for Settings)."""
         since = (now() - timedelta(hours=1)).isoformat()
@@ -156,16 +156,24 @@ class NodeService:
         return sorted(out.values(), key=lambda e: e["node"])
 
 
+def signature(data: bytes) -> str:
+    """HMAC-SHA256 of the bundle with the pairing token: the node checks it before running anything it downloaded."""
+    return hmac.new(settings.node_token.encode(), data, hashlib.sha256).hexdigest()
+
+
 @lru_cache(maxsize=1)
 def bundle() -> tuple[bytes, str]:
-    """The code a node runs (apps/api/app, apps/node, the node requirements) as a zip, and its version hash."""
+    """
+    The code a node runs (apps/api/app, apps/node) as a zip, and a version hash over the code and the mirrored
+    settings, so changing ANALYSIS_NODES (say) also makes every node restart with the new value.
+    """
     files: list[tuple[str, Path]] = []
     for path in sorted((API_DIR / "app").rglob("*.py")):
         files.append((f"api/{path.relative_to(API_DIR).as_posix()}", path))
     for path in sorted(NODE_DIR.glob("*")):
         if path.is_file():
             files.append((f"node/{path.name}", path))
-    digest = hashlib.sha256()
+    digest = hashlib.sha256(repr({name: getattr(settings, name) for name in MIRRORED}).encode())
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
         for name, path in files:

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import ctypes
 import io
+import threading
 import json
 import multiprocessing as mp
 import os
@@ -30,6 +31,7 @@ UPDATE_EXIT = 3
 FLUSH_ROWS = 8
 FLUSH_S = 45
 IDLE_S = 60
+HEARTBEAT_S = 60
 
 
 def load_env() -> dict[str, str]:
@@ -125,15 +127,30 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
                 evals.last = threats.last = time.monotonic()
 
             evals.flush = threats.flush = flush
+            # A heartbeat on its own timer: decided positions are searched but not cached, so rows can pause for
+            # longer than the lease while the worker is busy.
+            stop = threading.Event()
+
+            def beat(gid: str = game_id) -> None:
+                while not stop.wait(HEARTBEAT_S):
+                    try:
+                        gw.call("/nodes/heartbeat", {"gameId": gid}, timeout=20)
+                    except Exception:
+                        pass
+
+            threading.Thread(target=beat, daemon=True).start()
             game = chess.pgn.read_game(io.StringIO(job["pgn"]))
             if game is None:
                 gw.call_retrying("/nodes/done", {"gameId": game_id})
                 continue
-            board, moves = game.board(), list(game.mainline_moves())
-            lines = game_lines(board, moves, engine, evals)
-            classified = MoveClassifier().classify_game(board, moves, job["userColor"], lines=lines)
-            evaluate_game_threats(board, moves, job["userColor"], classified, engine, threats)
-            flush()
+            try:
+                board, moves = game.board(), list(game.mainline_moves())
+                lines = game_lines(board, moves, engine, evals)
+                classified = MoveClassifier().classify_game(board, moves, job["userColor"], lines=lines)
+                evaluate_game_threats(board, moves, job["userColor"], classified, engine, threats)
+                flush()
+            finally:
+                stop.set()
             gw.call_retrying("/nodes/done", {"gameId": game_id})
             print(f"[{name}] {game_id}: {len(moves)} plies in {time.monotonic() - started:.0f}s", flush=True)
 
@@ -143,6 +160,10 @@ def main() -> int:
     gw = Gateway(env["SERVER"], env["TOKEN"], env["NODE"])
     config = gw.call_retrying("/nodes/config")
     local = (HERE.parent / "VERSION").read_text(encoding="utf-8").strip() if (HERE.parent / "VERSION").exists() else ""
+    if not config.get("ready", True):
+        print("the server doesn't read the engine cache (POSITION_EVALS_ENABLED is off), so there's nothing useful to do; waiting", flush=True)
+        time.sleep(600)
+        return 0
     if config["version"] != local:
         print(f"server runs {config['version']}, this node has {local or 'nothing'}: updating", flush=True)
         return UPDATE_EXIT
