@@ -11,6 +11,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import monitor_tui  # noqa: E402
 
+T1, T2 = "2026-01-01T10:00:00+00:00", "2026-01-01T10:10:00+00:00"  # finished buckets
+
 ENGINE = {"engine": 0, "state": "searching", "game_id": "g1", "done": 10, "total": 40, "cpu": 12.0, "rss_mb": 150.0,
           "games_today": 3, "last_game_s": 90, "elapsedS": 30, "etaS": 90, "stale": False,
           "game": {"opponent": "rival", "opponent_rating": 900, "user_color": "white", "time_control": "600"}}
@@ -27,7 +29,7 @@ class FakeApi:
         if path.startswith("/monitor/snapshot"):
             return SNAP
         if path.startswith("/monitor/history"):
-            return {"bucketMin": 10, "series": {"desk": {"a": 1, "b": 3}, "lap": {"b": 2}}}
+            return {"bucketMin": 10, "series": {"desk": {T1: 1, T2: 3}, "lap": {T2: 2}}}
         return {"events": EVENTS}
 
 
@@ -63,7 +65,7 @@ def test_startup_errors_show_and_dotted_hostnames_chart():
         async with app.run_test(size=(160, 45)) as pilot:
             await pilot.pause(0.5)
             assert "refused" in str(app.query_one("#kpis").render())
-            app._apply_slow({"bucketMin": 10, "series": {"worker.example.com": {"a": 1}}}, [])
+            app._apply_slow({"bucketMin": 10, "series": {"worker.example.com": {T1: 1}}}, [])
             await pilot.pause(0.1)
             assert len(app.query("Sparkline")) == 1
             app._apply_slow({"bucketMin": 10, "series": {}}, [])

@@ -5,6 +5,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Fixed
+- Analysis monitor: the chart spans the history actually there (not a fixed day, which squeezed a fresh monitor
+  into a spike at the edge), leaves out the bucket still filling, adds a total line, time and rate axes, and hover
+  values; the server's own games and stalls are logged against their engine, so every engine row lists its events;
+  alerts and recoveries say what happened (how long silent or stuck, the speed before and after)
 - Sarce Node engines exit when the node's main process is gone: on Windows a hard-killed parent left them running as
   orphans on the old bundle, doubling up with the next start
 - Tal benchmark (review F6): `process_tal_benchmark` now runs the same pipeline as a player's games (the shared
@@ -13,6 +17,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- `NODE_WORKERS` on the server sets the engines per Sarce Node (capped at its CPU threads); changing it restarts
+  the nodes with the new count, so nobody has to visit the machine
 - Analysis monitor in the terminal (dev mode, part 3): `scripts/monitor_tui.py`, a Textual dashboard with the web
   page's data and no flicker: queue, speed and time to go; each machine; each engine's game, positions, elapsed, ETA,
   CPU and memory; games per 10 minutes on a shared time axis; alerts; and the picked engine's events or the feed by

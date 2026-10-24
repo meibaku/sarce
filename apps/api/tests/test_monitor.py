@@ -196,3 +196,34 @@ def test_a_game_already_processing_is_left_alone():
     with patch("app.services.analysis.get_supabase", return_value=sb), patch.object(AnalysisService, "_classify") as classify:
         assert asyncio.run(AnalysisService()._analyze_game("g")) is None
     assert not classify.called and not sb.table.return_value.update.called
+
+
+def test_server_events_carry_their_slot_and_stalls_their_engine():
+    with patch("app.services.monitor.searched_by_node", return_value=False), patch("app.services.monitor.bump"), \
+            patch("app.services.monitor.event") as ev:
+        monitor.game_finished("g", 30, 40, 20, 3)
+    assert ev.call_args.kwargs["engine"] == 3
+    with patch("app.services.monitor.get_supabase", return_value=MagicMock()), patch("app.services.monitor._sampler") as sampler, \
+            patch("app.services.monitor.event") as ev, patch("app.services.monitor.alerts") as alerts:
+        sampler.machine.return_value = {"cpu": 1, "memUsed": 0.1, "memTotalGb": 8, "uptimeS": 1}
+        monitor._active_alerts.clear()
+        alerts.return_value = {"stalled-2|desk": ("stalled", "desk", {"engine": 2, "stuckS": 200})}
+        monitor.tick(1)
+        assert ev.call_args.kwargs == {"machine": "desk", "engine": 2, "stuckS": 200}
+        alerts.return_value = {}
+        monitor.tick(1)
+        assert ev.call_args.args == ("recovered",) and ev.call_args.kwargs == {"machine": "desk", "engine": 2, "cleared": "stalled"}
+
+
+def test_the_server_can_set_node_engines():
+    from app.services import nodes
+
+    nodes.bundle.cache_clear()  # the version is computed once per process (settings don't change while it runs)
+    with patch.object(nodes.settings, "node_workers", 0):
+        before = nodes.NodeService().config()
+    nodes.bundle.cache_clear()
+    assert before["workers"] is None
+    with patch.object(nodes.settings, "node_workers", 7):
+        after = nodes.NodeService().config()
+    nodes.bundle.cache_clear()
+    assert after["workers"] == 7 and after["version"] != before["version"]  # nodes restart with the new count

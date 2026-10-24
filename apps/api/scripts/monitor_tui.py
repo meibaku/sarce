@@ -35,6 +35,7 @@ ENGINE_COLS = [("engine", "Engine"), ("state", "State"), ("game", "Game"), ("pro
                ("eta", "ETA"), ("cpu", "CPU"), ("mem", "Memory"), ("today", "Today · last")]
 ALERT_KINDS = {"offline", "stalled", "rate_drop", "game_failed"}
 GOOD_KINDS = {"recovered", "node_started", "updated"}
+CLEARED = {"offline": "back online", "stalled": "progressing again", "drop": "speed back"}
 
 
 def dur(seconds: float | None) -> str:
@@ -248,7 +249,13 @@ class MonitorApp(App):
     def _apply_slow(self, history: dict, events: list[dict]) -> None:
         self.events = events
         box = self.query_one("#throughput", VerticalScroll)
-        series_by = {m: [float(v) for _, v in sorted(s.items())] or [0.0] for m, s in history.get("series", {}).items()}
+        # The bucket still filling is left out: it would always read as a drop.
+        bucket_s = history.get("bucketMin", 10) * 60
+        current = datetime.now(timezone.utc).timestamp() // bucket_s * bucket_s
+        series_by = {
+            m: [float(v) for t, v in sorted(s.items()) if datetime.fromisoformat(t).timestamp() < current] or [0.0]
+            for m, s in history.get("series", {}).items()
+        }
         width = max((len(v) for v in series_by.values()), default=1)
         for machine, values in sorted(series_by.items()):
             values = [0.0] * (width - len(values)) + values  # every series ends now: a shared time axis
@@ -286,6 +293,10 @@ class MonitorApp(App):
                     (ev.get("game_id") or "")[:8],
                     dur(d["seconds"]) if d.get("seconds") is not None else "",
                     f"{d['positions']} positions" if d.get("positions") is not None else "",
+                    f"no progress for {dur(d['stuckS'])}" if d.get("stuckS") is not None else "",
+                    f"silent for {dur(d['silentS'])}" if d.get("silentS") is not None else "",
+                    f"{d['perHourNow']}/h, was {d.get('perHourBefore')}/h" if d.get("perHourNow") is not None else "",
+                    CLEARED.get(d.get("cleared"), d.get("cleared") or ""),
                     str(d.get("error") or "")[:60],
                 ) if x
             )

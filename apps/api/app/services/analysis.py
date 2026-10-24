@@ -150,12 +150,15 @@ class AnalysisService:
             try:
                 result = await self._analyze_game(game_id)
             except Exception as exc:
-                monitor.background(monitor.event, "game_failed", monitor.MACHINE, None, game_id)
+                monitor.background(monitor.event, "game_failed", monitor.MACHINE, tracker.slot, game_id)
                 logger.debug("monitor: game %s failed: %s", game_id, exc)
                 raise
         if result:
             # Positions searched or looked up, the same measure nodes report; off the event loop.
-            monitor.background(monitor.game_finished, game_id, round(time.monotonic() - started), len(tracker.seen) or tracker.done, result.get("totalMoves"))
+            monitor.background(
+                monitor.game_finished, game_id, round(time.monotonic() - started), len(tracker.seen) or tracker.done,
+                result.get("totalMoves"), tracker.slot,
+            )
         return result
 
     async def _analyze_game(self, game_id: str) -> dict | None:

@@ -283,7 +283,8 @@ def main() -> int:
     if config["version"] != local:
         print(f"server runs {config['version']}, this node has {local or 'nothing'}: updating", flush=True)
         return UPDATE_EXIT
-    workers = max(1, int(env.get("WORKERS", "3")))
+    # The server's NODE_WORKERS wins over node.env, so the count can change without visiting the machine.
+    workers = max(1, min(int(config.get("workers") or env.get("WORKERS", "3")), os.cpu_count() or 1))
     print(f"Sarce Node {env['NODE']}: {workers} engines, server {env['SERVER']}, bundle {local}", flush=True)
     keep_awake()
     status_shortcut()

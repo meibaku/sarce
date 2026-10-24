@@ -191,12 +191,15 @@ def tick(engines: int) -> None:
     for key, (kind, machine, detail) in alerts().items():
         if key not in _active_alerts:
             _active_alerts.add(key)
-            event(kind, machine=machine, **detail)
+            # A stall belongs to an engine: in the engine column, so that engine's row shows it.
+            event(kind, machine=machine, engine=detail.get("engine"), **{k: v for k, v in detail.items() if k != "engine"})
     current_keys = set(alerts())
     for key in list(_active_alerts):
         if key not in current_keys:
             _active_alerts.discard(key)
-            event("recovered", machine=key.split("|", 1)[1], cleared=key.split("|", 1)[0])
+            what, machine = key.split("|", 1)
+            engine = int(what.split("-", 1)[1]) if what.startswith("stalled-") else None
+            event("recovered", machine=machine, engine=engine, cleared=what.split("-", 1)[0])
 
 
 def trim() -> None:
@@ -340,13 +343,16 @@ def events(limit: int = 100, machine: str | None = None) -> list[dict]:
     return q.execute().data or []
 
 
-def game_finished(game_id: str, seconds: int, positions: int, moves: int | None) -> None:
-    """A server analysis ended: counted for this machine, unless a node had searched it (then the node got the count)."""
+def game_finished(game_id: str, seconds: int, positions: int, moves: int | None, slot: int | None = None) -> None:
+    """
+    A server analysis ended: counted for this machine, unless a node had searched it (then the node got the count).
+    Logged against the server slot that ran it, so that engine's row lists it.
+    """
     if searched_by_node(game_id):
-        event("finished_from_node", game_id=game_id, seconds=seconds)
+        event("finished_from_node", engine=slot, game_id=game_id, seconds=seconds)
     else:
         bump(MACHINE, 1, positions)
-        event("game_done", game_id=game_id, seconds=seconds, moves=moves, positions=positions)
+        event("game_done", engine=slot, game_id=game_id, seconds=seconds, moves=moves, positions=positions)
 
 
 def searched_by_node(game_id: str) -> bool:
