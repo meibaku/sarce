@@ -37,7 +37,7 @@ export function TrapsSetCard() {
         <T size={13} tone="muted">{building ? "Under a minute, no engine needed. Tap again to check." : "Positions you steer into where opponents most often go wrong on the next move."}</T>
       ) : (
         <>
-          <T weight="medium" size={15}>{`After ${t.move}, ${pct(t.rate)} of opponents went wrong.`}</T>
+          <T weight="medium" size={15}>{`After ${t.move}, ${pct(t.rate)} of opponents went wrong (likely at least ${pct(t.likely)}).`}</T>
           <Board fen={t.fen} orientation={t.fen.split(" ")[1] === "b" ? "white" : "black"} maxSize={300} />
           <T size={12} tone="ink2">{`Caught ${t.caught} of ${t.seen}. The usual slip is ${t.slip}, worth about ${t.gainPawns.toFixed(1)} pawns. The defence that holds is ${t.defence}.`}</T>
           {traps.map((x, i) => (
@@ -50,7 +50,7 @@ export function TrapsSetCard() {
                 <T mono size={12} numberOfLines={1}>{x.line}</T>
                 <T size={12} tone="muted">{`caught ${x.caught} of ${x.seen} · they slip with ${x.slip}`}</T>
               </View>
-              <T mono weight="medium" tone="accentText">{pct(x.rate)}</T>
+              <T mono weight="medium" tone="accentText">{`≥${pct(x.likely)}`}</T>
             </Pressable>
           ))}
         </>
