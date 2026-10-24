@@ -25,6 +25,8 @@ DEFAULTS = {
     "lichessUsername": None,
     # Opt-in: screenshot reading and video summaries are sent to Anthropic (services/ai.py).
     "aiHelp": False,
+    # Developer mode: shows the analysis monitor (/dev/monitor) in Settings and the header.
+    "devMode": False,
 }
 # Written by the sync, never by the player.
 INTERNAL = {"lastSyncedAt": None, "lastSyncErrors": [], "firstImportAt": None, "firstReadAt": None}
@@ -58,7 +60,7 @@ def validate(changes: dict) -> dict:
             if value is not None and (not isinstance(value, str) or not USERNAME.match(value.strip())):
                 raise ValueError(f"{key} must be a username (letters, digits, - and _)")
             clean[key] = value.strip() if isinstance(value, str) else None
-        elif key in ("playfulMascot", "aiHelp"):
+        elif key in ("playfulMascot", "aiHelp", "devMode"):
             if not isinstance(value, bool):
                 raise ValueError(f"{key} must be true or false")
             clean[key] = value
