@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { TextButton } from "@/components/ui/buttons";
 import { Board } from "@/components/ui/board";
 import { SectionLabel } from "@/components/ui/card";
-import { getWhy, type WhyApi } from "@/lib/api";
+import { getWhy, reportBrilliant, type WhyApi } from "@/lib/api";
 
 /*
  * "Why this move?" (Review). Answers "why this badge?" and "why isn't this Brilliant?" from what Sarce
@@ -19,6 +19,7 @@ const KIND_TONE: Record<string, string> = {
 };
 
 export function WhyPanel({ gameId, ply, orientation, onClose }: { gameId: string; ply: number; orientation: "white" | "black"; onClose: () => void }) {
+  const [reportLine, setReportLine] = useState<string | null>(null);
   const [data, setData] = useState<WhyApi | null>(null);
   const [failed, setFailed] = useState(false);
   const [line, setLine] = useState(0);
@@ -90,6 +91,26 @@ export function WhyPanel({ gameId, ply, orientation, onClose }: { gameId: string
             </li>
           ))}
         </ul>
+        {!data.isBrilliant && (
+          <div className="flex flex-wrap items-baseline gap-2 text-[12px] text-muted">
+            {reportLine ? (
+              <span className="text-ink-2">{reportLine}</span>
+            ) : data.reported ? (
+              <span>You said Chess.com called this Brilliant.</span>
+            ) : (
+              <TextButton
+                className="!text-[12px]"
+                onClick={() =>
+                  reportBrilliant(gameId, ply)
+                    .then((r) => setReportLine(r.line))
+                    .catch(() => setReportLine("That didn't save. Try again."))
+                }
+              >
+                Chess.com called this Brilliant
+              </TextButton>
+            )}
+          </div>
+        )}
       </div>
 
       {(data.chaos.pFail || data.chaos.safeReplies.length > 0) && (

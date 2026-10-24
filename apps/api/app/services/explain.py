@@ -212,6 +212,10 @@ class ExplainService:
             "orientation": game.get("user_color") or "white",
             "badge": badge_reason(glyph, chaos, survival, bool(row.get("is_brilliant")), None if cost is None else float(cost)),
             "isBrilliant": bool(row.get("is_brilliant")),
+            # Whether you already said another site called this move Brilliant (plan 3.3).
+            "reported": bool(
+                sb.table("brilliant_reports").select("id").eq("game_id", game_id).eq("ply", ply).limit(1).execute().data
+            ),
             "brilliant": checks,
             "evalBefore": row.get("eval_before"),
             "evalAfter": row.get("eval_after"),

@@ -458,6 +458,22 @@ async def save_move_intent(game_id: str, ply: int, body: IntentRequest):
     return review_service.save_intent(game_id, ply, body.type, body.note, current_user_id())
 
 
+class BrilliantReportRequest(BaseModel):
+    source: str = Field(default="chess_com", pattern="^(chess_com|lichess)$")
+
+
+@router.post("/{game_id}/moves/{ply}/brilliant-report")
+async def report_brilliant(game_id: str, ply: int, body: BrilliantReportRequest):
+    """"Chess.com called this Brilliant": stores the report and says which clause Sarce's rule stopped at (plan 3.3)."""
+    from app.services.brilliant_reports import BrilliantReportService
+
+    require_game_access(game_id)
+    result = await asyncio.to_thread(BrilliantReportService().report, game_id, ply, body.source, current_user_id())
+    if result is None:
+        raise HTTPException(status_code=404, detail="Not one of your analysed moves.")
+    return result
+
+
 class CheckinRequest(BaseModel):
     ply: int
     answer: str

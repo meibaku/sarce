@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { Board } from "@/components/board";
 import { Card, Label, Link, Loading, T, s } from "@/components/ui";
-import { getWhy } from "@/lib/api";
+import { getWhy, reportBrilliant } from "@/lib/api";
 import { color } from "@/lib/theme";
 import { useLoad } from "@/lib/use-load";
 
@@ -14,6 +14,7 @@ export function WhyCard({ gameId, ply, orientation, onClose }: { gameId: string;
   const { data, failed } = useLoad(() => getWhy(gameId, ply), `${gameId}:${ply}`);
   const [line, setLine] = useState(0);
   const [step, setStep] = useState(1);
+  const [reportLine, setReportLine] = useState<string | null>(null);
   if (failed) return <Card><T size={13} tone="muted">This move hasn&apos;t been analysed yet.</T><Link label="Close" onPress={onClose} /></Card>;
   if (!data) return <Loading />;
   const current = data.lines[line];
@@ -33,6 +34,16 @@ export function WhyCard({ gameId, ply, orientation, onClose }: { gameId: string;
           <T size={13} tone="ink2" style={{ flex: 1 }}>{`${c.rule}. ${c.detail}`}</T>
         </View>
       ))}
+      {!data.isBrilliant &&
+        (reportLine || data.reported ? (
+          <T size={12} tone="muted">{reportLine ?? "You said Chess.com called this Brilliant."}</T>
+        ) : (
+          <Link
+            label="Chess.com called this Brilliant"
+            tone="muted"
+            onPress={() => reportBrilliant(gameId, ply).then((r) => setReportLine(r.line)).catch(() => setReportLine("That didn't save. Try again."))}
+          />
+        ))}
       {data.chaos.pFail && (
         <T size={12} tone="muted">{`${data.chaos.faced ? "The problem you faced" : "The problem you set"}: ${data.chaos.pFail.map((p, i) => `${data.chaos.rungs[i]} ${Math.round(p * 100)}%`).join(" · ")} miss every safe reply${data.chaos.safeReplies.length ? ` (safe: ${data.chaos.safeReplies.join(", ")})` : ""}.`}</T>
       )}
