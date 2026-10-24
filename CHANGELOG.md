@@ -11,6 +11,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- `scripts/trait_overlap.py` and `docs/TRAIT_OVERLAP.md` (review F10a): the nine traits' correlation over 81 windows of
+  20 games. No pair moves together (|r| > 0.8; the strongest is Initiative–Grip at −0.77), so all nine stay; Calm's
+  narrow range is already handled by the per-trait fingerprint scale
 - `brilliant_clauses()`: each Brilliant clause on its own (real sacrifice, sound, not already winning, not
   forced, hard to find); `is_brilliant_move` is now built on it
 - `services/brilliant_benchmark.py` and `scripts/benchmark_brilliant_v3.py`: Brilliant % under rule v3 with a
