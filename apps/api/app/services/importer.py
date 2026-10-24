@@ -106,24 +106,32 @@ class FirstReadImporter:
                     stored += await self.store.store_imported_games(username=username, user_id=user_id, games=month)
                 if left is not None and stored >= left:
                     break
-            if analyse and stored:
-                await analyse_later(analyse, user_id, username, stored)
         except Exception:
             logger.exception("Chess.com backfill failed for %s", username)
+        # Whatever was saved is queued, even when a later month failed to fetch.
+        if analyse and stored:
+            try:
+                await analyse_later(analyse, user_id, username, stored)
+            except Exception:
+                logger.exception("Could not queue the backfill's analysis for %s", username)
         return stored
 
-    async def lichess_first(self, username: str, user_id: str | None, max_games: int) -> int:
-        """Stores the newest finished Lichess games (up to FIRST_READ_GAMES)."""
+    async def lichess_first(self, username: str, user_id: str | None, max_games: int) -> tuple[int, set[str]]:
+        """Stores the newest finished Lichess games (up to FIRST_READ_GAMES). Returns (stored, their ids)."""
         mark_first_import(user_id)
         raw = await self.lichess.fetch_games(username, max_games=min(FIRST_READ_GAMES, max_games))
         parsed = [g for r in raw if (g := parse_lichess_game(r, username))]
-        return await self.store.store_parsed_games(username=username, parsed_games=parsed, source="lichess", user_id=user_id)
+        stored = await self.store.store_parsed_games(username=username, parsed_games=parsed, source="lichess", user_id=user_id)
+        return stored, {g["external_id"] for g in parsed}
 
-    async def lichess_backfill(self, username: str, user_id: str | None, max_games: int, analyse: Analyse | None) -> int:
-        """Fetches the full count and stores what's new, then queues it. Never raises."""
+    async def lichess_backfill(
+        self, username: str, user_id: str | None, max_games: int, analyse: Analyse | None, skip: set[str] | None = None
+    ) -> int:
+        """Fetches the full count and stores the games the first pass didn't, then queues them. Never raises."""
         try:
             raw = await self.lichess.fetch_games(username, max_games=max_games)
-            parsed = [g for r in raw if (g := parse_lichess_game(r, username))][FIRST_READ_GAMES:]
+            # Skip by id, not by count: variants the parser drops would otherwise shift which games are skipped.
+            parsed = [g for r in raw if (g := parse_lichess_game(r, username)) and g["external_id"] not in (skip or set())]
             stored = await self.store.store_parsed_games(username=username, parsed_games=parsed, source="lichess", user_id=user_id) if parsed else 0
             if analyse and stored:
                 await analyse_later(analyse, user_id, username, stored)

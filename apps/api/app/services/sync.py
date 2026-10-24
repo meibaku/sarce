@@ -56,6 +56,11 @@ class SyncService:
                 except Exception as exc:
                     errors.append(f"Lichess: {exc}")
             store.record_sync(owner_id, datetime.now(timezone.utc).isoformat(), errors)
+            if imported:
+                # Games that first arrive through the sync are timed too (plan 3.1); a no-op once recorded.
+                from app.services.importer import mark_first_import
+
+                mark_first_import(owner_id)
             # At least one game per analysis worker, so a sync keeps every engine busy.
             analysed = await analyse(user_id=owner_id, limit=max(ANALYSE_PER_SYNC, settings.workers))
             return {"fetched": imported, "analysed": len(analysed or []), "errors": errors}

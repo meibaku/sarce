@@ -64,3 +64,35 @@ def test_a_small_cap_needs_no_backfill(_mark):
 def test_first_read_seconds():
     assert first_read_seconds({"firstImportAt": "2026-10-24T10:00:00+00:00", "firstReadAt": "2026-10-24T10:03:30+00:00"}) == 210
     assert first_read_seconds({"firstImportAt": "2026-10-24T10:00:00+00:00"}) is None
+
+
+@patch("app.services.importer.mark_first_import")
+def test_lichess_backfill_skips_by_id_not_count(_mark):
+    store = AsyncMock()
+    store.store_parsed_games.side_effect = lambda **kw: len(kw["parsed_games"])
+    raw = [{"id": f"g{i}"} for i in range(25)]
+    lichess = AsyncMock()
+    lichess.fetch_games.return_value = raw
+    parsed = lambda r, name: None if r["id"] == "g1" else {"external_id": f"https://lichess.org/{r['id']}"}  # g1 is a variant
+    with patch("app.services.importer.parse_lichess_game", side_effect=parsed), patch.object(imp.settings, "job_queue_enabled", False):
+        importer = imp.FirstReadImporter(None, lichess, store)
+        stored, first_ids = run(importer.lichess_first("tal_fan", "u1", 200))
+        backfilled = run(importer.lichess_backfill("tal_fan", "u1", 200, None, first_ids))
+    assert stored == 24 and backfilled == 0  # the first fetch returned all 25 here; nothing valid is skipped or doubled
+
+
+@patch("app.services.importer.mark_first_import")
+def test_chess_com_backfill_queues_what_it_saved_when_a_later_month_fails(_mark):
+    class Flaky(FakeChessCom):
+        async def fetch_games_from_archive(self, url):
+            if url == "2026/07":
+                raise RuntimeError("Chess.com is down")
+            return await super().fetch_games_from_archive(url)
+
+    store = AsyncMock()
+    store.store_imported_games.side_effect = lambda **kw: len(kw["games"])
+    analyse = AsyncMock()
+    with patch.object(imp.settings, "job_queue_enabled", False):
+        stored = run(imp.FirstReadImporter(Flaky({"2026/08": month("aug", 4)}), None, store).chess_com_backfill("k", "u1", ["2026/08", "2026/07"], None, analyse))
+    assert stored == 4
+    analyse.assert_awaited_once_with(user_id="u1", chess_com_username="k", limit=4)

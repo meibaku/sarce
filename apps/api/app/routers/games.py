@@ -105,7 +105,7 @@ async def import_lichess_games(body: ImportRequest, background_tasks: Background
     username = normalize_lichess_username(body.username)
     wanted = body.max_games or 200
     try:
-        stored = await importer.lichess_first(username, user_id, wanted)
+        stored, first_ids = await importer.lichess_first(username, user_id, wanted)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Lichess API error: {exc}") from exc
     msg = f"Imported {stored} Lichess games for '{username}'."
@@ -118,7 +118,7 @@ async def import_lichess_games(body: ImportRequest, background_tasks: Background
     if wanted > FIRST_READ_GAMES:
         # The newest come first (plan 3.1); the rest follow in the background.
         background_tasks.add_task(
-            importer.lichess_backfill, username, user_id, wanted, analysis_service.analyze_pending if body.analyze else None
+            importer.lichess_backfill, username, user_id, wanted, analysis_service.analyze_pending if body.analyze else None, first_ids
         )
     return ImportResponse(imported=stored, message=msg, username=username)
 
