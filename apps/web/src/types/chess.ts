@@ -333,7 +333,18 @@ export interface HomeApi {
 export type FeltAnswer = "yes" | "partly" | "no";
 
 /** GET /games/{id}/summary (app/services/summary.py). */
+/** Chaos budget (plan 3.9), in expected points: what setting problems cost, and what the replies gave back. */
+export interface ChaosBudget {
+  spent: number;
+  back: number;
+  net: number;
+  problems: number;
+  /** Replies outside the stored engine lines, left out of `back`. */
+  unknown: number;
+}
+
 export interface SummaryApi {
+  budget?: ChaosBudget | null;
   gameId: string;
   opponent: string | null;
   result: "win" | "loss" | "draw" | null;
@@ -427,7 +438,18 @@ export interface YouApi {
   /** `refs` holds each scored reference player's value on the axis (data/reference_axes.json). */
   axes: { name: string; you: number | null; refs?: Record<string, number | null> }[] | null;
   references?: Record<string, { games: number; model: string | null }>;
-  timeControls: { class: "bullet" | "blitz" | "rapid"; games: number; pct: number | null; spread: number | null; calibrated: boolean }[];
+  /** `traits`: the nine traits in that class alone (plan 3.8), dashed under MIN_EVENTS, with a 95% range for shares. */
+  timeControls: {
+    class: "bullet" | "blitz" | "rapid";
+    games: number;
+    pct: number | null;
+    spread: number | null;
+    calibrated: boolean;
+    traits?: Record<string, { value: number | null; lo: number | null; hi: number | null; events: number }>;
+  }[];
+  budget?: ChaosBudget | null;
+  /** Where your two most-played classes differ beyond noise; `traits` empty when they overlap. */
+  timeGap?: { classes: string[]; traits: { trait: string; more: string; less: string; ratio: number }[]; sentence: string } | null;
   /** Converting advantages (squeeze lens) across the window; null before any clearly winning position. */
   /** Fighting back (swindle lens): problems set while clearly losing, and games saved from lost positions. */
   fight?: {

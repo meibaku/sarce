@@ -15,6 +15,16 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   Lichess (`#N`), web and Expo. Home opens with a line for the games analysed since your last visit ("6 games
   analysed, 2 that felt like you, 1 real problem set"), counted by when analysis finished (`games.analysed_at`,
   new); `/users/home?since=` returns `session`
+- Chaos budget (plan 3.9): Summary shows what setting problems cost in a game and what your opponent's replies gave
+  back ("chaos budget · 0.27 risked · 0.40 came back", expected points), and You shows the last 20 games. The chaos
+  lens now stores the opponent's actual reply and its EP loss (version 3); re-score with `scripts/rescore_lenses.py`
+- Fingerprints by time control (plan 3.8): You's "By time control" card shows the nine traits for the chosen class,
+  each with its 95% range, and one sentence naming where your two main classes differ beyond noise ("In rapid you
+  set problems more often; in bullet you keep a winning position tight more often"). Each class reads up to 100 of
+  its own newest games, reaching past the 500-game window when recent games are all one speed. Web and Expo
+- `docs/PHASE3_PLAN.md`: Phase 3 (product) in waves: items needing no engine first (3.1, 3.8, 3.9, 3.4a, 3.3), then
+  weekly focus and quests and opponent-aware chaos, with style cards and the style twin waiting on Phase 2 and the
+  owner-gated items listed with suggested defaults
 - A personal next band (plan 1.3): Home and Settings show a dashed step on the Brilliant gauge, from just above your
   likely range (its 95% upper bound) to half as much again, on the way to the goal band, with one line naming it.
   Web and Expo; `/users/home` returns `nextLo`/`nextHi`. Hidden within half a point of the goal
@@ -34,6 +44,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   F2, F4 and F12 are marked done; F6 moves to the front after F4 showed Brilliant at 0.01% under rule v3
 
 ### Changed
+- Time to first read (plan 3.1): importing an account stores and queues the newest 20 games before answering, then
+  fetches older Chess.com months (newest first) or the remaining Lichess games in the background and queues them.
+  Before, every archive was fetched first. The first import and first completed analysis are recorded on the
+  profile (sync or import), and `GET /users/sync` returns `firstReadSeconds`
 - `docs/IMPLEMENTATION_PLAN.md`: Phase 1 progress (1.1, 1.3 part, 1.4–1.10, 4.7 done; Tal under rule v4 and the band
   decision open); a squeeze test where the stored WDL-based EP decides the verdict, not the centipawn score
 - Lenses in one unit (review F8): squeeze, swindle, clock and prophylaxis judge edges and costs in expected points

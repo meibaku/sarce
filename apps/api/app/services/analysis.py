@@ -124,6 +124,7 @@ class AnalysisService:
     """Run Stockfish classification and persist results."""
 
     def __init__(self) -> None:
+        self._first_read_done: set[str] = set()
         self.classifier = MoveClassifier()
         self.baseline = BaselineService()
 
@@ -211,6 +212,7 @@ class AnalysisService:
         ).execute()
 
         sb.table("games").update({"analysis_status": "complete", "analysed_at": datetime.now(timezone.utc).isoformat()}).eq("id", game_id).execute()
+        self._first_read(row.get("user_id"))
 
         await self.baseline.recompute_baseline(
             user_id=row.get("user_id"),
@@ -256,6 +258,19 @@ class AnalysisService:
         with StockfishEngine() as engine:
             lines = game_lines(board, moves, engine, SupabaseEvalStore())
         return self.classifier.classify_game(board, moves, user_color, lines=lines)
+
+    def _first_read(self, user_id: str | None) -> None:
+        """Records the owner's first completed game once (plan 3.1: time to first read). Never fails analysis."""
+        if not user_id or user_id in self._first_read_done:
+            return
+        try:
+            from app.services.importer import now
+            from app.services.settings_store import SettingsStore
+
+            SettingsStore().record_once(user_id, "firstReadAt", now())
+            self._first_read_done.add(user_id)  # written now or already set: no need to look again
+        except Exception:
+            logger.exception("Could not record the first read for %s", user_id)
 
     def _apply_find_rate(self, game_id: str) -> None:
         """Brilliant find-rate rule (ADR 0004). Never fails the analysis."""
