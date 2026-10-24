@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { HomeView, type HomeData } from "@/components/home/home-view";
 import { EdgeState } from "@/components/ui/edge-state";
 import { getHome, getSettings } from "@/lib/api";
+import { getUserKey } from "@/lib/auth";
 import { gameMeta, timeAgo } from "@/lib/format";
 import type { HomeApi } from "@/types/chess";
 
@@ -18,17 +19,18 @@ export function sessionLine(s: NonNullable<HomeApi["session"]>): string {
   return `Since your last visit: ${parts.join(", ")}.`;
 }
 
-function readLastVisit(): string | undefined {
+// Kept per account, so a second account on this browser never gets the first one's visit time.
+function readLastVisit(user: string): string | undefined {
   try {
-    return localStorage.getItem(LAST_VISIT) ?? undefined;
+    return localStorage.getItem(`${LAST_VISIT}:${user}`) ?? undefined;
   } catch {
     return undefined; // private window or blocked storage: no session line, nothing else changes
   }
 }
 
-function writeLastVisit() {
+function writeLastVisit(user: string, at: string) {
   try {
-    localStorage.setItem(LAST_VISIT, new Date().toISOString());
+    localStorage.setItem(`${LAST_VISIT}:${user}`, at);
   } catch {
     /* see readLastVisit */
   }
@@ -80,9 +82,16 @@ export function HomeScreen() {
   });
 
   useEffect(() => {
-    Promise.all([getHome(undefined, readLastVisit()), getSettings().catch(() => null)])
+    // The new cutoff is taken before asking, so a game analysed while Home loads is counted next time, not lost.
+    const visit = new Date().toISOString();
+    getUserKey()
+      .then((user) =>
+        Promise.all([getHome(undefined, readLastVisit(user)), getSettings().catch(() => null)]).then((r) => {
+          writeLastVisit(user, visit);
+          return r;
+        }),
+      )
       .then(([api, settings]) => {
-        writeLastVisit();
         const data = toHomeData(api);
         const quiet = settings?.quietUntil
           ? new Date(`${settings.quietUntil}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" })

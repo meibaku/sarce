@@ -17,3 +17,14 @@ export async function getAccessToken(): Promise<string | null> {
     return null;
   }
 }
+
+/** The signed-in user's id, or "local" when signed out or auth is off: keys per-account browser state. */
+export async function getUserKey(): Promise<string> {
+  if (typeof window === "undefined" || !authConfigured()) return "local";
+  try {
+    const { data } = await createClient().auth.getSession();
+    return data.session?.user.id ?? "local";
+  } catch {
+    return "local";
+  }
+}

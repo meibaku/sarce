@@ -203,30 +203,28 @@ def gap_line(pct: float | None, lo: float, hi: float) -> str:
     return f"Inside your {lo:g}–{hi:g}% band."
 
 
-def session_read(games_newest_first: list[dict], real_by_game: dict[str, int], since: str | None) -> dict | None:
-    """
-    The games analysed since your last visit (plan 3.4a): how many, how many felt like you, the real problems set and
-    the Brilliant moves. `since` is the client's last-visit time; None or nothing new gives None.
-    """
+SESSION_MAX = 1000  # games read for the session line; a longer absence is summarised over the newest 1,000
+
+
+def parse_since(since: str | None) -> datetime | None:
     if not since:
         return None
     try:
         cutoff = datetime.fromisoformat(since.replace("Z", "+00:00"))
     except ValueError:
         return None
-    if cutoff.tzinfo is None:
-        cutoff = cutoff.replace(tzinfo=timezone.utc)
-    new = [
-        g for g in games_newest_first
-        if g.get("played_at") and datetime.fromisoformat(g["played_at"].replace("Z", "+00:00")) > cutoff
-    ]
-    if not new:
+    return cutoff if cutoff.tzinfo else cutoff.replace(tzinfo=timezone.utc)
+
+
+def summarise_session(games: list[dict], real_by_game: dict[str, int]) -> dict | None:
+    """The session line's numbers for the games analysed since your last visit; None when there are none."""
+    if not games:
         return None
     return {
-        "games": len(new),
-        "feltLikeYou": sum(1 for g in new if g.get("felt_like_you") == "yes"),
-        "realProblems": sum(real_by_game.get(g["id"], 0) for g in new),
-        "brilliant": sum(1 for g in new if float((g.get("analysis") or {}).get("brilliant_pct") or 0) > 0),
+        "games": len(games),
+        "feltLikeYou": sum(1 for g in games if g.get("felt_like_you") == "yes"),
+        "realProblems": sum(real_by_game.get(g["id"], 0) for g in games),
+        "brilliant": sum(1 for g in games if float((g.get("analysis") or {}).get("brilliant_pct") or 0) > 0),
     }
 
 
@@ -260,7 +258,7 @@ class HomeService:
         def games_query():
             q = (
                 sb.table("games")
-                .select("id, played_at, opponent, result, time_control, user_color, clocks_ms, felt_like_you, game_analyses(brilliant_pct, total_moves)")
+                .select("id, played_at, opponent, result, time_control, user_color, clocks_ms, game_analyses(brilliant_pct, total_moves)")
                 .eq("analysis_status", "complete")
                 .neq("source", "sarce_bot")  # bot games are practice
                 .order("played_at", desc=True)
@@ -309,7 +307,7 @@ class HomeService:
         return {
             "latest": self._latest(latest, [r for r in lens_rows if r["game_id"] == latest["id"]]),
             "brilliant": brilliant,
-            "session": session_read(games, real_by_game, since),
+            "session": self._session(user_id, username, since),
             "stats": {
                 "streak": style_streak(games, real_by_game) if enough else None,
                 "real": real,
@@ -318,6 +316,39 @@ class HomeService:
                 "trapsSurvived": round(survived / faced, 2) if enough and faced else None,
             },
         }
+
+    def _session(self, user_id: str | None, username: str | None, since: str | None) -> dict | None:
+        """
+        The games whose analysis finished after `since` (plan 3.4a), read on their own: by analysis time, so a game
+        played earlier but analysed after your visit still counts, and not limited to Home's rolling window.
+        """
+        cutoff = parse_since(since)
+        if cutoff is None:
+            return None
+        sb = get_supabase()
+        q = (
+            sb.table("games").select("id, felt_like_you, game_analyses(brilliant_pct)")
+            .eq("analysis_status", "complete").neq("source", "sarce_bot").gt("analysed_at", cutoff.isoformat())
+            .order("analysed_at", desc=True).limit(SESSION_MAX)
+        )
+        if user_id:
+            q = q.eq("user_id", user_id)
+        if username:
+            q = q.eq("chess_com_username", username)
+        games = q.execute().data or []
+        for g in games:
+            a = g.pop("game_analyses", None)
+            g["analysis"] = a[0] if isinstance(a, list) and a else a
+        real: dict[str, int] = {}
+        ids = [g["id"] for g in games]
+        for start in range(0, len(ids), 100):
+            rows = _paged(
+                lambda: sb.table("move_lens_scores").select("game_id").in_("game_id", ids[start : start + 100])
+                .eq("lens", "chaos").eq("verdict", "real_chaos").order("game_move_id")
+            )
+            for r in rows:
+                real[r["game_id"]] = real.get(r["game_id"], 0) + 1
+        return summarise_session(games, real)
 
     def _goal(self, user_id: str | None) -> dict:
         lo, hi = 6, 10

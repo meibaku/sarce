@@ -102,15 +102,15 @@ def test_next_band_never_passes_a_fractional_goal():
     assert next_band(4.5, 6.06) == (4.5, 6.06)
 
 
-def test_session_read_counts_games_after_the_last_visit():
-    from app.services.home import session_read
+def test_session_summary_and_cutoff():
+    from app.services.home import parse_since, summarise_session
 
     games = [
-        {"id": "a", "played_at": "2026-10-24T12:00:00+00:00", "felt_like_you": "yes", "analysis": {"brilliant_pct": 5.0}},
-        {"id": "b", "played_at": "2026-10-24T11:00:00+00:00", "felt_like_you": None, "analysis": {"brilliant_pct": 0}},
-        {"id": "c", "played_at": "2026-10-23T09:00:00+00:00"},
+        {"id": "a", "felt_like_you": "yes", "analysis": {"brilliant_pct": 5.0}},
+        {"id": "b", "felt_like_you": None, "analysis": {"brilliant_pct": 0}},
     ]
-    s = session_read(games, {"a": 1, "b": 2, "c": 4}, "2026-10-24T10:00:00Z")
-    assert s == {"games": 2, "feltLikeYou": 1, "realProblems": 3, "brilliant": 1}
-    assert session_read(games, {}, "2026-10-25T00:00:00Z") is None
-    assert session_read(games, {}, None) is None and session_read(games, {}, "not a date") is None
+    assert summarise_session(games, {"a": 1, "b": 2}) == {"games": 2, "feltLikeYou": 1, "realProblems": 3, "brilliant": 1}
+    assert summarise_session([], {}) is None
+    assert parse_since("2026-10-24T10:00:00Z").isoformat() == "2026-10-24T10:00:00+00:00"
+    assert parse_since("2026-10-24T10:00:00").tzinfo is not None
+    assert parse_since(None) is None and parse_since("not a date") is None
