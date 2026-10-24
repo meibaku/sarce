@@ -11,6 +11,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- One focus a week (plan 3.2): Home names one trait, the one whose last 80 games sit lowest among twelve 40-game
+  stretches of your own history, with a target from your own range ("Sacrifice: last 80 games 1.0%; aim for 2.0%").
+  Pick one yourself in the Recap (the nine traits join the weekly focuses); the Recap says whether this week's games
+  moved it, and only "up" or "down" when the ranges separate. Brilliant is never the focus. Web and Expo
 - Where they go wrong (plan 3.7): a scouting report now checks the opponent's most frequent opening positions with
   the engine and lists where they have gone wrong in their own games ("After e4 e5 Nf3 Nf6 Bc4 Nxe4 Nxe5: 2 of 2
   times wrong, usually d6. d5 holds; 97% at 800 miss it"), with P_fail at their level. Only the aggregate is stored;

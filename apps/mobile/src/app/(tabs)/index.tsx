@@ -20,6 +20,9 @@ function Stat({ label, value }: { label: string; value: string | number | null }
   );
 }
 
+/** A trait value as shown: shares as percentages, Initiative as a score (the web's focusValue). */
+const fmtTrait = (v: number, unit: "share" | "score") => (unit === "share" ? `${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%` : v.toFixed(2));
+
 export default function Home() {
   const { data, failed, reload } = useLoad(getHome);
   const quiet = Boolean(usePrefs().quietUntil);
@@ -38,6 +41,14 @@ export default function Home() {
               <T size={13} tone="ink2" style={{ flex: 1 }}>Quiet week · numbers are hidden, moments and notes stay.</T>
               <Link label="End early" onPress={() => router.push("/settings")} />
             </View>
+          )}
+          {!quiet && data.focus && (
+            // This week's one trait (plan 3.2).
+            <Card>
+              <T mono size={11} tone="accentText">This week</T>
+              <T weight="medium" size={14}>{`${data.focus.trait}: ${data.focus.phrase}`}</T>
+              <T size={13} tone="ink2">{`Last ${data.focus.games} games ${fmtTrait(data.focus.value, data.focus.unit)}; aim for ${fmtTrait(data.focus.target, data.focus.unit)}.`}</T>
+            </Card>
           )}
           <Card lead>
             {/* Handoff: "Latest game · when", the game in a mono chip, the style read, then the chaos strip. */}

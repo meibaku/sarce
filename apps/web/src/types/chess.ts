@@ -333,6 +333,17 @@ export interface HomeApi {
     nextLo?: number | null;
     nextHi?: number | null;
   };
+  /** This week's one trait (plan 3.2): chosen in the Recap, or picked as the one with the most room. */
+  focus?: {
+    trait: string;
+    phrase: string;
+    value: number;
+    target: number;
+    games: number;
+    unit: "share" | "score";
+    auto: boolean;
+    verdict: "up" | "down" | "held";
+  } | null;
   /** Games analysed since your last visit (plan 3.4a); null without `since` or when nothing is new. */
   session?: { games: number; feltLikeYou: number; realProblems: number; brilliant: number } | null;
   stats: {
