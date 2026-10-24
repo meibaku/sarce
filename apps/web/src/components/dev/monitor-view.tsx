@@ -69,10 +69,18 @@ function EngineRow({ e, events, open, onToggle }: { e: MonitorEngine; events: Mo
   const vs = g ? `vs ${g.opponent ?? "?"}${g.opponent_rating ? ` (${g.opponent_rating})` : ""} · ${g.user_color ?? "?"} · ${g.time_control ?? "?"}` : null;
   return (
     <>
-      <tr className="border-t border-hair align-middle hover:bg-panel" onClick={onToggle} aria-expanded={open}>
+      <tr className="cursor-pointer border-t border-hair align-middle hover:bg-panel" onClick={onToggle}>
         <td className="py-2 pl-3 font-mono text-[12px] text-muted">
-          <span className="mr-1 inline-block w-3 text-faint">{open ? "▾" : "▸"}</span>
-          {e.engine}
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-label={`Engine ${e.engine}: recent events`}
+            onClick={(ev) => { ev.stopPropagation(); onToggle(); }}
+            className="rounded-[3px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            <span className="mr-1 inline-block w-3 text-faint">{open ? "▾" : "▸"}</span>
+            {e.engine}
+          </button>
         </td>
         <td className="py-2 text-[12px]">
           <span className={`inline-block rounded-[4px] px-[6px] py-[1px] font-mono text-[11px] ${busy ? "bg-accent-tint text-accent-text" : "bg-hair text-muted"}`}>
@@ -220,7 +228,7 @@ export function MonitorView() {
   const [snap, setSnap] = useState<MonitorSnapshot | null>(null);
   const [history, setHistory] = useState<MonitorHistory | null>(null);
   const [events, setEvents] = useState<MonitorEvent[]>([]);
-  const [live, setLive] = useState<"stream" | "polling" | "connecting">("connecting");
+  const [live, setLive] = useState<"stream" | "polling" | "connecting" | "stale">("connecting");
   const [filter, setFilter] = useState("");
   const [openEngines, setOpenEngines] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -246,6 +254,12 @@ export function MonitorView() {
         setSnap(JSON.parse((ev as MessageEvent).data));
         setLive("stream");
         setError(null);
+      });
+      // The API is up but its database reads fail: say so instead of showing the last snapshot as live.
+      source.addEventListener("problem", () => {
+        clearTimeout(silent);
+        setLive("stale");
+        setError("The database isn't answering; showing the last snapshot.");
       });
       source.onerror = () => {
         clearTimeout(silent);
@@ -288,7 +302,7 @@ export function MonitorView() {
       <div className="flex flex-wrap items-baseline gap-3">
         <h1 className="text-[22px] font-medium">Analysis monitor</h1>
         <span className="font-mono text-[11px] text-muted">
-          {live === "stream" ? "live" : live === "polling" ? "polling every 3 s" : "connecting"} · updated {clock(snap.at)}
+          {live === "stream" ? "live" : live === "polling" ? "polling every 3 s" : live === "stale" ? "stale" : "connecting"} · updated {clock(snap.at)}
         </span>
         {error && <span className="font-mono text-[11px] text-checkin">{error}</span>}
       </div>

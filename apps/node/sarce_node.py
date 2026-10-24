@@ -315,8 +315,9 @@ def main() -> int:
                 # Ages, not timestamps: an offline machine's clock drifts (days, on this desktop), so the server
                 # places these on its own clock.
                 now = time.time()
-                e["startedAgo"] = now - e["startedAt"] if e.get("startedAt") else None
-                e["progressAgo"] = now - e["progressAt"] if e.get("progressAt") else None
+                # Clamped: a clock stepped backwards must not make the gateway refuse the whole report.
+                e["startedAgo"] = max(0.0, now - e["startedAt"]) if e.get("startedAt") else None
+                e["progressAgo"] = max(0.0, now - e["progressAt"]) if e.get("progressAt") else None
                 engines.append(e)
             gw.call("/nodes/report", {"machine": sampler.machine(), "engines": engines, "bundle": local, "startedAt": started_at}, timeout=10)
         except Exception:

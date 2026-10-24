@@ -98,6 +98,9 @@ class Settings(BaseSettings):
     position_evals_enabled: bool = False
     # Pairing secret for Sarce Nodes (ADR 0010); empty means the node gateway accepts no one.
     node_token: str = ""
+    # Signed-in users (Supabase ids) allowed to read the analysis monitor, which shows every user's games.
+    # Local-first (nobody signed in) the machine's owner is the operator; signed in, only these ids are.
+    monitor_operators: list[str] = []
     analysis_nodes: int = 1_500_000
     analysis_multipv: int = 4
     analysis_multipv_cap: int = 8

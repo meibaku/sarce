@@ -96,8 +96,8 @@ class OneGame:
     def execute(self):
         if self._update:
             self.status = self._update["analysis_status"]
-            return types.SimpleNamespace(data=[])
-        return types.SimpleNamespace(data={"id": "g", "pgn": "1. e4 *", "user_color": "white"})
+            return types.SimpleNamespace(data=[{"id": "g"}])  # the claim is conditional: it must see its row
+        return types.SimpleNamespace(data={"id": "g", "pgn": "1. e4 *", "user_color": "white", "analysis_status": self.status})
 
 
 def test_engine_timeouts_are_retried_a_few_times_then_marked_failed(monkeypatch):

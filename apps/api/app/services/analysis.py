@@ -178,8 +178,16 @@ class AnalysisService:
             claimed = sb.table("games").update({"analysis_status": "processing"}).eq("id", game_id).eq("analysis_status", "pending").execute()
             if not claimed.data:
                 return None
+        elif row.get("analysis_status") == "processing":
+            return None  # someone is on it (a crash's leftovers go back to pending at startup)
         else:
-            sb.table("games").update({"analysis_status": "processing"}).eq("id", game_id).execute()
+            # Reanalysis of a finished or failed game: claimed the same way, from the status it was read with.
+            claimed = (
+                sb.table("games").update({"analysis_status": "processing"}).eq("id", game_id)
+                .eq("analysis_status", row.get("analysis_status")).execute()
+            )
+            if not claimed.data:
+                return None
         tracker = monitor.current.get()
         if tracker:
             tracker.phase("searching", total=len(moves) + 1)

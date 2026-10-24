@@ -17,7 +17,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   server-sent events with no flicker: the queue, speed and time to go; each machine (CPU, memory, uptime, rate) with
   its engines per game (opponent, colour, time control, positions with a bar, elapsed, ETA, CPU, memory), expandable
   to their recent events; games per hour for 24 h with markers for restarts, drops, stalls and offline spells; alert
-  banners; and the event feed by machine. API: `/monitor/snapshot`, `/history`, `/events`, `/stream`
+  banners; and the event feed by machine. API: `/monitor/snapshot`, `/history`, `/events`, `/stream`.
+  Signed in, only `MONITOR_OPERATORS` may read it (it shows every user's games); quiet spells chart as zero; node
+  times are ages, so an offline node's drifting clock can't fake stalls; a game already being analysed is never
+  claimed twice.
 - Analysis monitor, data (dev mode, part 1): every machine and engine reports what it is doing. The server's own
   analysis slots report each game's progress through its positions and their Stockfish's CPU and memory; Sarce Nodes
   report every 5 s through the gateway (`/nodes/report`). Claims, finished and failed games, restarts and alerts

@@ -10,12 +10,27 @@ from __future__ import annotations
 import asyncio
 import json
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 
+from app.config import settings
+from app.deps import current_user_id
 from app.services import monitor
 
-router = APIRouter()
+
+def require_operator() -> None:
+    """
+    The monitor reads every user's games with the service role, so `devMode` (a preference) is not enough: a
+    signed-in caller must be listed in MONITOR_OPERATORS. Runs after the router's `authenticate`.
+    """
+    user = current_user_id()
+    if user is not None and user not in settings.monitor_operators:
+        raise HTTPException(status_code=403, detail="The analysis monitor is for this deployment's operators")
+    if user is None and settings.auth_required:
+        raise HTTPException(status_code=401, detail="Sign in required")
+
+
+router = APIRouter(dependencies=[Depends(require_operator)])
 STREAM_S = 2.0
 
 
