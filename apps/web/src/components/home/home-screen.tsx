@@ -10,6 +10,9 @@ import type { HomeApi } from "@/types/chess";
 
 const LAST_VISIT = "sarce.lastVisit";
 
+/** A trait value as shown: shares as percentages (1.5% of your moves), Initiative as a score. */
+const focusValue = (v: number, unit: "share" | "score") => (unit === "share" ? `${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%` : v.toFixed(2));
+
 /** "Since your last visit: 6 games, 2 that felt like you, 1 real problem set." */
 export function sessionLine(s: NonNullable<HomeApi["session"]>): string {
   const parts = [`${s.games} game${s.games === 1 ? "" : "s"} analysed`];
@@ -67,6 +70,12 @@ export function toHomeData(api: HomeApi): HomeData | null {
       trapsSurvived: stats?.trapsSurvived == null ? null : `${Math.round(stats.trapsSurvived * 100)}%`,
     },
     session: api.session ? sessionLine(api.session) : undefined,
+    focus: api.focus
+      ? {
+          title: `${api.focus.trait}: ${api.focus.phrase}`,
+          line: `Last ${api.focus.games} games ${focusValue(api.focus.value, api.focus.unit)}; aim for ${focusValue(api.focus.target, api.focus.unit)}.${api.focus.auto ? " Picked as the trait with the most room; change it in the Recap." : ""}`,
+        }
+      : undefined,
     doors: [
       { kicker: "Weekly recap", title: `${brilliant.games} games analysed`, action: "Open the recap", href: "/recap" },
       { kicker: "Before your next game", title: "Today I want to: choose one", action: "Set it in Play", href: "/play" },

@@ -44,6 +44,8 @@ export interface HomeData {
   quietUntil?: string;
   /** "Since your last visit: …" (plan 3.4a). */
   session?: string;
+  /** This week's one trait (plan 3.2). */
+  focus?: { title: string; line: string };
 }
 
 function DoorTile({ door }: { door: HomeData["doors"][number] }) {
@@ -60,7 +62,7 @@ function DoorTile({ door }: { door: HomeData["doors"][number] }) {
 }
 
 export function HomeView({ data }: { data: HomeData }) {
-  const { latest, brilliant, doors, quietUntil, session } = data;
+  const { latest, brilliant, doors, quietUntil, session, focus } = data;
   const quiet = Boolean(quietUntil);
 
   return (
@@ -74,6 +76,13 @@ export function HomeView({ data }: { data: HomeData }) {
         </div>
       )}
       {!quiet && session && <p className="text-[13px] leading-[1.5] text-ink-2">{session}</p>}
+      {!quiet && focus && (
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-[8px] border border-line bg-surface px-4 py-3">
+          <span className="font-mono text-[11px] text-accent-text">This week</span>
+          <span className="text-[14px] font-medium">{focus.title}</span>
+          <span className="basis-full text-[13px] leading-[1.5] text-ink-2">{focus.line}</span>
+        </div>
+      )}
 
       <AutoGrid min={380}>
         <Card lead className="gap-[14px]">

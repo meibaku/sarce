@@ -11,6 +11,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- One focus a week (plan 3.2): Home names one trait, the one whose last 80 games sit lowest among twelve 40-game
+  stretches of your own history, with a target from your own range ("Sacrifice: last 80 games 1.0%; aim for 2.0%").
+  Pick one yourself in the Recap (the nine traits join the weekly focuses); the Recap says whether this week's games
+  moved it, and only "up" or "down" when the ranges separate. Brilliant is never the focus. Web and Expo
 - Brilliant disagreements, part 2 (plan 3.3): "Chess.com called this Brilliant" in Why this move? (web, Expo) stores
   a report with the clause Sarce's rule stopped at (new `brilliant_reports` table, RLS, no free text) and tells you
   which condition made the difference; `scripts/brilliant_reports.py` counts them by clause for Benchmark B.

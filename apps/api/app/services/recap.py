@@ -13,14 +13,18 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from app.db.supabase import get_supabase
+from app.services.focus import FocusService
 from app.services.uncertainty import direction
 from app.services.home import HomeService, window_brilliant
 from app.services.summary import move_label, style_read
+from app.services.you import TRAIT_PHRASE, TRAITS
 
 FOCUSES = {
     "real_problems": "Keep setting real problems",
     "calm_after_sacrifice": "Stay calm after a sacrifice",
     "safe_reply": "Find the safe reply in traps",
+    # One trait for the week (plan 3.2); Home picks one automatically when none is chosen.
+    **{f"trait:{t}": f"{t}: {TRAIT_PHRASE[t]}" for t in TRAITS},
 }
 INTENTS = {
     "sacrifice": "look for a sacrifice",
@@ -35,8 +39,14 @@ def week_label(start: datetime, end: datetime) -> str:
     return f"{start.strftime('%b')} {start.day}–{end.strftime('%b')} {end.day}"
 
 
-def focus_line(focus: str | None, real: int, cheap: int, survived: int, faced: int) -> str | None:
+VERDICT = {"up": "moved up", "down": "came down", "held": "held"}
+
+
+def focus_line(focus: str | None, real: int, cheap: int, survived: int, faced: int, trait_focus: dict | None = None) -> str | None:
     """How last week's focus went, in its own terms."""
+    if trait_focus and focus and focus.startswith("trait:"):
+        fmt = (lambda v: f"{v * 100:.0f}%") if trait_focus.get("unit") == "share" else (lambda v: f"{v:.2f}")
+        return f"{trait_focus['trait']} {VERDICT[trait_focus['verdict']]}: {fmt(trait_focus['value'])}, aiming for {fmt(trait_focus['target'])}"
     if focus == "real_problems":
         return f"Real problems: {real} set" + (f", {real / cheap:.1f} : 1 sound" if cheap else "")
     if focus == "safe_reply":
@@ -137,7 +147,11 @@ class RecapService:
             "bars": bars,
             "brilliant": {**this_week, "change": change, "trend": trend},
             "best": best,
-            "lastFocus": {"id": weekly, "label": FOCUSES.get(weekly or ""), "line": focus_line(weekly, real, cheap, survived, len(faced))} if weekly else None,
+            "lastFocus": {
+                "id": weekly,
+                "label": FOCUSES.get(weekly or ""),
+                "line": focus_line(weekly, real, cheap, survived, len(faced), FocusService().weekly(user_id, weekly) if (weekly or "").startswith("trait:") else None),
+            } if weekly else None,
             "streakWeeks": streak_weeks(kept),
             "focuses": [{"id": k, "label": v} for k, v in FOCUSES.items()],
         }
