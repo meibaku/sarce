@@ -24,8 +24,10 @@ def test_verdict_only_moves_when_ranges_separate():
 def test_trait_focus_values_and_recap_line():
     assert f.trait_from_focus("trait:Grip") == "Grip" and f.trait_from_focus("real_problems") is None and f.trait_from_focus("trait:Brilliant") is None
     assert "trait:Grip" in FOCUSES and not any("Brilliant" in k for k in FOCUSES)
-    line = focus_line("trait:Grip", 0, 0, 0, 0, {"trait": "Grip", "verdict": "up", "value": 0.84, "target": 0.88, "unit": "share"})
-    assert line == "Grip moved up: 84%, aiming for 88%"
+    focus = {"trait": "Grip", "verdict": "up", "value": 0.84, "target": 0.88, "unit": "share", "week": 0.9, "before": 0.8}
+    assert focus_line("trait:Grip", 0, 0, 0, 0, focus) == "Grip moved up this week (90%, against 80% before); aiming for 88%"
+    rare = {**focus, "trait": "Sacrifice", "verdict": "held", "week": None, "target": 0.004}
+    assert focus_line("trait:Sacrifice", 0, 0, 0, 0, rare) == "Sacrifice held; aiming for 0.4%"
 
 
 def test_windows_and_this_week():

@@ -45,8 +45,13 @@ VERDICT = {"up": "moved up", "down": "came down", "held": "held"}
 def focus_line(focus: str | None, real: int, cheap: int, survived: int, faced: int, trait_focus: dict | None = None) -> str | None:
     """How last week's focus went, in its own terms."""
     if trait_focus and focus and focus.startswith("trait:"):
-        fmt = (lambda v: f"{v * 100:.0f}%") if trait_focus.get("unit") == "share" else (lambda v: f"{v:.2f}")
-        return f"{trait_focus['trait']} {VERDICT[trait_focus['verdict']]}: {fmt(trait_focus['value'])}, aiming for {fmt(trait_focus['target'])}"
+        share = trait_focus.get("unit") == "share"
+        fmt = (lambda v: f"{v * 100:.1f}%" if v < 0.1 else f"{v * 100:.0f}%") if share else (lambda v: f"{v:.2f}")
+        line = f"{trait_focus['trait']} {VERDICT[trait_focus['verdict']]}"
+        if trait_focus.get("week") is not None and trait_focus.get("before") is not None:
+            # The verdict compares this week's games with the ones before them: show those two, not the 80-game value.
+            line += f" this week ({fmt(trait_focus['week'])}, against {fmt(trait_focus['before'])} before)"
+        return f"{line}; aiming for {fmt(trait_focus['target'])}"
     if focus == "real_problems":
         return f"Real problems: {real} set" + (f", {real / cheap:.1f} : 1 sound" if cheap else "")
     if focus == "safe_reply":
@@ -140,6 +145,11 @@ class RecapService:
             kept.append(any(g.get("felt_like_you") == "yes" for g in w_games) or (w == 0 and real > 0))
 
         weekly = self.current_focus(owner_id, "weekly")
+        auto_focus = None
+        if weekly is None:
+            # Home's automatic pick counts as the week's focus when you didn't choose one (plan 3.2).
+            auto_focus = FocusService().weekly(user_id, None)
+            weekly = f"trait:{auto_focus['trait']}" if auto_focus else None
         return {
             "week": week_label(start + timedelta(days=1), end),
             "games": len(week),
@@ -150,7 +160,11 @@ class RecapService:
             "lastFocus": {
                 "id": weekly,
                 "label": FOCUSES.get(weekly or ""),
-                "line": focus_line(weekly, real, cheap, survived, len(faced), FocusService().weekly(user_id, weekly) if (weekly or "").startswith("trait:") else None),
+                "line": focus_line(
+                    weekly, real, cheap, survived, len(faced),
+                    auto_focus or (FocusService().weekly(user_id, weekly) if (weekly or "").startswith("trait:") else None),
+                ),
+                "auto": auto_focus is not None,
             } if weekly else None,
             "streakWeeks": streak_weeks(kept),
             "focuses": [{"id": k, "label": v} for k, v in FOCUSES.items()],
