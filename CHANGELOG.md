@@ -73,6 +73,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   F2, F4 and F12 are marked done; F6 moves to the front after F4 showed Brilliant at 0.01% under rule v3
 
 ### Changed
+- Sarce Nodes work offline (ADR 0010): `install.ps1 -Kit <folder or share>` installs Python, the node's wheels and
+  Stockfish from a kit checked against its SHA256SUMS.txt, and updates install from the kept wheels. The node now needs
+  only python-chess, pydantic, pydantic-settings and python-dotenv; the database client is imported lazily
 - Time to first read (plan 3.1): importing an account stores and queues the newest 20 games before answering, then
   fetches older Chess.com months (newest first) or the remaining Lichess games in the background and queues them.
   Before, every archive was fetched first. The first import and first completed analysis are recorded on the

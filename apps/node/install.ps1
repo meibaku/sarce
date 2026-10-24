@@ -1,6 +1,10 @@
 # Sarce Node installer (ADR 0010). Run once on the helper computer, in PowerShell as Administrator:
 #
-#   powershell -ExecutionPolicy Bypass -File install.ps1 -Server http://10.77.0.1:8002 -Token <NODE_TOKEN> -Workers 4
+#   powershell -ExecutionPolicy Bypass -File install.ps1 -Server http://192.168.137.1:8002 -Token <NODE_TOKEN> -Workers 4
+#
+# Without internet on this machine, add -Kit <folder>: a folder (local or a network share such as
+# \\DESKTOP-K5KC76C\SarceNodeKit) with the Python installer, the node's wheels and the Stockfish zip, checked against
+# its SHA256SUMS.txt. Only the code bundle then comes over the network, from your Sarce server.
 #
 # What it does, all under C:\SarceNode:
 #   1. Python 3.12 (winget, or the python.org installer) if it isn't there, and a private virtual environment;
@@ -12,7 +16,8 @@ param(
     [Parameter(Mandatory = $true)][string]$Server,
     [Parameter(Mandatory = $true)][string]$Token,
     [int]$Workers = 4,
-    [string]$Root = "C:\SarceNode"
+    [string]$Root = "C:\SarceNode",
+    [string]$Kit = ""
 )
 $ErrorActionPreference = "Stop"
 $Server = $Server.TrimEnd("/")
@@ -27,13 +32,27 @@ try {
     throw "Can't reach $Server/nodes/config with this token. Check the cable, the server's gateway and the token. ($_)"
 }
 
+# The offline kit: every file is checked against the kit's SHA256SUMS.txt before it is used.
+function Get-KitFile([string]$Name) {
+    $path = Join-Path $Kit $Name
+    if (-not (Test-Path $path)) { throw "The kit has no $Name" }
+    $line = Get-Content (Join-Path $Kit "SHA256SUMS.txt") | Where-Object { $_ -match "  $([regex]::Escape($Name))$" } | Select-Object -First 1
+    if (-not $line) { throw "SHA256SUMS.txt doesn't list $Name" }
+    if ((Get-FileHash $path -Algorithm SHA256).Hash.ToLower() -ne ($line -split "\s+")[0].ToLower()) { throw "$Name doesn't match its checksum" }
+    return $path
+}
+if ($Kit) { Write-Host "Offline kit: $Kit" }
+
 # 1. Python
 $py = (Get-Command py -ErrorAction SilentlyContinue)
 $hasPython = $false
 if ($py) { try { & py -3.12 --version | Out-Null; $hasPython = ($LASTEXITCODE -eq 0) } catch {} }
 if (-not $hasPython) {
     Write-Host "Installing Python 3.12..."
-    if (Get-Command winget -ErrorAction SilentlyContinue) {
+    if ($Kit) {
+        $installer = Get-KitFile "python-3.12.10-amd64.exe"
+        Start-Process $installer -ArgumentList "/quiet InstallAllUsers=1 PrependPath=1 Include_launcher=1" -Wait
+    } elseif (Get-Command winget -ErrorAction SilentlyContinue) {
         winget install --id Python.Python.3.12 --silent --accept-package-agreements --accept-source-agreements --scope machine
     } else {
         $installer = Join-Path $env:TEMP "python-3.12.10-amd64.exe"
@@ -57,8 +76,18 @@ Expand-Archive -Path $zip -DestinationPath $Root -Force
 Remove-Item $zip
 # The runner lives outside node\, so an update (which replaces node\) never removes what the boot task starts.
 Copy-Item "$Root\node\run-node.ps1" "$Root\run-node.ps1" -Force
-& "$Root\venv\Scripts\python.exe" -m pip install --quiet --disable-pip-version-check --upgrade pip
-& "$Root\venv\Scripts\python.exe" -m pip install --quiet --disable-pip-version-check -r "$Root\node\requirements-node.txt"
+if ($Kit) {
+    # Keep the wheels here too, so later updates install offline as well (run-node.ps1 uses them when present).
+    $wheels = Join-Path $Root "wheels"
+    New-Item -ItemType Directory -Force -Path $wheels | Out-Null
+    Get-ChildItem (Join-Path $Kit "wheels") -Filter "*.whl" | ForEach-Object { Copy-Item (Get-KitFile "wheels/$($_.Name)") $wheels -Force }
+    & "$Root\venv\Scripts\python.exe" -m pip install --quiet --disable-pip-version-check --no-index --find-links $wheels --upgrade pip
+    & "$Root\venv\Scripts\python.exe" -m pip install --quiet --disable-pip-version-check --no-index --find-links $wheels -r "$Root\node\requirements-node.txt"
+} else {
+    & "$Root\venv\Scripts\python.exe" -m pip install --quiet --disable-pip-version-check --upgrade pip
+    & "$Root\venv\Scripts\python.exe" -m pip install --quiet --disable-pip-version-check -r "$Root\node\requirements-node.txt"
+}
+if ($LASTEXITCODE -ne 0) { throw "Installing the node's packages failed" }
 
 # 3. Stockfish 18, the build this CPU runs (an i7-3770 has no AVX2: SSE4.1). Same version as the server, so the
 #    node-limited searches give the same results.
@@ -68,12 +97,17 @@ if (-not $sfExe) {
     Add-Type -Namespace Native -Name Cpu -MemberDefinition '[DllImport("kernel32.dll")] public static extern bool IsProcessorFeaturePresent(uint f);'
     $avx2 = [Native.Cpu]::IsProcessorFeaturePresent(40)   # PF_AVX2_INSTRUCTIONS_AVAILABLE
     $build = if ($avx2) { "x86-64-avx2" } else { "x86-64-sse41-popcnt" }
-    Write-Host "Downloading Stockfish 18 ($build)..."
-    $sfZip = Join-Path $env:TEMP "stockfish.zip"
-    Invoke-WebRequest "https://github.com/official-stockfish/Stockfish/releases/download/sf_18/stockfish-windows-$build.zip" -OutFile $sfZip -UseBasicParsing
     New-Item -ItemType Directory -Force -Path $sfDir | Out-Null
-    Expand-Archive -Path $sfZip -DestinationPath $sfDir -Force
-    Remove-Item $sfZip
+    if ($Kit) {
+        Write-Host "Stockfish 18 ($build) from the kit..."
+        Expand-Archive -Path (Get-KitFile "stockfish-windows-$build.zip") -DestinationPath $sfDir -Force
+    } else {
+        Write-Host "Downloading Stockfish 18 ($build)..."
+        $sfZip = Join-Path $env:TEMP "stockfish.zip"
+        Invoke-WebRequest "https://github.com/official-stockfish/Stockfish/releases/download/sf_18/stockfish-windows-$build.zip" -OutFile $sfZip -UseBasicParsing
+        Expand-Archive -Path $sfZip -DestinationPath $sfDir -Force
+        Remove-Item $sfZip
+    }
     $sfExe = Get-ChildItem $sfDir -Recurse -Filter "stockfish*.exe" | Select-Object -First 1
 }
 
