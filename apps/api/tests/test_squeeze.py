@@ -2,10 +2,11 @@
 
 from app.lenses.base import PlyContext, PositionData
 from app.lenses.squeeze import SqueezeLens, line_cp, room
+from app.services.ep import cp_to_ep
 
 
 def pos(*cps, complete=True):
-    return PositionData(lines=[{"move_uci": f"m{i}", "cp": cp, "mate": None, "ep": 0.5} for i, cp in enumerate(cps)], safe_set_complete=complete)
+    return PositionData(lines=[{"move_uci": f"m{i}", "cp": cp, "mate": None, "ep": cp_to_ep(cp)} for i, cp in enumerate(cps)], safe_set_complete=complete)
 
 
 def ctx(faced_best, left_cps, complete=True):
@@ -38,5 +39,11 @@ def test_kept_when_the_opponent_still_has_room():
 
 
 def test_gave_air_when_the_edge_drops_by_more_than_a_pawn():
-    r = SqueezeLens().score(ctx(400, [-250, -260]))
+    r = SqueezeLens().score(ctx(350, [-200, -210]))
     assert r.verdict == "gave_air" and r.score == 0.0 and r.details["cost_cp"] == 150
+
+
+def test_giving_back_a_pawn_from_a_big_edge_is_not_air():
+    # +8 to +6.5 is still winning comfortably: in expected points it costs almost nothing (review F8).
+    r = SqueezeLens().score(ctx(800, [-650, -660]))
+    assert r.verdict != "gave_air" and r.details["cost_ep"] < 0.05

@@ -30,6 +30,11 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   F2, F4 and F12 are marked done; F6 moves to the front after F4 showed Brilliant at 0.01% under rule v3
 
 ### Changed
+- Lenses in one unit (review F8): squeeze, swindle, clock and prophylaxis judge edges and costs in expected points
+  like chaos, not centipawns. Thresholds equal the old ones in a level position, so a pawn given back at +8 no
+  longer counts as "gave air" and a won position where every move still wins is no longer "critical". Squeeze's
+  room count stays in centipawns (documented: EP compresses on the losing side). Lens versions → 2; re-score with
+  `scripts/rescore_lenses.py` (stored data, no engine)
 - Brilliant rule v4 (ADR 0009, review F5): sound = at most 0.03 expected points below the best move (one-sided);
   no Brilliant when already lost (under 0.10 EP); "not forced" = another move kept you within 0.10 EP of the best,
   not just "more than one legal move". The post-pass re-judges every stored move from scratch, so rule changes
