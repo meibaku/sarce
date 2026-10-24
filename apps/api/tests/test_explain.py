@@ -16,12 +16,12 @@ def test_brilliant_checks_report_each_rule_with_numbers():
     # Bxf7+ wins a pawn back, so it nets only 2 points: below the 3-point minimum.
     board = chess.Board(FEN)
     assert not brilliant_checks(board, chess.Move.from_uci("c4f7"), 0.4, 0.3, 0.03, 1200)[0]["passed"]
-    assert checks["It holds up"]["passed"] and "0.10" in checks["It holds up"]["detail"]
+    assert checks["It holds up"]["passed"] and "0.01 expected points" in checks["It holds up"]["detail"]
     assert checks["Hard to find"]["passed"] and "3% of 1200-rated" in checks["Hard to find"]["detail"]
 
     quiet = {c["rule"]: c for c in brilliant_checks(board, chess.Move.from_uci("d2d3"), 4.2, 3.0, 0.6, 1200)}
     assert not quiet["A real sacrifice"]["passed"]
-    assert not quiet["It holds up"]["passed"] and "1.20 pawns" in quiet["It holds up"]["detail"]
+    assert not quiet["It holds up"]["passed"] and "0.07 expected points" in quiet["It holds up"]["detail"]
     assert not quiet["Not already decided"]["passed"]
     assert not quiet["Hard to find"]["passed"]
 

@@ -1,0 +1,23 @@
+{
+  "you": {
+    "games": 1635,
+    "moves": 30756,
+    "brilliant": 3,
+    "brilliantPct": 0.01,
+    "interval": [
+      0.0,
+      0.02
+    ],
+    "candidates": 493,
+    "stoppedBy": {
+      "sound": 384,
+      "not_already_winning": 80,
+      "not_lost": 20,
+      "not_forced": 3,
+      "hard_to_find": 3,
+      "brilliant": 3
+    },
+    "rule": "v4",
+    "computedAt": "2026-10-24"
+  }
+}

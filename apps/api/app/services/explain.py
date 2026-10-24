@@ -20,10 +20,21 @@ import io
 import chess
 import chess.pgn
 
+from app.services.brilliant_find_rate import mover_rung
 from app.services.rating_map import opponent_model_elo
 from app.config import settings
 from app.db.supabase import get_supabase
-from app.services.brilliant import FIND_RATE_MAX, MAX_BRILLIANT_EVAL_LOSS, MIN_BRILLIANT_SACRIFICE_VALUE
+from app.services.brilliant import (
+    ALTERNATIVE_EP,
+    FIND_RATE_MAX,
+    LOST_EP,
+    MIN_BRILLIANT_SACRIFICE_VALUE,
+    SOUND_EP_LOSS,
+    alternatives_from_row,
+    best_eval_from_row,
+    brilliant_clauses,
+    pawns_ep,
+)
 from app.services.library import real_offer
 from app.services.position_evals import fen_key
 from app.services.review import LADDER, ladder_p_fail, nearest_rung
@@ -59,39 +70,55 @@ def steps(board: chess.Board, ucis: list[str]) -> list[dict]:
     return out
 
 
-def brilliant_checks(board: chess.Board, move: chess.Move, eval_before: float | None, eval_after: float | None, find_prob: float | None, rung: int) -> list[dict]:
-    """Each Brilliant rule, with whether it held and the number behind it."""
-    # The strict test (ADR 0007): the number the Brilliant verdict actually uses.
+def brilliant_checks(
+    board: chess.Board,
+    move: chess.Move,
+    eval_before: float | None,
+    eval_after: float | None,
+    find_prob: float | None,
+    rung: int,
+    best_eval: float | None = None,
+    alternatives: list[tuple[str, float | None]] | None = None,
+) -> list[dict]:
+    """Each Brilliant rule (v4, ADR 0009), with whether it held and the number behind it."""
+    # The rule's own clauses, so this list can never disagree with the verdict.
+    best = eval_before if best_eval is None else best_eval
+    clauses = brilliant_clauses(board, move, eval_before, eval_after, best, alternatives=alternatives)
     offered = real_offer(board, move)
-    allowed = min(settings.brilliant_eval_margin, MAX_BRILLIANT_EVAL_LOSS)
-    gap = None if eval_before is None or eval_after is None else round(max(0.0, eval_before - eval_after), 2)
+    loss = None if best is None or eval_after is None else round(max(0.0, pawns_ep(best) - pawns_ep(eval_after)), 3)
+    ep_before = pawns_ep(eval_before)
     legal = board.legal_moves.count()
+    no_eval = "There was no engine evaluation to judge it by."
     return [
         {
             "rule": "A real sacrifice",
-            "passed": offered >= MIN_BRILLIANT_SACRIFICE_VALUE,
+            "passed": bool(clauses["real_sacrifice"]),
             "detail": f"You offered {offered} point{'s' if offered != 1 else ''} of material; Brilliant needs at least {MIN_BRILLIANT_SACRIFICE_VALUE} (a minor piece). Pawns alone don't count."
             if offered
             else f"Nothing was really on offer (a piece counts when something cheaper attacks it, or it is undefended); Brilliant needs at least {MIN_BRILLIANT_SACRIFICE_VALUE} points.",
         },
         {
             "rule": "It holds up",
-            "passed": gap is not None and gap <= allowed,
-            "detail": f"After it the engine rates the position {gap:.2f} pawns below its first choice; Brilliant allows {allowed:.2f}."
-            if gap is not None
-            else "There was no engine evaluation to judge it by.",
+            "passed": bool(clauses["sound"]),
+            "detail": f"It kept {round((1 - loss) * 100) if loss is not None else 0}% of the best move's winning chances "
+            f"({loss:.2f} expected points below it); Brilliant allows {SOUND_EP_LOSS:.2f}."
+            if loss is not None
+            else no_eval,
         },
         {
             "rule": "Not already decided",
-            "passed": eval_before is not None and eval_before <= settings.brilliant_winning_margin,
-            "detail": f"You were {fmt(eval_before)} before the move; a sacrifice only counts when you weren't already above +{settings.brilliant_winning_margin:.0f}."
-            if eval_before is not None
-            else "There was no engine evaluation to judge it by.",
+            "passed": bool(clauses["not_lost"] and clauses["not_already_winning"]),
+            "detail": f"You were {fmt(eval_before)} before the move ({round(ep_before * 100)}% winning chances); a sacrifice counts "
+            f"when you weren't already lost (under {round(LOST_EP * 100)}%) or above +{settings.brilliant_winning_margin:.0f}."
+            if ep_before is not None
+            else no_eval,
         },
         {
             "rule": "A real choice",
-            "passed": legal > 1,
-            "detail": f"You had {legal} legal moves." if legal > 1 else "It was the only legal move, so there was nothing to find.",
+            "passed": bool(clauses["not_forced"]),
+            "detail": f"Another move kept you within {ALTERNATIVE_EP:.2f} expected points of the best, so you chose the sacrifice."
+            if clauses["not_forced"]
+            else ("It was the only legal move, so there was nothing to find." if legal < 2 else "Every other move was clearly worse, so the sacrifice was forced."),
         },
         {
             "rule": "Hard to find",
@@ -130,7 +157,7 @@ class ExplainService:
 
     def why(self, game_id: str, ply: int) -> dict | None:
         sb = get_supabase()
-        games = sb.table("games").select("pgn, user_color, opponent_rating, source, time_control").eq("id", game_id).limit(1).execute().data or []
+        games = sb.table("games").select("pgn, user_color, opponent_rating, user_rating, source, time_control").eq("id", game_id).limit(1).execute().data or []
         if not games:
             return None
         game = games[0]
@@ -148,12 +175,17 @@ class ExplainService:
         chaos, survival = lens.get("chaos") or {}, lens.get("survival") or {}
 
         rung = nearest_rung(opponent_model_elo(game))
-        probs_rows = sb.table("human_probs").select("probs").eq("fen_key", fen_key(board)).eq("elo", rung).limit(1).execute().data or []
+        # The find-rate clause is judged at your own rating (ADR 0004 addendum), like the verdict.
+        find_rung = mover_rung(game)
+        probs_rows = sb.table("human_probs").select("probs").eq("fen_key", fen_key(board)).eq("elo", find_rung).limit(1).execute().data or []
         find_prob = (probs_rows[0]["probs"] or {}).get(row["uci"], 0.0) if probs_rows else None
 
         cost = ((lens.get("soundness") or {}).get("details") or {}).get("objective_cost")
         glyph = "!!" if row.get("is_brilliant") else None
-        checks = brilliant_checks(board, move, row.get("eval_before"), row.get("eval_after"), find_prob, rung)
+        checks = brilliant_checks(
+            board, move, row.get("eval_before"), row.get("eval_after"), find_prob, find_rung,
+            best_eval=best_eval_from_row(row), alternatives=alternatives_from_row(row),
+        )
 
         # A problem you faced (survival) speaks about you; one you set (chaos) about your opponent.
         source = survival if survival.get("verdict") in ("survived", "missed") else chaos
@@ -234,7 +266,7 @@ class ExplainService:
                 ev = pawns(line["cp"], line["mate"])
                 # The stricter test (attacked by something cheaper, or undefended), so the example is a
                 # sacrifice a person would recognise, not just a piece a reply could land on.
-                if cand != move and real_offer(board, cand) >= MIN_BRILLIANT_SACRIFICE_VALUE and ev is not None and best_eval - ev <= MAX_BRILLIANT_EVAL_LOSS:
+                if cand != move and real_offer(board, cand) >= MIN_BRILLIANT_SACRIFICE_VALUE and ev is not None and pawns_ep(best_eval) - pawns_ep(ev) <= SOUND_EP_LOSS:
                     lines.append({
                         "title": "A sacrifice that would count",
                         "note": "Gives up material and the engine still rates it among the best: the shape of a Brilliant move here.",

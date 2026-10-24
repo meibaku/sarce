@@ -3,7 +3,7 @@
 import chess
 
 from app.services import brilliant_benchmark as bb
-from app.services.brilliant import CLAUSES, brilliant_clauses, is_brilliant_move
+from app.services.brilliant import CLAUSES, best_eval_from_row, brilliant_clauses, is_brilliant_move
 
 
 def board_after(sans):
@@ -47,9 +47,10 @@ def test_bootstrap_resamples_whole_games():
 
 
 def test_outcome_separates_unjudged_from_brilliant():
-    assert bb.outcome({"real_sacrifice": True, "sound": None, "not_already_winning": None, "not_forced": True, "hard_to_find": None}) == "no_evals"
-    assert bb.outcome({"real_sacrifice": True, "sound": True, "not_already_winning": True, "not_forced": True, "hard_to_find": None}) == "brilliant"
-    assert bb.outcome({"real_sacrifice": True, "sound": True, "not_already_winning": True, "not_forced": True, "hard_to_find": False}) == "hard_to_find"
+    judged = {"real_sacrifice": True, "sound": True, "not_lost": True, "not_already_winning": True, "not_forced": True}
+    assert bb.outcome({**judged, "sound": None, "not_lost": None, "not_already_winning": None, "hard_to_find": None}) == "no_evals"
+    assert bb.outcome({**judged, "hard_to_find": None}) == "brilliant"
+    assert bb.outcome({**judged, "hard_to_find": False}) == "hard_to_find"
 
 
 def test_even_sample_spans_the_whole_corpus():
@@ -62,6 +63,6 @@ def test_even_sample_spans_the_whole_corpus():
 def test_stored_best_eval_keeps_a_better_than_best_search():
     # cp_loss is clamped at 0, so only the PV shows the played move searched 0.5 above the best line.
     m = {"uci": "e2e4", "best_uci": "d2d4", "eval_after": 1.0, "pv": [{"eval": 0.5}]}
-    assert bb.stored_best_eval(m) == 0.5
-    assert bb.stored_best_eval({**m, "uci": "d2d4"}) == 1.0
-    assert bb.stored_best_eval({"uci": "e2e4", "best_uci": "d2d4", "pv": []}) is None
+    assert best_eval_from_row(m) == 0.5
+    assert best_eval_from_row({**m, "uci": "d2d4"}) == 1.0
+    assert best_eval_from_row({"uci": "e2e4", "best_uci": "d2d4", "pv": []}) is None

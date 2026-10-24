@@ -24,6 +24,11 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   F2, F4 and F12 are marked done; F6 moves to the front after F4 showed Brilliant at 0.01% under rule v3
 
 ### Changed
+- Brilliant rule v4 (ADR 0009, review F5): sound = at most 0.03 expected points below the best move (one-sided);
+  no Brilliant when already lost (under 0.10 EP); "not forced" = another move kept you within 0.10 EP of the best,
+  not just "more than one legal move". The post-pass re-judges every stored move from scratch, so rule changes
+  promote as well as demote; style vectors → version 5. "Why this move?" builds its checklist from the same
+  clauses. Locally: 3 Brilliant moves in 30,756 (0.01%) against 6 under v3
 - Ratings on the human model's scale (review F1): Maia-2 is conditioned on Lichess ratings, so every Chess.com
   rating is converted first (`services/rating_map.py`, from the public ChessGoals survey, July 2026) wherever it
   meets the model: lens ladder, chaos map, Review's "who falls for this", Why this move. A Chess.com rapid 660
