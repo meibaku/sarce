@@ -32,8 +32,9 @@ class ProphylaxisLens:
         if edge is None or reply is None or ep_edge is None or ep_reply is None:
             return None
         threat_gain = float(faced.threat["threat_cp"]) + edge  # the opponent's gain over their normal standing
-        # The same in EP: the opponent's EP after the pass minus their EP now.
-        threat_gain_ep = cp_to_ep(float(faced.threat["threat_cp"])) - (1 - ep_edge)
+        # The same in EP: the opponent's EP after the pass minus their EP now. Both from centipawns, since the stored
+        # threat has no WDL; mixing in the WDL-based EP of the main line would compare two different scales.
+        threat_gain_ep = cp_to_ep(float(faced.threat["threat_cp"])) - cp_to_ep(-edge)
         if threat_gain_ep < config.PROPH_THREAT_EP:
             return None
         try:
