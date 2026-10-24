@@ -147,14 +147,14 @@ BOARD_CLAUSES = CLAUSES[:-1]  # judged at classification; the find-rate clause n
 
 def best_eval_from_row(m: dict) -> float | None:
     """
-    The best move's evaluation for a stored `game_moves` row. `cp_loss` is clamped at zero, so it can't recover a
-    played move that searched better than the best line; the stored PV can (the engine's choice scores its own
-    eval_after).
+    The best move's evaluation for a stored `game_moves` row, as classification compared it: eval_after plus the
+    centipawn loss. The loss is clamped at zero, but a clamped zero means the move scored at least as well as the
+    best line, which passes the one-sided soundness test either way (and old engine-searched games stored a
+    separate search of the best move that the PV doesn't hold).
     """
-    if m.get("uci") and m.get("uci") == m.get("best_uci"):
-        return m.get("eval_after")
-    pv = m.get("pv") or []
-    return pv[0].get("eval") if pv else None
+    if m.get("eval_after") is None:
+        return None
+    return m["eval_after"] + float(m.get("cp_loss") or 0) / 100
 
 
 def alternatives_from_row(m: dict) -> list[tuple[str, float | None]]:

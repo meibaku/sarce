@@ -60,9 +60,21 @@ def test_even_sample_spans_the_whole_corpus():
     assert bb.even_sample(corpus[:5], 200) == corpus[:5]
 
 
-def test_stored_best_eval_keeps_a_better_than_best_search():
-    # cp_loss is clamped at 0, so only the PV shows the played move searched 0.5 above the best line.
-    m = {"uci": "e2e4", "best_uci": "d2d4", "eval_after": 1.0, "pv": [{"eval": 0.5}]}
-    assert best_eval_from_row(m) == 0.5
-    assert best_eval_from_row({**m, "uci": "d2d4"}) == 1.0
-    assert best_eval_from_row({"uci": "e2e4", "best_uci": "d2d4", "pv": []}) is None
+def test_best_eval_from_row_is_the_soundness_comparator():
+    # eval_after + cp_loss is exactly what classification compared; a clamped 0 means the move scored at least as
+    # well as the best line, which passes the one-sided v4 test either way.
+    assert best_eval_from_row({"eval_after": 1.0, "cp_loss": 50}) == 1.5
+    assert best_eval_from_row({"eval_after": 1.0, "cp_loss": 0}) == 1.0
+    assert best_eval_from_row({"eval_after": None, "cp_loss": 20}) is None
+
+
+def test_reference_rung_uses_the_players_own_elo():
+    import chess.pgn
+
+    game = chess.pgn.Game()
+    game.headers.update({"White": "Tal, Mikhail", "Black": "X", "WhiteElo": "2630", "BlackElo": "2550"})
+    assert bb.reference_rung(game, "white") == 2600
+    del game.headers["WhiteElo"]
+    assert bb.reference_rung(game, "white") == 2600  # the opponent's 2550, rounded
+    del game.headers["BlackElo"]
+    assert bb.reference_rung(game, "white") == 2400
