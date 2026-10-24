@@ -11,6 +11,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- Weekly quests (plan 3.6): the week's focus becomes three drills from your own games where that trait's lens
+  marked a chance (a squeeze you let go for Grip, a threat let through for Foresight, an almost-Brilliant sacrifice
+  for Sacrifice), first in Train, with a reference player above you on that trait where one is scored ("Sacrifice,
+  like Morphy (provisional)"). The Recap says how many you did and whether the week moved it: done, held or next week
 - One focus a week (plan 3.2): Home names one trait, the one whose last 80 games sit lowest among twelve 40-game
   stretches of your own history, with a target from your own range ("Sacrifice: last 80 games 1.0%; aim for 2.0%").
   Pick one yourself in the Recap (the nine traits join the weekly focuses); the Recap says whether this week's games

@@ -172,8 +172,13 @@ def missed_sacrifice(board: chess.Board, played: chess.Move, best_uci: str | Non
 
 
 class TrainService:
-    def queue(self, user_id: str | None, owner_id: str, focus: str | None, first: str | None = None) -> dict:
-        """The queue; `first` (a drill key, e.g. from the library's "Defend it yourself") goes to the front."""
+    def queue(
+        self, user_id: str | None, owner_id: str, focus: str | None, first: str | None = None, quest: list[dict] | None = None
+    ) -> dict:
+        """
+        The queue; `first` (a drill key, e.g. from the library's "Defend it yourself") goes to the front, then this
+        week's quest drills (plan 3.6), then the rest by focus.
+        """
         sb = get_supabase()
         q = (
             sb.table("games")
@@ -286,10 +291,15 @@ class TrainService:
             "safe_reply": [trap_items, missed, other_side, chaos, tal, saved],
             "calm_after_sacrifice": [other_side, missed, trap_items, chaos, tal, saved],
         }.get(focus or "", [missed, chaos, trap_items, tal, other_side, saved])
-        wanted = next((i for pool in order for i in pool if i["key"] == first), None) if first else None
+        quest_pool = list(quest or [])
+        wanted = next((i for pool in [quest_pool, *order] for i in pool if i["key"] == first), None) if first else None
         pools = [[i for i in pool if i["key"] not in due and i is not wanted] for pool in order]
         if wanted:
             items.append(wanted)
+        # The week's quest drills all come before the round robin (plan 3.6), unless answered recently.
+        items += [i for i in quest_pool if i["key"] not in due and i is not wanted][: QUEUE - len(items)]
+        quest_keys = {i["key"] for i in items}
+        pools = [[i for i in pool if i["key"] not in quest_keys] for pool in pools]
         while len(items) < QUEUE and any(pools):
             for pool in pools:
                 if pool and len(items) < QUEUE:

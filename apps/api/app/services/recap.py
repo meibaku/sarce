@@ -61,6 +61,15 @@ def focus_line(focus: str | None, real: int, cheap: int, survived: int, faced: i
     return None
 
 
+def quest_line(quest: dict | None) -> str | None:
+    """"Quest · Sacrifice, like Morphy (provisional): 2 of 3 drills · held". Never "failed"."""
+    if not quest:
+        return None
+    who = f", like {quest['reference']['label']}" if quest.get("reference") else ""
+    drills = f"{quest['done']} of {len(quest['drills'])} drills" if quest.get("drills") else "no drills from your games yet"
+    return f"Quest · {quest['trait']}{who}: {drills} · {quest['verdict']}"
+
+
 def streak_weeks(weeks_newest_first: list[bool]) -> int:
     count = 0
     for kept in weeks_newest_first:
@@ -150,6 +159,7 @@ class RecapService:
             # Home's automatic pick counts as the week's focus when you didn't choose one (plan 3.2).
             auto_focus = FocusService().weekly(user_id, None)
             weekly = f"trait:{auto_focus['trait']}" if auto_focus else None
+        quest = self._quest(user_id, owner_id, weekly)
         return {
             "week": week_label(start + timedelta(days=1), end),
             "games": len(week),
@@ -166,9 +176,18 @@ class RecapService:
                 ),
                 "auto": auto_focus is not None,
             } if weekly else None,
+            "questLine": quest_line(quest),
             "streakWeeks": streak_weeks(kept),
             "focuses": [{"id": k, "label": v} for k, v in FOCUSES.items()],
         }
+
+    def _quest(self, user_id: str | None, owner_id: str, weekly: str | None) -> dict | None:
+        from app.services.quests import QuestService
+
+        try:
+            return QuestService().quest(user_id, owner_id, FocusService().weekly(user_id, weekly))
+        except Exception:
+            return None  # the quest line is optional; the recap must still load
 
     def current_focus(self, owner_id: str, kind: str) -> str | None:
         rows = (
