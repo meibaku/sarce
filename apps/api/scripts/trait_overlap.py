@@ -18,7 +18,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import os
 import sys
 from itertools import combinations
 from pathlib import Path
@@ -114,7 +113,9 @@ def windows_of(games: list[dict], moves: dict, lens: dict, size: int) -> list[di
 
 
 def main(window: int, out: Path | None) -> None:
-    games, moves, lens = load(os.environ["LOCAL_USER_ID"])
+    from app.config import settings
+
+    games, moves, lens = load(settings.local_user_id)  # reads .env like the API
     windows = windows_of(games, moves, lens, window)
     m, s = matrix(windows), spread(windows)
     print(f"{len(games)} games in {len(windows)} windows of {window}\n")
