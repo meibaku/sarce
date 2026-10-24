@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 from app.config import settings
 from app.deps import current_user_id, require_game_access, resolve_user_id, scoped_user_id
+from app.services.importer import FIRST_READ_GAMES, FirstReadImporter
 from app.services.analysis import AnalysisService
 from app.services.chess_com import ChessComClient, normalize_chess_com_username
 from app.services.game_store import GameStore
@@ -20,6 +21,7 @@ router = APIRouter()
 chess_com = ChessComClient()
 lichess = LichessClient()
 game_store = GameStore()
+importer = FirstReadImporter(chess_com, lichess, game_store)
 analysis_service = AnalysisService()
 lens_service = LensService()
 summary_service = SummaryService()
@@ -56,7 +58,8 @@ async def import_games(body: ImportRequest, background_tasks: BackgroundTasks):
     """
     Fetch Chess.com games by username, store PGNs, optionally analyze.
 
-    Phase 1: imports last archives, parses PGN via python-chess, stores metadata.
+    The newest FIRST_READ_GAMES are stored and queued before the request answers; older months are fetched and
+    queued in the background (plan 3.1, services/importer.py).
     """
     user_id = resolve_user_id(body.user_id)
     username = normalize_chess_com_username(body.username)
@@ -72,23 +75,11 @@ async def import_games(body: ImportRequest, background_tasks: BackgroundTasks):
             username=username,
         )
 
-    games = []
     try:
-        for archive_url in archives:
-            batch = await chess_com.fetch_games_from_archive(archive_url)
-            games.extend(batch)
-            if body.max_games is not None and len(games) >= body.max_games:
-                break
+        first = await importer.chess_com_first(username, user_id, archives, body.max_games)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Chess.com API error: {exc}") from exc
-
-    if body.max_games is not None:
-        games = games[: body.max_games]
-    stored = await game_store.store_imported_games(
-        username=username,
-        user_id=user_id,
-        games=games,
-    )
+    stored = first["stored"]
 
     msg = f"Imported {stored} games for '{username}'."
     if body.analyze and stored > 0:
@@ -97,6 +88,12 @@ async def import_games(body: ImportRequest, background_tasks: BackgroundTasks):
             user_id=user_id, username=username, limit=stored,
         )
         msg += " Analysis started in background."
+    if first["rest"]:
+        background_tasks.add_task(
+            importer.chess_com_backfill, username, user_id, first["rest"], first["left"],
+            analysis_service.analyze_pending if body.analyze else None, first["skip"],
+        )
+        msg += " Older games are importing in the background."
 
     return ImportResponse(imported=stored, message=msg, username=username)
 
@@ -106,15 +103,11 @@ async def import_lichess_games(body: ImportRequest, background_tasks: Background
     """Fetch a user's recent **finished** Lichess games, store them, optionally analyze."""
     user_id = resolve_user_id(body.user_id)
     username = normalize_lichess_username(body.username)
+    wanted = body.max_games or 200
     try:
-        raw_games = await lichess.fetch_games(username, max_games=body.max_games or 200)
+        stored = await importer.lichess_first(username, user_id, wanted)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Lichess API error: {exc}") from exc
-
-    parsed = [game for raw in raw_games if (game := parse_lichess_game(raw, username))]
-    stored = await game_store.store_parsed_games(
-        username=username, parsed_games=parsed, source="lichess", user_id=user_id
-    )
     msg = f"Imported {stored} Lichess games for '{username}'."
     if body.analyze and stored > 0:
         queue_analysis(
@@ -122,6 +115,11 @@ async def import_lichess_games(body: ImportRequest, background_tasks: Background
             user_id=user_id, username=username, limit=stored,
         )
         msg += " Analysis started in background."
+    if wanted > FIRST_READ_GAMES:
+        # The newest come first (plan 3.1); the rest follow in the background.
+        background_tasks.add_task(
+            importer.lichess_backfill, username, user_id, wanted, analysis_service.analyze_pending if body.analyze else None
+        )
     return ImportResponse(imported=stored, message=msg, username=username)
 
 

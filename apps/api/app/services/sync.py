@@ -95,9 +95,19 @@ class SyncService:
             "lastSyncErrors": prefs.get("lastSyncErrors") or [],
             "pending": count("pending"),
             "processing": count("processing"),
+            "firstReadSeconds": first_read_seconds(prefs),
             "autoSync": settings.auto_sync_enabled,
             "chaosPass": settings.position_evals_enabled,
         }
+
+
+def first_read_seconds(prefs: dict) -> int | None:
+    """Seconds from the first import to the first completed analysis (plan 3.1); None until both happened."""
+    start, done = prefs.get("firstImportAt"), prefs.get("firstReadAt")
+    if not start or not done:
+        return None
+    delta = datetime.fromisoformat(done) - datetime.fromisoformat(start)
+    return max(0, int(delta.total_seconds()))
 
 
 def owners_to_sync(local_user_id: str | None) -> list[str]:
