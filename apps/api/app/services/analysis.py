@@ -146,10 +146,16 @@ class AnalysisService:
         busy with this game, and the game's end (finished, failed, or finished from a node's search) is an event.
         """
         started = time.monotonic()
+        claim = {"ours": False}  # set once this call has flipped the game to 'processing'
         with monitor.track_game(game_id) as tracker:
             try:
-                result = await self._analyze_game(game_id)
+                result = await self._analyze_game(game_id, claim)
             except Exception as exc:
+                # Only the call that claimed the game may hand it back: a caller that failed before claiming (a
+                # database timeout reading the row) would otherwise requeue a game another worker is analysing,
+                # and it would be analysed twice.
+                if claim["ours"]:
+                    self._release(game_id, exc)
                 monitor.background(monitor.event, "game_failed", monitor.MACHINE, tracker.slot, game_id)
                 logger.debug("monitor: game %s failed: %s", game_id, exc)
                 raise
@@ -161,7 +167,7 @@ class AnalysisService:
             )
         return result
 
-    async def _analyze_game(self, game_id: str) -> dict | None:
+    async def _analyze_game(self, game_id: str, claim: dict | None = None) -> dict | None:
         sb = get_supabase()
         res = sb.table("games").select("*").eq("id", game_id).maybe_single().execute()
         if not res or not res.data:
@@ -181,6 +187,8 @@ class AnalysisService:
             claimed = sb.table("games").update({"analysis_status": "processing"}).eq("id", game_id).eq("analysis_status", "pending").execute()
             if not claimed.data:
                 return None
+            if claim is not None:
+                claim["ours"] = True
         elif row.get("analysis_status") == "processing":
             return None  # someone is on it (a crash's leftovers go back to pending at startup)
         else:
@@ -191,6 +199,8 @@ class AnalysisService:
             )
             if not claimed.data:
                 return None
+            if claim is not None:
+                claim["ours"] = True
         tracker = monitor.current.get()
         if tracker:
             tracker.phase("searching", total=len(moves) + 1)
@@ -205,6 +215,8 @@ class AnalysisService:
             tries = _attempts[game_id] = _attempts.get(game_id, 0) + 1
             retry = is_transient(exc) and tries < MAX_ATTEMPTS
             sb.table("games").update({"analysis_status": "pending" if retry else "failed"}).eq("id", game_id).execute()
+            if claim is not None:
+                claim["ours"] = False  # settled here: nothing left to hand back
             raise
 
         # Clear prior moves if re-analyzing
@@ -504,10 +516,9 @@ class AnalysisService:
         results = []
         for row, outcome in zip(res.data or [], outcomes):
             if isinstance(outcome, BaseException):
-                # One bad game must not stop the batch. An engine failure already marked it failed; a failure
-                # while storing results left it 'processing', where nothing would ever pick it up again.
+                # One bad game must not stop the batch. analyze_game already handed the game back if it had
+                # claimed it (a failure while storing results would otherwise leave it 'processing' for good).
                 logger.error("Analysis failed for game %s: %s", row["id"], outcome)
-                self._release(row["id"], outcome)
             elif outcome:
                 results.append(outcome)
         return results

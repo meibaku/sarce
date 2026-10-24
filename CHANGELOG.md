@@ -5,6 +5,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Fixed
+- A game could be analysed twice: the queue, failing to read a game (a database timeout under load), put it back
+  to pending while the node-finisher was analysing it. Only the call that claimed a game hands it back now
 - Analysis monitor: the chart spans the history actually there (not a fixed day, which squeezed a fresh monitor
   into a spike at the edge), leaves out the bucket still filling, adds a total line, time and rate axes, and hover
   values; the server's own games and stalls are logged against their engine, so every engine row lists its events;

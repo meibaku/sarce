@@ -227,3 +227,25 @@ def test_the_server_can_set_node_engines():
         after = nodes.NodeService().config()
     nodes.bundle.cache_clear()
     assert after["workers"] == 7 and after["version"] != before["version"]  # nodes restart with the new count
+
+
+def test_only_the_claiming_call_hands_a_game_back():
+    import asyncio
+
+    from app.services.analysis import AnalysisService
+
+    async def fails_before_claim(game_id, claim=None):
+        raise TimeoutError("statement timeout reading the row")
+
+    async def fails_after_claim(game_id, claim=None):
+        claim["ours"] = True
+        raise TimeoutError("statement timeout storing moves")
+
+    service = AnalysisService.__new__(AnalysisService)
+    with patch("app.services.monitor.get_supabase", return_value=MagicMock()), patch.object(AnalysisService, "_release") as release:
+        for fn, expected in ((fails_before_claim, False), (fails_after_claim, True)):
+            release.reset_mock()
+            service._analyze_game = fn
+            with pytest.raises(TimeoutError):
+                asyncio.run(service.analyze_game("g"))
+            assert release.called is expected  # before claiming, someone else may be analysing it

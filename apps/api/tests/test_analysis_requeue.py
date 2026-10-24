@@ -55,15 +55,17 @@ def test_transient_errors():
 def test_a_storage_timeout_sends_the_game_back_to_pending(monkeypatch):
     db = FakeGames({"g1": "pending", "g2": "pending"})
     monkeypatch.setattr(analysis, "get_supabase", lambda: db)
+    monkeypatch.setattr("app.services.monitor.get_supabase", lambda: types.SimpleNamespace(table=lambda _n: db))
     service = AnalysisService.__new__(AnalysisService)
 
-    async def analyze_game(game_id):
+    async def claim_then_fail(game_id, claim=None):
         db.rows[game_id] = "processing"
+        claim["ours"] = True
         if game_id == "g1":
             raise APIError({"message": "canceling statement due to statement timeout", "code": "57014"})
         raise KeyError("a real bug")
 
-    service.analyze_game = analyze_game
+    service._analyze_game = claim_then_fail
     asyncio.run(service.analyze_pending())
     assert db.rows == {"g1": "pending", "g2": "failed"}
 
