@@ -4,6 +4,20 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Fixed
+- Tal benchmark (review F6): `process_tal_benchmark` now runs the same pipeline as a player's games (the shared
+  engine search, classification, then the find-rate and real-offer post-pass), on an evenly spaced sample across
+  the career, skipping games Tal isn't in. It used to classify the first N games with no find-rate rule and fell
+  back to a guessed colour
+
+### Added
+- `brilliant_clauses()`: each Brilliant clause on its own (real sacrifice, sound, not already winning, not
+  forced, hard to find); `is_brilliant_move` is now built on it
+- `services/brilliant_benchmark.py` and `scripts/benchmark_brilliant_v3.py`: Brilliant % under rule v3 with a
+  game-level bootstrap interval, and the first clause stopping each real sacrifice, for a reference player (engine)
+  and for you (stored data, seconds). Locally (1,626 games): your Brilliant is 0.02% (0.01–0.04%). Of 489 real
+  sacrifices, 440 failed "sound" and 31 came when already winning; 11 reached the find-rate clause
+
 ### Added
 - `docs/IMPLEMENTATION_PLAN.md`: every suggestion from the October review and its companion docs as ordered work
   items (phases 1–5), with size, dependencies, ADR/engine/data needs and the decisions only the owner can make.
@@ -148,6 +162,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   service must share its source; compatible with python-chess (GPL-3.0+)
 
 ### Removed
+- Style profile (review F11b): the one-word style label ("Sacrificial tactician", "Balanced improver", …) is gone.
+  Its thresholds were hand-cut and never validated, and no screen showed it; style is the fingerprint on You
 - The pre-v1 dashboard at `/lab` and the components only it used (ADR 0005); the Brilliant headline contract now
   checks Home; sign-in status moved to Settings
 

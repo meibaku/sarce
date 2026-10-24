@@ -116,6 +116,35 @@ def has_reasonable_alternatives(board: chess.Board, move: chess.Move) -> bool:
     return len(legal) > 1 and move in legal
 
 
+CLAUSES = ("real_sacrifice", "sound", "not_already_winning", "not_forced", "hard_to_find")
+
+
+def brilliant_clauses(
+    board: chess.Board,
+    move: chess.Move,
+    eval_before: float | None,
+    eval_after: float | None,
+    best_eval: float | None,
+    probs: dict[str, float] | None = None,
+) -> dict[str, bool | None]:
+    """
+    Each Brilliant clause on its own, in CLAUSES order: True/False, or None when it can't be judged (no evaluation,
+    or no human-model data for the find-rate clause). `is_brilliant_move` is the first four; the find-rate clause
+    (ADR 0004) is applied afterwards by the post-pass. Used to show which clause stops a move (review F6).
+    """
+    real = material_sacrifice(board, move) >= MIN_BRILLIANT_SACRIFICE_VALUE and real_offer(board, move) >= MIN_BRILLIANT_SACRIFICE_VALUE
+    has_evals = eval_before is not None and eval_after is not None and best_eval is not None
+    # Keep Brilliant above the normal "good move" band even if env margin is looser.
+    allowed_eval_loss = min(settings.brilliant_eval_margin, MAX_BRILLIANT_EVAL_LOSS)
+    return {
+        "real_sacrifice": real,  # ADR 0007: a minor piece or more genuinely on offer
+        "sound": abs(eval_after - best_eval) <= allowed_eval_loss if has_evals else None,
+        "not_already_winning": eval_before <= settings.brilliant_winning_margin if has_evals else None,
+        "not_forced": has_reasonable_alternatives(board, move),
+        "hard_to_find": hard_to_find(probs, move.uci()),
+    }
+
+
 def is_brilliant_move(
     board: chess.Board,
     move: chess.Move,
@@ -124,33 +153,17 @@ def is_brilliant_move(
     best_eval: float | None,
 ) -> bool:
     """
-    Tal-specific brilliant detection. ALL conditions must hold:
+    Tal-specific brilliant detection. ALL conditions must hold (see `brilliant_clauses`):
 
     1. Real piece sacrifice (minor piece or larger, not a pawn), genuinely on offer (ADR 0007)
     2. Eval after move within excellent-or-better margin of best available
     3. Position not already crushing (+3 pawns default)
     4. Not a forced-only move
 
+    The find-rate clause (ADR 0004) is applied afterwards by brilliant_find_rate.
     Thresholds: BRILLIANT_EVAL_MARGIN, BRILLIANT_WINNING_MARGIN in .env
     """
     if eval_before is None or eval_after is None or best_eval is None:
         return False
-
-    if material_sacrifice(board, move) < MIN_BRILLIANT_SACRIFICE_VALUE:
-        return False
-    # ADR 0007: the piece must really be on offer, not just a square a reply could reach.
-    if real_offer(board, move) < MIN_BRILLIANT_SACRIFICE_VALUE:
-        return False
-
-    # Keep Brilliant above the normal "good move" band even if env margin is looser.
-    allowed_eval_loss = min(settings.brilliant_eval_margin, MAX_BRILLIANT_EVAL_LOSS)
-    if abs(eval_after - best_eval) > allowed_eval_loss:
-        return False
-
-    if eval_before > settings.brilliant_winning_margin:
-        return False
-
-    if not has_reasonable_alternatives(board, move):
-        return False
-
-    return True
+    clauses = brilliant_clauses(board, move, eval_before, eval_after, best_eval)
+    return all(clauses[c] for c in CLAUSES[:4])
