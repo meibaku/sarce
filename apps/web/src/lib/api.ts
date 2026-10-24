@@ -65,9 +65,13 @@ export async function deleteScoutingReport(id: string) {
 
 export { LOCAL_USER_ID };
 
-export async function getHome(username?: string) {
-  const params = username ? `?username=${encodeURIComponent(username)}` : "";
-  return fetchApi<import("@/types/chess").HomeApi>(`/users/home${params}`);
+/** `since`: your last visit (ISO); Home then also returns `session`, the games analysed after it. */
+export async function getHome(username?: string, since?: string) {
+  const params = new URLSearchParams();
+  if (username) params.set("username", username);
+  if (since) params.set("since", since);
+  const query = params.toString();
+  return fetchApi<import("@/types/chess").HomeApi>(`/users/home${query ? `?${query}` : ""}`);
 }
 
 export async function getGameSummary(gameId: string) {

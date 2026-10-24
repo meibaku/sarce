@@ -7,6 +7,7 @@ Phase 1 pipeline: pending game → Stockfish → game_moves + game_analyses → 
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timezone
 import io
 import logging
 
@@ -210,7 +211,7 @@ class AnalysisService:
             on_conflict="game_id",
         ).execute()
 
-        sb.table("games").update({"analysis_status": "complete"}).eq("id", game_id).execute()
+        sb.table("games").update({"analysis_status": "complete", "analysed_at": datetime.now(timezone.utc).isoformat()}).eq("id", game_id).execute()
         self._first_read(row.get("user_id"))
 
         await self.baseline.recompute_baseline(

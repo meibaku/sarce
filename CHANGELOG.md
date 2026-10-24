@@ -11,6 +11,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- On top of the sites (plan 3.4a): Review links the move on the board to the same move on Chess.com (`?move=N`) or
+  Lichess (`#N`), web and Expo. Home opens with a line for the games analysed since your last visit ("6 games
+  analysed, 2 that felt like you, 1 real problem set"), counted by when analysis finished (`games.analysed_at`,
+  new); `/users/home?since=` returns `session`
 - Chaos budget (plan 3.9): Summary shows what setting problems cost in a game and what your opponent's replies gave
   back ("chaos budget · 0.27 risked · 0.40 came back", expected points), and You shows the last 20 games. The chaos
   lens now stores the opponent's actual reply and its EP loss (version 3); re-score with `scripts/rescore_lenses.py`
