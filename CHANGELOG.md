@@ -13,6 +13,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- Analysis monitor in the terminal (dev mode, part 3): `scripts/monitor_tui.py`, a Textual dashboard with the web
+  page's data and no flicker: queue, speed and time to go; each machine; each engine's game, positions, elapsed, ETA,
+  CPU and memory; games per 10 minutes on a shared time axis; alerts; and the picked engine's events or the feed by
+  machine. Optional install (`requirements-monitor.txt`), not in CI or on nodes
 - Analysis monitor page (dev mode, part 2): Settings → Developer mode opens `/dev/monitor`, updated live over
   server-sent events with no flicker: the queue, speed and time to go; each machine (CPU, memory, uptime, rate) with
   its engines per game (opponent, colour, time control, positions with a bar, elapsed, ETA, CPU, memory), expandable
