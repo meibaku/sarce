@@ -27,3 +27,21 @@ def test_board_before_and_drills_are_first_in_train():
     pgn = '[Event "?"]\n\n1. e4 e5 2. Nf3 *'
     assert q.board_before(pgn, 2).fen().startswith("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w")
     assert q.board_before(pgn, 9) is None
+
+
+def test_quest_drills_come_before_the_round_robin():
+    from unittest.mock import MagicMock
+
+    from app.services.train import TrainService
+
+    quest = [{"key": f"quest:g:{i}", "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1", "source": "quest"} for i in range(3)]
+    with patch("app.services.train.get_supabase") as sb, patch("app.services.train.your_openings", return_value=[]), patch(
+        "app.services.train.reference_items", return_value=[]
+    ), patch("app.services.positions.PositionStore") as ps, patch("app.services.chaos_map.ChaosMapService") as cm:
+        sb.return_value = MagicMock()
+        sb.return_value.table.return_value.select.return_value.eq.return_value.order.return_value.limit.return_value.execute.return_value.data = []
+        sb.return_value.table.return_value.select.return_value.eq.return_value.gt.return_value.execute.return_value.data = []
+        ps.return_value.list.return_value = []
+        cm.return_value.get.return_value = []
+        out = TrainService().queue(None, "o", None, quest=quest)
+    assert [i["key"] for i in out["items"][:3]] == [q["key"] for q in quest]

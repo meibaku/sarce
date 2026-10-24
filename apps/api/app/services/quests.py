@@ -74,17 +74,19 @@ def quest_drills(user_id: str | None, trait: str, limit: int = QUEST_DRILLS) -> 
         title, detail = "Your almost-Brilliant move", "Your sacrifice here missed one Brilliant condition. Find the engine's choice, then compare it with yours."
     elif trait in LENS_DRILLS:
         lens, verdicts, title, detail = LENS_DRILLS[trait]
-        rows = sb.table("move_lens_scores").select("game_id, ply").in_("game_id", list(games)).eq("lens", lens).in_("verdict", list(verdicts)).execute().data or []
+        rows = paged(
+            lambda ids: sb.table("move_lens_scores").select("game_id, ply").in_("game_id", ids).eq("lens", lens).in_("verdict", list(verdicts)).order("game_move_id"),
+            list(games),
+        )
         chances = [(r["game_id"], r["ply"]) for r in rows]
     else:  # Calm: moves where the evaluation swung
         chances = [(r["game_id"], r["ply"]) for r in moves_with_signal(list(games), "evaluation_swing")]
         title, detail = "Keep it level", "The game swung after this move. Find the one that keeps it steady."
+    if not chances:
+        return []
     best = {
         (m["game_id"], m["ply"]): m
-        for m in (
-            sb.table("game_moves").select("game_id, ply, san, best_san").in_("game_id", list({g for g, _ in chances}) or ["-"]).execute().data
-            or []
-        )
+        for m in paged(lambda ids: sb.table("game_moves").select("game_id, ply, san, best_san").in_("game_id", ids).order("id"), list({g for g, _ in chances}))
     }
     items, seen_games = [], set()
     for game_id, ply in chances:
@@ -111,15 +113,24 @@ def quest_drills(user_id: str | None, trait: str, limit: int = QUEST_DRILLS) -> 
     return items
 
 
+def paged(build, game_ids: list[str], chunk: int = 20) -> list[dict]:
+    """Every row for these games: ids in chunks, each chunk read in pages (PostgREST caps a response at 1,000)."""
+    rows: list[dict] = []
+    for start in range(0, len(game_ids), chunk):
+        part = game_ids[start : start + chunk]
+        got: list[dict] = []
+        while True:
+            batch = build(part).range(len(got), len(got) + 999).execute().data or []
+            got += batch
+            if len(batch) < 1000:
+                break
+        rows += got
+    return rows
+
+
 def moves_with_signal(game_ids: list[str], prefix: str) -> list[dict]:
     """Your moves in these games carrying a signal that starts with `prefix` (signals is jsonb: filtered here)."""
-    rows: list[dict] = []
-    for start in range(0, len(game_ids), 20):
-        rows += (
-            get_supabase().table("game_moves").select("game_id, ply, signals").in_("game_id", game_ids[start : start + 20])
-            .order("ply").execute().data
-            or []
-        )
+    rows = paged(lambda ids: get_supabase().table("game_moves").select("game_id, ply, signals").in_("game_id", ids).order("id"), game_ids)
     return [r for r in rows if any(str(sig).startswith(prefix) for sig in r.get("signals") or [])]
 
 

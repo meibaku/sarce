@@ -308,7 +308,7 @@ class HomeService:
             "latest": self._latest(latest, [r for r in lens_rows if r["game_id"] == latest["id"]]),
             "brilliant": brilliant,
             "session": self._session(user_id, username, since),
-            "focus": self._focus(user_id),
+            "focus": self._focus(user_id, username),
             "stats": {
                 "streak": style_streak(games, real_by_game) if enough else None,
                 "real": real,
@@ -351,14 +351,14 @@ class HomeService:
                 real[r["game_id"]] = real.get(r["game_id"], 0) + 1
         return summarise_session(games, real)
 
-    def _focus(self, user_id: str | None) -> dict | None:
+    def _focus(self, user_id: str | None, username: str | None = None) -> dict | None:
         """This week's one trait (plan 3.2): the one you chose in the Recap, else the one with the most room."""
         from app.services.focus import FocusService
         from app.services.recap import RecapService
 
         try:
             chosen = RecapService().current_focus(user_id, "weekly") if user_id else None
-            return FocusService().weekly(user_id, chosen)
+            return FocusService().weekly(user_id, chosen, username)
         except Exception:
             return None  # the focus card is optional; Home must still load
 

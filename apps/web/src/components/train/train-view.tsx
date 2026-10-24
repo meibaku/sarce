@@ -24,6 +24,8 @@ const CONFIDENCE: [Confidence, string, string][] = [
 ];
 
 export function TrainView({ data, onAnswer, aiHelp = false }: { data: TrainApi; onAnswer: (key: string, c: Confidence) => Promise<unknown>; aiHelp?: boolean }) {
+  // Quest drills answered in this visit, on top of the count the queue arrived with.
+  const [questDone, setQuestDone] = useState(0);
   const [saved, setSaved] = useState(0);
   const [selected, setSelected] = useState(0);
   const [running, setRunning] = useState(false);
@@ -83,7 +85,7 @@ export function TrainView({ data, onAnswer, aiHelp = false }: { data: TrainApi; 
           </span>
           <span className="basis-full text-[13px] text-ink-2">
             {data.quest.drillCount
-              ? `${data.quest.done} of ${data.quest.drillCount} quest drills done; they're first in the queue.`
+              ? `${Math.min(data.quest.drillCount, data.quest.done + questDone)} of ${data.quest.drillCount} quest drills done; they're first in the queue.`
               : "No drills for it in your recent games yet."}
             {data.quest.reference ? ` ${data.quest.reference.axis}: ${data.quest.reference.player} ${data.quest.reference.theirs}, you ${data.quest.reference.yours}.` : ""}
           </span>
@@ -175,6 +177,7 @@ export function TrainView({ data, onAnswer, aiHelp = false }: { data: TrainApi; 
                       onClick={async () => {
                         setAnswered(value);
                         await onAnswer(current.key, value);
+                        if (current.source === "quest") setQuestDone((n) => n + 1);
                       }}
                       className={`h-11 flex-1 rounded-[6px] border-[1.5px] text-[13px] font-medium ${
                         answered === value ? "border-accent bg-accent-tint text-accent-text" : "border-line-2 bg-surface text-ink hover:bg-panel"
