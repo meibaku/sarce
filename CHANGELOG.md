@@ -159,6 +159,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   service must share its source; compatible with python-chess (GPL-3.0+)
 
 ### Removed
+- Style profile (review F11b): the one-word style label ("Sacrificial tactician", "Balanced improver", …) is gone.
+  Its thresholds were hand-cut and never validated, and no screen showed it; style is the fingerprint on You
 - The pre-v1 dashboard at `/lab` and the components only it used (ADR 0005); the Brilliant headline contract now
   checks Home; sign-in status moved to Settings
 

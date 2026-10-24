@@ -1,4 +1,9 @@
-"""Aggregate analyzed games into a player style profile."""
+"""
+Aggregate analyzed games into a player style profile: openings, phases, signals, results and quality mix.
+
+There is deliberately no one-word style label: the hand-cut thresholds it used were never validated (review
+F11b). Style is the fingerprint's traits on You; percentile traits replace them once validated (plan 2.4).
+"""
 
 from __future__ import annotations
 
@@ -25,39 +30,6 @@ def _pgn_opening(pgn_text: str) -> tuple[str | None, str]:
     return eco, opening
 
 
-def _classify_style(signal_counts: Counter[str], distribution: dict) -> str:
-    total_signals = sum(signal_counts.values()) or 1
-    tactical = (
-        signal_counts["tactical_resource"]
-        + signal_counts["breakthrough_sacrifice"]
-        + signal_counts["brilliant_sacrifice"]
-        + signal_counts["momentum_shift"]
-    )
-    sacrifice = (
-        signal_counts["sacrifice"]
-        + signal_counts["exchange_sacrifice"]
-        + signal_counts["breakthrough_sacrifice"]
-        + signal_counts["brilliant_sacrifice"]
-    )
-    clean = distribution.get("best", 0) + distribution.get("excellent", 0)
-    errors = (
-        distribution.get("inaccuracy", 0)
-        + distribution.get("mistake", 0)
-        + distribution.get("blunder", 0)
-        + distribution.get("miss", 0)
-    )
-
-    if sacrifice / total_signals >= 0.25:
-        return "Sacrificial tactician"
-    if tactical / total_signals >= 0.3:
-        return "Tactical pressure player"
-    if clean > errors * 2:
-        return "Technical converter"
-    if signal_counts["evaluation_swing"] + signal_counts["momentum_shift"] >= 3:
-        return "Volatile attacker"
-    return "Balanced improver"
-
-
 class StyleProfileService:
     async def get_profile(
         self,
@@ -82,7 +54,6 @@ class StyleProfileService:
         if not game_ids:
             return {
                 "gamesAnalyzed": 0,
-                "styleLabel": "No analyzed games",
                 "favoriteOpening": None,
                 "openings": [],
                 "phaseDistribution": {},
@@ -128,7 +99,6 @@ class StyleProfileService:
 
         return {
             "gamesAnalyzed": len(games),
-            "styleLabel": _classify_style(signal_counts, distribution),
             "favoriteOpening": opening_meta.get(favorite_opening) if favorite_opening else None,
             "openings": [
                 {**opening_meta[name], "games": count}
