@@ -5,7 +5,8 @@ The trap atlas (traps.py) is the defensive side: traps at your rating band to av
 your own finished games. For every move you play in the first MAX_PLY plies, the opponent's actual reply is
 compared with the stored engine lines for that position (`position_evals`, no new engine work): a reply that
 drops TRAP_CP or more below their best is a trap that caught them. Positions reached at least MIN_SEEN times are
-grouped and ranked by how many opponents they caught. Rebuilt on request and stored (`traps_set`).
+grouped and ranked by a cautious estimate of how often they catch opponents: the Wilson lower bound of caught/seen
+(review F7), so a 3-of-3 fluke doesn't outrank 20 of 40. Rebuilt on request and stored (`traps_set`).
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from app.config import settings
 from app.db.supabase import get_supabase
 from app.lenses.squeeze import line_cp
 from app.services.position_evals import fen_key
+from app.services.uncertainty import wilson
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +93,12 @@ def score_trap(entry: dict, lines: list[dict]) -> dict | None:
     }
 
 
+def likely_rate(caught: int, seen: int) -> float:
+    """The rate we can stand behind: the Wilson 95% lower bound of caught/seen (review F7, the winner's curse)."""
+    interval = wilson(caught, seen)
+    return round(interval[0], 3) if interval else 0.0
+
+
 def to_api(row: dict) -> dict:
     return {
         "fen": row["fen"],
@@ -99,6 +107,7 @@ def to_api(row: dict) -> dict:
         "seen": row["seen"],
         "caught": row["caught"],
         "rate": row["rate"],
+        "likely": likely_rate(row["caught"], row["seen"]),
         "gainPawns": round(row["gain_cp"] / 100, 1),
         "slip": row["slip"],
         "defence": row["defence"],
@@ -128,7 +137,7 @@ class TrapsSetService:
             found = score_trap(entry, evals.get(key, []))
             if found:
                 traps.append((key, entry, found))
-        traps.sort(key=lambda t: (-t[2]["caught"], -t[2]["rate"]))
+        traps.sort(key=lambda t: (-likely_rate(t[2]["caught"], t[1]["seen"]), -t[2]["caught"]))
         now = datetime.now(timezone.utc).isoformat()
         rows = [
             {
@@ -143,5 +152,5 @@ class TrapsSetService:
         return {"traps": len(rows), "positions": len(reached)}
 
     def get(self, owner_id: str) -> list[dict]:
-        rows = get_supabase().table("traps_set").select("*").eq("user_id", owner_id).order("caught", desc=True).execute().data or []
-        return [to_api(r) for r in rows]
+        rows = get_supabase().table("traps_set").select("*").eq("user_id", owner_id).execute().data or []
+        return sorted((to_api(r) for r in rows), key=lambda t: (-t["likely"], -t["caught"]))

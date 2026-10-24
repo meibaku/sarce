@@ -10,6 +10,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   F2, F4 and F12 are marked done; F6 moves to the front after F4 showed Brilliant at 0.01% under rule v3
 
 ### Changed
+- Traps (review F7, the winner's curse): Your traps and the trap atlas rank by a cautious estimate, the 95% lower
+  bound of how often a trap catches opponents, so a lucky 3 of 3 can't outrank 30 of 40. Your traps show "likely at
+  least N%" next to the raw rate; the atlas returns `seen` with each trap
 - Honest uncertainty (review F4), in a new `services/uncertainty.py`:
   - Brilliant % shows its Wilson 95% range ("likely 3.2–5.0%") on Home, You and Recap, web and phone.
   - The You trend is Brilliant % over rolling 20-game windows, drawn as a line in its shaded range, instead of one

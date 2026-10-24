@@ -58,7 +58,7 @@ class TestApi:
     def test_to_api_shape(self):
         row = build_traps([obs("g8f6", 0.9)] * 3)[0]
         assert to_api(row) == {
-            "fen": FEN, "band": 1200, "speed": "bullet", "frequency": 3,
+            "fen": FEN, "band": 1200, "speed": "bullet", "frequency": 3, "seen": 3,
             "commonReplyUci": "g8f6", "commonReplyShare": 1.0, "epLoss": 0.9,
             "bestReplyUci": "g7g6", "pFail": 0.6, "stake": 0.5, "eco": "C20",
         }
@@ -93,3 +93,10 @@ class TestShippedAtlas:
         assert traps and all(set(trap) == columns for trap in traps)
         assert all(trap["ep_loss"] >= 0.20 and trap["frequency"] >= 3 for trap in traps)
         assert len({(t["fen_key"], t["band"], t["speed"]) for t in traps}) == len(traps)
+
+
+def test_a_rare_perfect_trap_does_not_outrank_a_well_seen_one():
+    # 3 of 3 is likely luck next to 30 of 40 with the same loss (review F7).
+    rare = [obs("g8f6", 0.5, key="rare")] * 3
+    common = [obs("g8f6", 0.5, key="common")] * 30 + [obs("g7g6", 0.0, key="common")] * 10
+    assert [t["fen_key"] for t in build_traps(rare + common)] == ["common", "rare"]
