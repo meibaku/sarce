@@ -379,6 +379,8 @@ export interface ReviewMoment extends HomeMoment {
 
 export interface ReviewApi {
   gameId: string;
+  /** Real sacrifices that missed exactly one Brilliant clause (plan 3.3). */
+  almostBrilliant?: { ply: number; label: string; clause: string; line: string }[];
   opponent: string | null;
   result: "win" | "loss" | "draw" | null;
   userColor: "white" | "black" | null;

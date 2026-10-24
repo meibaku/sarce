@@ -213,3 +213,45 @@ def is_brilliant_move(
         return False
     clauses = brilliant_clauses(board, move, eval_before, eval_after, best_eval, alternatives=alternatives)
     return all(clauses[c] for c in BOARD_CLAUSES)
+
+
+# "Almost Brilliant" (plan 3.3): a real sacrifice that missed exactly one clause, named in the player's words.
+NEAR_PREFIX = "near_brilliant:"
+NEAR_COPY = {
+    "sound": "it gave a little more than the best move",
+    "not_lost": "the game was already lost",
+    "not_already_winning": "you were already winning",
+    "not_forced": "every other move was clearly worse, so it was forced",
+    "hard_to_find": "most players at your rating would find it",
+}
+
+
+def near_miss(clauses: dict[str, bool | None]) -> str | None:
+    """The one clause a real sacrifice missed, or None (not a real sacrifice, Brilliant, or two or more missed)."""
+    if not clauses.get("real_sacrifice"):
+        return None
+    missed = [c for c in CLAUSES[1:] if clauses.get(c) is False]
+    return missed[0] if len(missed) == 1 else None
+
+
+def definition() -> dict:
+    """The rule in plain words with the thresholds the code uses (the public definition page)."""
+    return {
+        "rule": "v4",
+        "clauses": [
+            {"id": "real_sacrifice", "title": "A real sacrifice", "text": f"You offer at least {MIN_BRILLIANT_SACRIFICE_VALUE} points of material (a minor piece or more) that is really on offer: attacked by something cheaper, or undefended. Pawns alone don't count."},
+            {"id": "sound", "title": "It holds up", "text": f"The move costs at most {SOUND_EP_LOSS:.2f} expected points against the best move: no more than {round(SOUND_EP_LOSS * 100)} points off your winning chances."},
+            {"id": "not_lost", "title": "The game is still open", "text": f"You still had at least {round(LOST_EP * 100)}% winning chances before the move."},
+            {"id": "not_already_winning", "title": "Not already won", "text": f"You weren't already more than {settings.brilliant_winning_margin:g} pawns up."},
+            {"id": "not_forced", "title": "A real choice", "text": f"Another move kept you within {ALTERNATIVE_EP:.2f} expected points of the best, so you chose the sacrifice."},
+            {"id": "hard_to_find", "title": "Hard to find", "text": f"At most {round(FIND_RATE_MAX * 100)}% of players at your rating would play it, by the human model."},
+        ],
+        "thresholds": {
+            "minSacrifice": MIN_BRILLIANT_SACRIFICE_VALUE,
+            "soundEpLoss": SOUND_EP_LOSS,
+            "lostEp": LOST_EP,
+            "winningPawns": settings.brilliant_winning_margin,
+            "alternativeEp": ALTERNATIVE_EP,
+            "findRateMax": FIND_RATE_MAX,
+        },
+    }

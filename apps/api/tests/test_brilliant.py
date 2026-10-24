@@ -146,3 +146,26 @@ class TestRuleV4:
         assert self.clauses(0.5, 0.5, 0.5, [("h5f7", 0.5), ("h5h4", 0.3)])["not_forced"] is True
         # No lines for any other move: more than one legal move is enough.
         assert self.clauses(0.5, 0.5, 0.5, [("h5f7", 0.5)])["not_forced"] is True
+
+
+def test_near_miss_names_the_one_clause_a_real_sacrifice_missed():
+    from app.services.brilliant import near_miss
+
+    ok = {"real_sacrifice": True, "sound": True, "not_lost": True, "not_already_winning": True, "not_forced": True, "hard_to_find": True}
+    assert near_miss({**ok, "sound": False}) == "sound"
+    assert near_miss({**ok, "hard_to_find": False}) == "hard_to_find"
+    assert near_miss({**ok, "hard_to_find": None, "not_forced": False}) == "not_forced"  # unknown isn't a miss
+    assert near_miss({**ok, "sound": False, "not_lost": False}) is None  # two missed: not "almost"
+    assert near_miss({**ok, "real_sacrifice": False, "sound": False}) is None
+    assert near_miss(ok) is None
+
+
+def test_public_definition_reads_the_thresholds():
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+    from app.services.brilliant import SOUND_EP_LOSS
+
+    body = TestClient(app).get("/public/brilliant/definition").json()
+    assert body["rule"] == "v4" and body["thresholds"]["soundEpLoss"] == SOUND_EP_LOSS
+    assert [c["id"] for c in body["clauses"]][:2] == ["real_sacrifice", "sound"]

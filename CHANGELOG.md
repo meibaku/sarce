@@ -11,6 +11,11 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- Brilliant disagreements, part 1 (plan 3.3): a real sacrifice that misses exactly one Brilliant clause is marked
+  "almost Brilliant" (`near_brilliant:<clause>` signal, set by the rule pass) and Review names the clause ("it gave a
+  little more than the best move"), web and Expo. Every `!!` links to a public page, `/brilliant`, that lists the six
+  clauses with the thresholds read from the API (`GET /public/brilliant/definition`), so it can't drift from the rule.
+  `backfill_brilliant_find_rate --all` re-judges games already on the current version
 - A personal next band (plan 1.3): Home and Settings show a dashed step on the Brilliant gauge, from just above your
   likely range (its 95% upper bound) to half as much again, on the way to the goal band, with one line naming it.
   Web and Expo; `/users/home` returns `nextLo`/`nextHi`. Hidden within half a point of the goal

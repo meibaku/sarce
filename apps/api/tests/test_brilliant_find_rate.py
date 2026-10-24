@@ -48,3 +48,15 @@ def test_rejudge_promotes_and_demotes_from_stored_data():
     # Easy to find at your rating: back to its centipawn quality.
     updated, changed = rule.rejudge([{**row, "is_brilliant": True, "quality": "brilliant"}], [(board, sac)], lambda ply: {"h5f7": 0.6})
     assert changed == 1 and not updated[0]["is_brilliant"] and updated[0]["quality"] == "best"
+
+
+def test_rejudge_marks_an_almost_brilliant_move():
+    import chess
+
+    board = chess.Board("rnb1kb1r/pppp1ppp/5n2/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQkq - 0 3")
+    row = {"ply": 0, "uci": "h5f7", "best_uci": "h5f7", "cp_loss": 0, "eval_before": 0.3, "eval_after": 0.3,
+           "pv": [{"uci": "h5f7", "eval": 0.3}, {"uci": "h5h4", "eval": 0.2}], "quality": "best", "is_brilliant": False, "signals": ["sacrifice"]}
+    updated, _ = rule.rejudge([row], [(board, chess.Move.from_uci("h5f7"))], lambda ply: {"h5f7": 0.6})
+    assert not updated[0]["is_brilliant"] and updated[0]["signals"] == ["sacrifice", "near_brilliant:hard_to_find"]
+    again, changed = rule.rejudge(updated, [(board, chess.Move.from_uci("h5f7"))], lambda ply: {"h5f7": 0.6})
+    assert changed == 0 and again[0]["signals"] == updated[0]["signals"]

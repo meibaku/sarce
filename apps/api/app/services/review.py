@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from app.services.brilliant import NEAR_COPY, NEAR_PREFIX
 from app.services.rating_map import opponent_model_elo
 from app.db.supabase import get_supabase
 from app.services.distraction import flagged_plies
@@ -220,6 +221,13 @@ class ReviewService:
             "timeControl": format_time_control(game.get("time_control")),
             "calibrated": calibrated,
             "initialFen": initial_fen,
+            # Real sacrifices that missed exactly one Brilliant clause (plan 3.3).
+            "almostBrilliant": [
+                {"ply": m["ply"], "label": move_label(m["ply"], m.get("san")), "clause": s[len(NEAR_PREFIX):], "line": f"Almost Brilliant: {NEAR_COPY.get(s[len(NEAR_PREFIX):], 'one clause missed')}."}
+                for m in moves
+                for s in (m.get("signals") or [])
+                if s.startswith(NEAR_PREFIX)
+            ],
             "positions": [{"ply": p["ply"], "san": p["san"], "uci": p["uci"], "fen": p["fen"]} for p in line],
             "moments": moments,
             "closingOut": closing,

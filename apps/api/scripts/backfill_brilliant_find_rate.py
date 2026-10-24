@@ -24,6 +24,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[1])
     parser.add_argument("--limit", type=int, default=0, help="Games to read (0 = all)")
     parser.add_argument("--dry-run", action="store_true", help="List the games without changing them")
+    parser.add_argument("--all", action="store_true", help="Re-judge every game, even those on the current version")
     args = parser.parse_args()
 
     rows: list[dict] = []
@@ -48,7 +49,7 @@ def main() -> None:
     for row in rows:
         a = row.get("game_analyses")
         vector = (a[0] if isinstance(a, list) and a else a or {}).get("style_vector") or {}
-        if vector.get("version") != VERSION:
+        if args.all or vector.get("version") != VERSION:
             todo.append(row)
     print(f"{len(todo)} of {len(rows)} games need Brilliant rule {VERSION}")
     if args.dry_run:

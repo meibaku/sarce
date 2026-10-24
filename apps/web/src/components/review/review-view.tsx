@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FallsChart, IdeaArcs } from "@/components/review/charts";
 import { WhyPanel } from "@/components/review/why-panel";
@@ -164,6 +165,29 @@ export function ReviewView({
             label={current ? `Position after ${current.label}` : "Starting position"}
           />
           {!twoMove && <IdeaArcs ideas={data.ideas} plies={data.positions.length} />}
+          {current?.glyph === "!!" && (
+            <Link href="/brilliant" className="self-start font-mono text-[11px] text-accent-text underline-offset-2 hover:underline">
+              Sarce Brilliant · what that means
+            </Link>
+          )}
+          {!twoMove && data.almostBrilliant && data.almostBrilliant.length > 0 && (
+            // Real sacrifices one clause short of Brilliant: the clause named, the checklist in Why this move?.
+            <section className="flex flex-col gap-1 rounded-[8px] border border-line bg-surface px-4 py-3">
+              <span className="font-mono text-[11px] text-muted">Almost Brilliant</span>
+              {data.almostBrilliant.map((a) => (
+                <button
+                  key={a.ply}
+                  type="button"
+                  onClick={() => setViewPly(a.ply)}
+                  aria-pressed={viewPly === a.ply}
+                  className={`tap grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] items-baseline gap-3 rounded-[4px] px-1 py-[3px] text-left text-[12px] ${viewPly === a.ply ? "bg-accent-tint" : "hover:bg-panel"}`}
+                >
+                  <span className="font-mono font-medium">{a.label}</span>
+                  <span className="text-ink-2">{a.line}</span>
+                </button>
+              ))}
+            </section>
+          )}
           {!twoMove && data.theirIdeas && data.theirIdeas.length > 0 && (
             // Prophylaxis lens: real threats taken away with a quiet move, or let through.
             <section className="flex flex-col gap-1 rounded-[8px] border border-line bg-surface px-4 py-3">
