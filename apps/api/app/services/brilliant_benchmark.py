@@ -70,7 +70,7 @@ def outcome(clauses: dict[str, bool | None]) -> str:
 
 
 def even_sample(corpus: list[str], n: int) -> list[str]:
-    """n games evenly spaced across the whole corpus (in date order), first to last."""
+    """One game from the start of each of n equal slices of the corpus (in date order), so every era is sampled."""
     if len(corpus) <= n:
         return list(corpus)
     return [corpus[i * len(corpus) // n] for i in range(n)]
