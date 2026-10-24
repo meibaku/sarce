@@ -52,7 +52,8 @@ scheduled task that starts at boot, before anyone logs in. The log is `C:\SarceN
 
 **No internet on the node?** Build an offline kit on the server once: a folder with the Python 3.12.10 installer,
 the node's wheels (`pip download -r apps/node/requirements-node.txt pip --only-binary=:all: --platform win_amd64
---python-version 3.12 -d wheels`), the Stockfish zip, and a `SHA256SUMS.txt` listing all of them. Share the folder
+--python-version 3.12 -d wheels`), the Stockfish zip, and a `SHA256SUMS.txt` listing all of them. `SHA256SUMS.txt` uses `sha256sum`'s format: the hash, two spaces, then the path relative to the kit with forward
+slashes (`wheels/pydantic_core-….whl`). Share the folder
 and add `-Kit \\SERVER\SarceNodeKit` to the install command. The installer checks every file against the sums and
 installs with nothing from the internet. It keeps the wheels in `C:\SarceNode\wheels`, so updates stay offline
 too. The node needs only four small packages: python-chess, pydantic, pydantic-settings, python-dotenv.
@@ -75,6 +76,19 @@ it's complete, and restarts. There's nothing to do on the desktop.
 
 The main API (with `NODE_TOKEN` set) analyses every 20 seconds the games nodes have finished searching. Every
 position is cached by then, so each takes seconds, even with automatic sync off.
+
+## Watching it
+
+On the node, open **Sarce Node status** from the Desktop (or run `C:\SarceNode\node\status.ps1`). It redraws every
+2 seconds and shows:
+- the link to the server;
+- the whole queue (done, left, failed, percent, and the time to go at the last hour's pace);
+- games per hour for each machine and for the server's own engine;
+- each local engine's game, with a progress bar through its positions;
+- CPU and memory, and the last log line.
+
+It reads small files the node writes in `C:\SarceNode\status` (the server's summary every 5 seconds, cached by the
+gateway), so it needs neither the token nor admin rights, and it adds no load to the server.
 
 ## Checking
 

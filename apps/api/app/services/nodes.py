@@ -13,6 +13,8 @@ from __future__ import annotations
 import hashlib
 import hmac
 import io
+import threading
+import time
 import zipfile
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
@@ -27,6 +29,9 @@ from app.services.position_evals import fen_key
 from app.services.threats import THREAT_NODES
 
 TABLE = "node_leases"
+STATUS_S = 4  # how long the status summary is reused
+_status: tuple[float, dict] | None = None
+_status_lock = threading.Lock()
 LEASE_S = 300  # no heartbeat for this long and the game goes back to the pool
 CHUNK = 60  # keys per `in` filter
 API_DIR = Path(__file__).resolve().parents[2]  # apps/api
@@ -144,16 +149,69 @@ class NodeService:
         ids = {r["id"] for r in pending}
         return [g for g in done if g in ids]
 
-    def status(self) -> list[dict]:
-        """Per node: games finished in the last hour and whether it's searching now (for Settings)."""
-        since = (now() - timedelta(hours=1)).isoformat()
-        rows = get_supabase().table(TABLE).select("node, done_at, heartbeat_at").gt("heartbeat_at", since).execute().data or []
-        out: dict[str, dict] = {}
-        for r in rows:
-            entry = out.setdefault(r["node"], {"node": r["node"], "gamesLastHour": 0, "active": False})
-            entry["gamesLastHour"] += 1 if r.get("done_at") else 0
-            entry["active"] = entry["active"] or not r.get("done_at")
-        return sorted(out.values(), key=lambda e: e["node"])
+    def status(self) -> dict:
+        """
+        The whole picture for a node's status window: the analysis queue, games per hour (all, split into the
+        server's own engine and the nodes, by the same event: a game's analysis completing), work per machine today
+        and in the last hour, and the time left at that pace. Cached STATUS_S behind a lock, so any number of windows
+        refreshing every couple of seconds share one set of queries.
+        """
+        global _status
+        with _status_lock:
+            if _status and time.monotonic() - _status[0] < STATUS_S:
+                return _status[1]
+            result = self._status()
+            _status = (time.monotonic(), result)
+            return result
+
+    def _status(self) -> dict:
+        sb = get_supabase()
+
+        def count(status: str) -> int:
+            return sb.table("games").select("id", count="exact").eq("analysis_status", status).limit(1).execute().count or 0
+
+        def paged(build) -> list[dict]:
+            rows: list[dict] = []
+            while True:
+                batch = build().range(len(rows), len(rows) + 999).execute().data or []
+                rows += batch
+                if len(batch) < 1000:
+                    return rows
+
+        queue = {s: count(s) for s in ("pending", "processing", "complete", "failed")}
+        current = now()
+        hour_ago = (current - timedelta(hours=1)).isoformat()
+        midnight = current.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        since = min(hour_ago, midnight)  # the rolling hour reaches into yesterday just after midnight
+        live_after = (current - timedelta(seconds=LEASE_S)).isoformat()
+        leases = paged(lambda: sb.table(TABLE).select("game_id, node, done_at, heartbeat_at, positions").gt("heartbeat_at", since).order("game_id"))
+        machines: dict[str, dict] = {}
+        for r in leases:
+            machine = r["node"].rsplit("-", 1)[0]  # desktop-fuer0cc-2 -> desktop-fuer0cc: one row per computer
+            m = machines.setdefault(machine, {"machine": machine, "engines": 0, "searchedLastHour": 0, "searchedToday": 0, "positionsToday": 0, "_engines": set()})
+            done = r.get("done_at")
+            if r["heartbeat_at"] > midnight:
+                m["positionsToday"] += r.get("positions") or 0
+            if done:
+                m["searchedToday"] += 1 if done > midnight else 0
+                m["searchedLastHour"] += 1 if done > hour_ago else 0
+            elif r["heartbeat_at"] > live_after:
+                m["_engines"].add(r["node"])
+        for m in machines.values():
+            m["engines"] = len(m.pop("_engines"))
+        # Games whose analysis completed in the last hour, and which of them a node had searched: one event, so the
+        # split always adds up.
+        analysed = [g["id"] for g in paged(lambda: sb.table("games").select("id").gt("analysed_at", hour_ago).order("id"))]
+        searched_by_nodes = {r["game_id"] for r in leases if r.get("done_at")}
+        by_nodes = sum(1 for g in analysed if g in searched_by_nodes)
+        per_hour = len(analysed)
+        return {
+            "queue": {**queue, "total": sum(queue.values())},
+            "machines": sorted(machines.values(), key=lambda m: m["machine"]),
+            "rates": {"allPerHour": per_hour, "nodesPerHour": by_nodes, "serverPerHour": per_hour - by_nodes},
+            "etaHours": round(queue["pending"] / per_hour, 1) if per_hour else None,
+            "at": current.isoformat(),
+        }
 
 
 def signature(data: bytes) -> str:
