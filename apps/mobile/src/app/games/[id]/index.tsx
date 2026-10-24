@@ -104,6 +104,9 @@ export default function Summary() {
                 {m.clock && <T mono size={11} tone="muted">{m.clock}</T>}
               </View>
             ))}
+            {data.budget && (
+              <T mono size={11} tone="muted">{`chaos budget · ${data.budget.spent.toFixed(2)} risked · ${data.budget.back.toFixed(2)} came back${data.budget.unknown ? ` · ${data.budget.unknown} not scored` : ""}`}</T>
+            )}
           </Card>
 
           {(data.questions ?? []).map((q) => (

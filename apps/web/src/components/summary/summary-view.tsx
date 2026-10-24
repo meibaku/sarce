@@ -152,6 +152,12 @@ export function SummaryView({
             {data.moments.length === 0 && !data.analysing && (
               <span className="px-4 py-[13px] text-[13px] text-muted">No moments stood out in this game.</span>
             )}
+            {data.budget && (
+              <span className="border-t border-hair px-4 py-[10px] font-mono text-[11px] text-muted" title="Expected points: what setting problems cost you, and what your opponent's replies gave back">
+                chaos budget · {data.budget.spent.toFixed(2)} risked · {data.budget.back.toFixed(2)} came back
+                {data.budget.unknown > 0 && ` · ${data.budget.unknown} repl${data.budget.unknown === 1 ? "y" : "ies"} not scored`}
+              </span>
+            )}
           </section>
         </div>
 

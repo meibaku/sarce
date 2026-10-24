@@ -12,6 +12,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from app.db.supabase import get_supabase
+from app.services.budget import chaos_budget
 from app.services.distraction import flagged_plies
 from app.services.home import HELD, HomeService, _count, format_time_control, is_calibrated, pick_moments, window_brilliant
 from app.services.pgn_parser import mainline_positions
@@ -98,7 +99,13 @@ class SummaryService:
         analysis = game.pop("game_analyses", None)
         analysis = analysis[0] if isinstance(analysis, list) and analysis else (analysis or {})
         moves = sb.table("game_moves").select("ply, san, quality, is_brilliant, signals").eq("game_id", game_id).order("ply").execute().data or []
-        lens_rows = sb.table("move_lens_scores").select("ply, lens, score, verdict").eq("game_id", game_id).execute().data or []
+        lens_rows = (
+            sb.table("move_lens_scores").select("ply, lens, score, verdict, objective_cost:details->objective_cost, reply_ep_loss:details->reply_ep_loss")
+            .eq("game_id", game_id).execute().data
+            or []
+        )
+        for row in lens_rows:
+            row["details"] = {"objective_cost": row.pop("objective_cost", None), "reply_ep_loss": row.pop("reply_ep_loss", None)}
         lens_by_ply: dict[int, dict] = {}
         for row in lens_rows:
             lens_by_ply.setdefault(row["ply"], {})[row["lens"]] = row
@@ -146,6 +153,7 @@ class SummaryService:
             "styleReadVersion": STYLE_READ_VERSION,
             **self._questions(game, moves, lens_rows, sacrifices, moments, owner_id),
             "lichessUrl": lichess_analysis_url([p["san"] for p in line]) if line else None,
+            "budget": chaos_budget(lens_rows),
         }
 
     def _questions(self, game: dict, moves: list[dict], lens_rows: list[dict], sacrifices: list[dict], moments: list[dict], owner_id: str | None) -> dict:

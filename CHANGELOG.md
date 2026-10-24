@@ -11,6 +11,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- Chaos budget (plan 3.9): Summary shows what setting problems cost in a game and what your opponent's replies gave
+  back ("chaos budget · 0.27 risked · 0.40 came back", expected points), and You shows the last 20 games. The chaos
+  lens now stores the opponent's actual reply and its EP loss (version 3); re-score with `scripts/rescore_lenses.py`
 - Fingerprints by time control (plan 3.8): You's "By time control" card shows the nine traits for the chosen class,
   each with its 95% range, and one sentence naming where your two main classes differ beyond noise ("In rapid you
   set problems more often; in bullet you keep a winning position tight more often"). Each class reads up to 100 of

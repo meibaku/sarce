@@ -272,6 +272,12 @@ export function YouView({ data }: { data: YouApi }) {
             </>
           )}
           {data.timeGap && <span className="border-t border-hair pt-2 text-[13px] leading-[1.5] text-ink-2">{data.timeGap.sentence}</span>}
+          {data.budget && (
+            <span className="border-t border-hair pt-2 font-mono text-[11px] text-muted" title="Expected points over your last 20 games">
+              chaos budget, last 20 games · {data.budget.spent.toFixed(2)} risked · {data.budget.back.toFixed(2)} came back
+              {data.budget.unknown > 0 && ` · ${data.budget.unknown} repl${data.budget.unknown === 1 ? "y" : "ies"} not scored`}
+            </span>
+          )}
         </Card>
 
         <Card className="gap-2 !px-5 !py-[18px]">
