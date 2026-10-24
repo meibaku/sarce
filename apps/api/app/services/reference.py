@@ -6,6 +6,7 @@ One-time batch jobs cache results in reference_benchmarks.
 
 from __future__ import annotations
 
+import asyncio
 import io
 import logging
 import re
@@ -16,10 +17,10 @@ import chess
 import chess.pgn
 import httpx
 
+from app.config import settings
 from app.db.supabase import get_supabase
 from app.services.analysis import build_style_vector_v1
 from app.services.baseline import BaselineService, EMPTY_DISTRIBUTION
-from app.services.move_classifier import MoveClassifier
 
 logger = logging.getLogger(__name__)
 
@@ -126,29 +127,41 @@ class ReferenceService:
                 res.raise_for_status()
                 zip_path.write_bytes(res.content)
 
-        pgns = self._extract_pgns(zip_path, max_games)
-        classifier = MoveClassifier()
+        # The same pipeline as a player's games (review F6): the shared engine search, classification, then the
+        # find-rate (ADR 0004) and real-offer (ADR 0007) post-pass. An evenly spaced sample across the career (the
+        # corpus is in date order), and only games Tal is actually in.
+        from app.services.brilliant_benchmark import benchmark_game, even_sample, summarize
+        from app.services.brilliant_find_rate import style_vector_v2
+        from app.services.human_model import get_human_model
+        from app.services.stockfish import StockfishEngine
+
+        corpus = self._extract_pgns(zip_path, 100_000)
+        model = get_human_model(settings.human_model)
         merged = {**EMPTY_DISTRIBUTION}
-        analyzed = 0
+        results = []
 
-        for pgn_text in pgns:
-            game = chess.pgn.read_game(io.StringIO(pgn_text))
-            if not game:
+        def run(pgn_text: str) -> dict | None:
+            try:
+                with StockfishEngine() as engine:
+                    return benchmark_game(pgn_text, TAL_PLAYER_NAME, engine, model)
+            except Exception:  # one odd PGN must not end the benchmark
+                logger.exception("Tal benchmark: game skipped")
+                return None
+
+        for pgn_text in even_sample(corpus, max_games):
+            result = await asyncio.to_thread(run, pgn_text)
+            if not result:
                 continue
-            board = game.board()
-            moves = list(game.mainline_moves())
-            classified = classifier.classify_game(
-                board,
-                moves,
-                infer_player_color(game, TAL_PLAYER_NAME),
-            )
-            dist = BaselineService.compute_distribution([m["quality"] for m in classified])
+            results.append(result)
             for k in merged:
-                merged[k] += dist.get(k, 0)
-            analyzed += 1
+                merged[k] += result["qualities"].get(k, 0)
 
+        analyzed = len(results)
+        if not analyzed:
+            raise RuntimeError("Tal benchmark: no games analysed (is Stockfish available?)")
+        summary = summarize(results)
         brilliant_pct = BaselineService.brilliant_pct(merged)
-        style_vector = build_style_vector_v1(merged, brilliant_pct)
+        style_vector = {**style_vector_v2(build_style_vector_v1(merged, brilliant_pct), merged, brilliant_pct), "interval": summary["interval"]}
 
         sb = get_supabase()
         player_res = (
