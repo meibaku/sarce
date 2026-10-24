@@ -1,0 +1,3 @@
+# Optional: the terminal analysis monitor (scripts/monitor_tui.py), a developer tool.
+# Not installed by default, in CI, or on Sarce Nodes.
+textual==8.2.8

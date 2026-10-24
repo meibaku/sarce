@@ -47,6 +47,17 @@ Integration tests requiring Supabase + Stockfish are run manually.
 python -m scripts.process_tal_benchmark --max-games 5
 ```
 
+## Analysis monitor (terminal)
+
+The web page is `/dev/monitor` (Settings → Developer mode). The same view in a terminal, without flicker:
+
+```powershell
+pip install -r requirements-monitor.txt
+python scripts/monitor_tui.py            # --api http://host:8001, --token for signed-in deployments
+```
+
+Arrows pick an engine (its events show on the right), `m` filters the feed by machine, `p` pauses, `q` quits.
+
 ## Services
 
 - `services/chess_com.py` — Chess.com public API client
