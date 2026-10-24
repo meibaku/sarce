@@ -13,6 +13,7 @@ import type { SettingsApi, SyncStatus } from "@/types/chess";
 export default function SettingsPage() {
   const [data, setData] = useState<SettingsApi | null>(null);
   const [brilliant, setBrilliant] = useState<number | null>(null);
+  const [next, setNext] = useState<{ lo: number; hi: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sync, setSync] = useState<SyncStatus | null>(null);
 
@@ -23,7 +24,12 @@ export default function SettingsPage() {
         applyTheme(s.theme); // the profile's choice wins over this device's copy
       })
       .catch(() => setError("Sarce can't reach its analysis service."));
-    getHome().then((h) => setBrilliant(h.brilliant.pct)).catch(() => undefined);
+    getHome()
+      .then((h) => {
+        setBrilliant(h.brilliant.pct);
+        if (h.brilliant.nextLo != null && h.brilliant.nextHi != null) setNext({ lo: h.brilliant.nextLo, hi: h.brilliant.nextHi });
+      })
+      .catch(() => undefined);
     getSyncStatus().then(setSync).catch(() => undefined);
   }, []);
 
@@ -35,6 +41,7 @@ export default function SettingsPage() {
         <SettingsView
           data={data}
           brilliant={brilliant}
+          next={next}
           sync={sync}
           onSyncNow={() =>
             syncNow()

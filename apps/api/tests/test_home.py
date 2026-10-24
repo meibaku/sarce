@@ -84,3 +84,13 @@ class TestRoute:
             res = client.get("/users/home?username=%20Dratius%20")
         assert res.status_code == 200 and res.json() == payload
         assert svc.call_args.args[1] == "dratius"
+
+
+def test_next_band_is_one_step_above_the_likely_range():
+    from app.services.home import next_band
+
+    assert next_band(0.02, 6) == (0.1, 0.6)  # a tiny range: the first visible step
+    assert next_band(2.34, 6) == (2.4, 3.6)  # half as much again
+    assert next_band(5.8, 6) is None  # the step would already be the goal band
+    assert next_band(4.5, 6) == (4.5, 6)  # capped at the goal
+    assert next_band(None, 6) is None

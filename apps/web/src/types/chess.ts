@@ -315,6 +315,9 @@ export interface HomeApi {
     goalLo: number;
     goalHi: number;
     gapLine?: string;
+    /** Your next band: just above your likely range, on the way to the goal (plan 1.3). */
+    nextLo?: number | null;
+    nextHi?: number | null;
   };
   stats: {
     streak: number | null;

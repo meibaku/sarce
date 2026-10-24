@@ -178,6 +178,20 @@ def rolling_brilliant(games_newest_first: list[dict]) -> list[dict]:
     return points[::-1]
 
 
+def next_band(hi: float | None, goal_lo: float) -> tuple[float, float] | None:
+    """
+    A personal next step on the way to the goal band (plan 1.3): from just above the top of your likely range (its
+    95% upper bound, rounded up to 0.1) to half as much again, at least half a point wide, capped at the goal.
+    None when there's no range yet or you are within half a point of the goal band.
+    """
+    if hi is None:
+        return None
+    lo = max(0.1, math.ceil(round(hi * 10, 6)) / 10)
+    if goal_lo - lo < 0.5:  # less than half a point short: the next step is the goal band itself
+        return None
+    return lo, round(min(goal_lo, lo + max(0.5, lo / 2)), 1)
+
+
 def gap_line(pct: float | None, lo: float, hi: float) -> str:
     if pct is None:
         return f"Your {lo:g}–{hi:g}% band fills in after {MIN_GAMES} analysed games."
@@ -262,6 +276,8 @@ class HomeService:
         enough = len(games) >= MIN_GAMES
         brilliant = {**window_brilliant(games), **goal}
         brilliant["gapLine"] = gap_line(brilliant["pct"], goal["goalLo"], goal["goalHi"])
+        step = next_band(brilliant.get("hi"), goal["goalLo"])
+        brilliant["nextLo"], brilliant["nextHi"] = step if step else (None, None)
         return {
             "latest": self._latest(latest, [r for r in lens_rows if r["game_id"] == latest["id"]]),
             "brilliant": brilliant,
