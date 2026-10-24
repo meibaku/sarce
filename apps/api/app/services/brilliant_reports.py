@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from app.config import settings
 from app.db.supabase import get_supabase
 from app.services.brilliant import (
     alternatives_from_row,
@@ -21,6 +22,7 @@ from app.services.brilliant import (
     hard_to_find,
 )
 from app.services.brilliant_find_rate import RULE, mover_rung
+from app.services.human_model import get_human_model
 from app.services.library import boards_before
 from app.services.position_evals import fen_key
 
@@ -43,6 +45,7 @@ class BrilliantReportService:
         )
         probs = (
             get_supabase().table("human_probs").select("probs").eq("fen_key", fen_key(board)).eq("elo", mover_rung(game))
+            .eq("model_version", get_human_model(settings.human_model).model_version)  # the model the verdict uses
             .limit(1).execute().data
             or []
         )
@@ -82,7 +85,12 @@ class BrilliantReportService:
 
 def summary() -> dict[str, int]:
     """Reports by the clause Sarce stopped at (for Benchmark B): where the definitions part ways most."""
-    rows = get_supabase().table("brilliant_reports").select("failed_clause").limit(10_000).execute().data or []
+    rows: list[dict] = []
+    while True:  # paged: PostgREST caps a response at 1,000 rows
+        batch = get_supabase().table("brilliant_reports").select("failed_clause").order("id").range(len(rows), len(rows) + 999).execute().data or []
+        rows += batch
+        if len(batch) < 1000:
+            break
     out: dict[str, int] = {}
     for r in rows:
         out[r["failed_clause"]] = out.get(r["failed_clause"], 0) + 1

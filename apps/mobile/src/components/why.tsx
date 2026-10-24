@@ -14,7 +14,11 @@ export function WhyCard({ gameId, ply, orientation, onClose }: { gameId: string;
   const { data, failed } = useLoad(() => getWhy(gameId, ply), `${gameId}:${ply}`);
   const [line, setLine] = useState(0);
   const [step, setStep] = useState(1);
-  const [reportLine, setReportLine] = useState<string | null>(null);
+  // The reply belongs to one move (see the web's WhyPanel); errors leave the action there to retry.
+  const [report, setReport] = useState<{ key: string; line: string } | null>(null);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const moveKey = `${gameId}:${ply}`;
+  const reportLine = report?.key === moveKey ? report.line : null;
   if (failed) return <Card><T size={13} tone="muted">This move hasn&apos;t been analysed yet.</T><Link label="Close" onPress={onClose} /></Card>;
   if (!data) return <Loading />;
   const current = data.lines[line];
@@ -38,11 +42,19 @@ export function WhyCard({ gameId, ply, orientation, onClose }: { gameId: string;
         (reportLine || data.reported ? (
           <T size={12} tone="muted">{reportLine ?? "You said Chess.com called this Brilliant."}</T>
         ) : (
-          <Link
-            label="Chess.com called this Brilliant"
-            tone="muted"
-            onPress={() => reportBrilliant(gameId, ply).then((r) => setReportLine(r.line)).catch(() => setReportLine("That didn't save. Try again."))}
-          />
+          <View style={{ gap: 2 }}>
+            <Link
+              label="Chess.com called this Brilliant"
+              tone="muted"
+              onPress={() => {
+                setReportError(null);
+                reportBrilliant(gameId, ply)
+                  .then((r) => setReport({ key: moveKey, line: r.line }))
+                  .catch(() => setReportError(moveKey));
+              }}
+            />
+            {reportError === moveKey && <T size={12} tone="muted">That didn't save. Try again.</T>}
+          </View>
         ))}
       {data.chaos.pFail && (
         <T size={12} tone="muted">{`${data.chaos.faced ? "The problem you faced" : "The problem you set"}: ${data.chaos.pFail.map((p, i) => `${data.chaos.rungs[i]} ${Math.round(p * 100)}%`).join(" · ")} miss every safe reply${data.chaos.safeReplies.length ? ` (safe: ${data.chaos.safeReplies.join(", ")})` : ""}.`}</T>

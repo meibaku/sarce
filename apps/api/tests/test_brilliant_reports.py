@@ -15,8 +15,8 @@ def test_failed_clause_is_the_first_the_rule_stops_at():
     # 2.Qh5 offers nothing: the first clause fails before soundness is even asked.
     game = {"pgn": PGN, "source": "chess_com", "time_control": "600", "user_rating": 700}
     row = {"ply": 2, "uci": "d1h5", "eval_before": 0.3, "eval_after": 0.1, "cp_loss": 20, "best_uci": "g1f3", "pv": []}
-    with patch("app.services.brilliant_reports.get_supabase") as sb:
-        sb.return_value.table.return_value.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute.return_value.data = []
+    with patch("app.services.brilliant_reports.get_supabase") as sb, patch("app.services.brilliant_reports.get_human_model"):
+        sb.return_value.table.return_value.select.return_value.eq.return_value.eq.return_value.eq.return_value.limit.return_value.execute.return_value.data = []
         assert BrilliantReportService().failed_clause(game, row) == "real_sacrifice"
     assert clause_title("sound") == "It holds up"
 

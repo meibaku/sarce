@@ -20,6 +20,7 @@ import io
 import chess
 import chess.pgn
 
+from app.services.human_model import get_human_model
 from app.services.brilliant_find_rate import mover_rung
 from app.services.rating_map import opponent_model_elo
 from app.config import settings
@@ -177,7 +178,11 @@ class ExplainService:
         rung = nearest_rung(opponent_model_elo(game))
         # The find-rate clause is judged at your own rating (ADR 0004 addendum), like the verdict.
         find_rung = mover_rung(game)
-        probs_rows = sb.table("human_probs").select("probs").eq("fen_key", fen_key(board)).eq("elo", find_rung).limit(1).execute().data or []
+        probs_rows = (
+            sb.table("human_probs").select("probs").eq("fen_key", fen_key(board)).eq("elo", find_rung)
+            .eq("model_version", get_human_model(settings.human_model).model_version).limit(1).execute().data
+            or []
+        )
         find_prob = (probs_rows[0]["probs"] or {}).get(row["uci"], 0.0) if probs_rows else None
 
         cost = ((lens.get("soundness") or {}).get("details") or {}).get("objective_cost")

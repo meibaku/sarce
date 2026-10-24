@@ -19,7 +19,11 @@ const KIND_TONE: Record<string, string> = {
 };
 
 export function WhyPanel({ gameId, ply, orientation, onClose }: { gameId: string; ply: number; orientation: "white" | "black"; onClose: () => void }) {
-  const [reportLine, setReportLine] = useState<string | null>(null);
+  // The reply belongs to one move: shown only while that move is open, so a late reply can't land on another.
+  const [report, setReport] = useState<{ key: string; line: string } | null>(null);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const moveKey = `${gameId}:${ply}`;
+  const reportLine = report?.key === moveKey ? report.line : null;
   const [data, setData] = useState<WhyApi | null>(null);
   const [failed, setFailed] = useState(false);
   const [line, setLine] = useState(0);
@@ -98,16 +102,20 @@ export function WhyPanel({ gameId, ply, orientation, onClose }: { gameId: string
             ) : data.reported ? (
               <span>You said Chess.com called this Brilliant.</span>
             ) : (
-              <TextButton
-                className="!text-[12px]"
-                onClick={() =>
-                  reportBrilliant(gameId, ply)
-                    .then((r) => setReportLine(r.line))
-                    .catch(() => setReportLine("That didn't save. Try again."))
-                }
-              >
-                Chess.com called this Brilliant
-              </TextButton>
+              <>
+                <TextButton
+                  className="!text-[12px]"
+                  onClick={() => {
+                    setReportError(null);
+                    reportBrilliant(gameId, ply)
+                      .then((r) => setReport({ key: moveKey, line: r.line }))
+                      .catch(() => setReportError(moveKey));
+                  }}
+                >
+                  Chess.com called this Brilliant
+                </TextButton>
+                {reportError === moveKey && <span>That didn&apos;t save. Try again.</span>}
+              </>
             )}
           </div>
         )}
