@@ -258,7 +258,8 @@ function Throughput({ history }: { history: MonitorHistory }) {
     );
   }
   const start = total[0][0];
-  const end = Math.max(total[total.length - 1][0], start + bucketMs);
+  // To now: the gap after the last point is the bucket still filling, and recent marks land where they happened.
+  const end = Math.max(new Date(history.to).getTime(), start + bucketMs);
   const peak = Math.max(1, ...total.map(([, v]) => v));
   const step = [5, 10, 20, 25, 50, 100, 200, 500].find((st) => peak / st <= 4) ?? 1000;
   const top = Math.ceil(peak / step) * step;
@@ -284,7 +285,7 @@ function Throughput({ history }: { history: MonitorHistory }) {
         {history.marks
           .filter((mk) => new Date(mk.at).getTime() >= start)
           .map((mk, i) => {
-            const at = Math.min(x(new Date(mk.at).getTime()), W - R);
+            const at = x(new Date(mk.at).getTime());
             return (
               <line key={i} x1={at} x2={at} y1={T} y2={y(0)} stroke={WARN.has(mk.kind) ? "var(--color-checkin)" : "var(--color-line-3)"} strokeDasharray="2 3">
                 <title>{`${clock(mk.at)} · ${KIND[mk.kind] ?? mk.kind}${mk.machine ? ` · ${mk.machine}` : ""}`}</title>
