@@ -105,7 +105,7 @@ export default function Summary() {
               </View>
             ))}
             {data.budget && (
-              <T mono size={11} tone="muted">{`chaos budget · ${data.budget.spent.toFixed(2)} risked · ${data.budget.back.toFixed(2)} came back`}</T>
+              <T mono size={11} tone="muted">{`chaos budget · ${data.budget.spent.toFixed(2)} risked · ${data.budget.back.toFixed(2)} came back${data.budget.unknown ? ` · ${data.budget.unknown} not scored` : ""}`}</T>
             )}
           </Card>
 
