@@ -338,6 +338,17 @@ export async function listGames(chaos: boolean, limit = 30) {
 }
 
 /** Public: anyone with the token. */
+/** The Brilliant definition (plan 3.3), public: clauses in plain words and the thresholds the rule uses. */
+export interface BrilliantDefinition {
+  rule: string;
+  clauses: { id: string; title: string; text: string }[];
+  thresholds: Record<string, number>;
+}
+
+export async function getBrilliantDefinition() {
+  return fetchApi<BrilliantDefinition>("/public/brilliant/definition");
+}
+
 export async function getPublicShare(token: string) {
   return fetchApi<PublicShare>(`/public/shares/${encodeURIComponent(token)}`);
 }

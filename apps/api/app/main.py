@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.deps import authenticate
-from app.routers import analysis, games, health, play, reference, scouting, shares, traps, users, videos
+from app.routers import analysis, brilliant, games, health, play, reference, scouting, shares, traps, users, videos
 from app.services.sync import sync_loop
 from app.services.job_queue import JobQueue, analysis_handlers, worker_loop
 
@@ -68,3 +68,4 @@ app.include_router(videos.router, prefix="/videos", tags=["videos"], dependencie
 app.include_router(shares.router, prefix="/shares", tags=["shares"], dependencies=AUTH)
 # Public on purpose: anyone with a share token reads that link's stored snapshot, nothing else.
 app.include_router(shares.public_router, prefix="/public/shares", tags=["shares"])
+app.include_router(brilliant.public_router, prefix="/public/brilliant", tags=["brilliant"])

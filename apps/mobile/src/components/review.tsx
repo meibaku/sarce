@@ -105,6 +105,19 @@ export function ReviewBody({ gameId, back }: { gameId: string; back?: boolean })
         />
       )}
 
+      {data.almostBrilliant && data.almostBrilliant.length > 0 && (
+        // Real sacrifices one clause short of Brilliant (plan 3.3).
+        <Card>
+          <Label>Almost Brilliant</Label>
+          {data.almostBrilliant.map((a) => (
+            <View key={a.ply} style={s.row}>
+              <T mono weight="medium" size={12}>{a.label}</T>
+              <T size={12} tone="ink2" style={{ flex: 1 }}>{a.line}</T>
+            </View>
+          ))}
+        </Card>
+      )}
+
       {data.theirIdeas && data.theirIdeas.length > 0 && (
         // Prophylaxis lens: real threats taken away with a quiet move, or let through.
         <Card>

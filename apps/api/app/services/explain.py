@@ -100,8 +100,8 @@ def brilliant_checks(
         {
             "rule": "It holds up",
             "passed": bool(clauses["sound"]),
-            "detail": f"It kept {round((1 - loss) * 100) if loss is not None else 0}% of the best move's winning chances "
-            f"({loss:.2f} expected points below it); Brilliant allows {SOUND_EP_LOSS:.2f}."
+            "detail": f"It cost {loss:.2f} expected points against the best move (about {round(loss * 100)} points off your "
+            f"winning chances); Brilliant allows {SOUND_EP_LOSS:.2f}."
             if loss is not None
             else no_eval,
         },

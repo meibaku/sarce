@@ -394,6 +394,8 @@ export interface ReviewApi {
   gameId: string;
   /** The game on its site, for "see this move there" (plan 3.4a): Chess.com `?move=N`, Lichess `#N`, N = ply + 1. */
   site?: { name: string; url: string; style: "query" | "hash" } | null;
+  /** Real sacrifices that missed exactly one Brilliant clause (plan 3.3). */
+  almostBrilliant?: { ply: number; label: string; clause: string; line: string }[];
   opponent: string | null;
   result: "win" | "loss" | "draw" | null;
   userColor: "white" | "black" | null;

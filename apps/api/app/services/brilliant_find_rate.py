@@ -17,10 +17,12 @@ from app.db.supabase import get_supabase
 from app.services.baseline import BaselineService
 from app.services.brilliant import (
     BOARD_CLAUSES,
+    NEAR_PREFIX,
     alternatives_from_row,
     best_eval_from_row,
     brilliant_clauses,
     hard_to_find,
+    near_miss,
 )
 from app.services.human_model import ELO_LADDER, SupabaseProbStore, cached_move_probs, get_human_model
 from app.services.library import boards_before
@@ -58,23 +60,29 @@ def rejudge(moves: list[dict], boards: list, probs_for) -> tuple[list[dict], int
 
     out, changed = [], 0
     for m in moves:
-        brilliant = False
+        brilliant, near = False, None
         if m["ply"] < len(boards) and m.get("eval_before") is not None and m.get("eval_after") is not None:
             board, move = boards[m["ply"]]
             clauses = brilliant_clauses(
                 board, move, m["eval_before"], m["eval_after"], best_eval_from_row(m), alternatives=alternatives_from_row(m)
             )
+            board_missed = sum(1 for c in BOARD_CLAUSES if clauses[c] is False)
+            # The human model is asked only where it can decide something: Brilliant, or "almost" (plan 3.3).
+            if clauses["real_sacrifice"] and board_missed <= 1:
+                clauses["hard_to_find"] = hard_to_find(probs_for(m["ply"]), m.get("uci") or "")
             if all(clauses[c] for c in BOARD_CLAUSES):
                 # No human-model data keeps the move Brilliant, as the find-rate rule always has.
-                brilliant = hard_to_find(probs_for(m["ply"]), m.get("uci") or "") is not False
+                brilliant = clauses["hard_to_find"] is not False
+            near = None if brilliant else near_miss(clauses)
+        signals = [s for s in (m.get("signals") or []) if not s.startswith(NEAR_PREFIX)] + ([NEAR_PREFIX + near] if near else [])
         quality = m.get("quality")
         if brilliant:
             quality = "brilliant"
         elif quality == "brilliant":
             quality = classify_move_quality(float(m.get("cp_loss") or 0), m.get("eval_before"), m.get("eval_after")).value
-        if brilliant != bool(m.get("is_brilliant")) or quality != m.get("quality"):
+        if brilliant != bool(m.get("is_brilliant")) or quality != m.get("quality") or signals != (m.get("signals") or []):
             changed += 1
-            m = {**m, "is_brilliant": brilliant, "quality": quality}
+            m = {**m, "is_brilliant": brilliant, "quality": quality, "signals": signals}
         out.append(m)
     return out, changed
 
@@ -111,7 +119,7 @@ class BrilliantFindRate:
             return None
         game = rows[0]
         moves = (
-            sb.table("game_moves").select("id, ply, uci, quality, is_brilliant, cp_loss, eval_before, eval_after, best_uci, pv")
+            sb.table("game_moves").select("id, ply, uci, quality, is_brilliant, signals, cp_loss, eval_before, eval_after, best_uci, pv")
             .eq("game_id", game_id).order("ply").execute().data
             or []
         )
@@ -132,7 +140,9 @@ class BrilliantFindRate:
         updated, changed = rejudge(moves, plies, probs_for)
         for before, after in zip(moves, updated):
             if before != after:
-                sb.table("game_moves").update({"is_brilliant": after["is_brilliant"], "quality": after["quality"]}).eq("id", after["id"]).execute()
+                sb.table("game_moves").update(
+                    {"is_brilliant": after["is_brilliant"], "quality": after["quality"], "signals": after.get("signals") or []}
+                ).eq("id", after["id"]).execute()
 
         distribution = BaselineService.compute_distribution([m["quality"] for m in updated])
         pct = BaselineService.brilliant_pct(distribution)
