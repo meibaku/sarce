@@ -29,35 +29,41 @@ CLOCK_MULTIPLIERS = {
     "maia2": {"<5s": 1.2294, "5-15s": 0.9797, "15s+": 0.9317},
 }
 
-# Squeeze (converting an advantage). Centipawns, from the user's side.
-# Only moves made at or above this edge count: clearly winning, about two pawns.
-SQUEEZE_MIN_CP = 200
-# Opponent replies within this of their best still "hold" (they have room).
+# The four style lenses below judge edges and costs in EP like chaos (review F8, CHAOS_PLAN rule 4): a pawn given
+# back at +5 costs almost nothing, at +1 a lot, and centipawns treated both the same. Values match the old
+# centipawn thresholds in a level position (cp_to_ep(100) - 0.5 ≈ 0.09). The one exception is squeeze's room count.
+
+# Squeeze (converting an advantage). Only moves made with at least this EP count: clearly winning (≈ +2 pawns).
+SQUEEZE_MIN_EP = 0.675
+# Giving back at most this EP keeps the squeeze (the same tolerance as a safe reply).
+SQUEEZE_KEEP_EP = SAFE_TOL
+# Giving back more than this EP is "gave_air": the opponent got counterplay back.
+SQUEEZE_AIR_EP = 0.10
+# Opponent replies within this many centipawns of their best still "hold" (they have room). Centipawns on purpose:
+# the opponent is losing here, where EP compresses (0.07 vs 0.02) and would hide which replies still hold.
 SQUEEZE_REPLY_CP = 50
-# Giving back more than this is "gave_air": the opponent got counterplay back.
-SQUEEZE_AIR_CP = 100
 # At most this many holding replies left, with the edge kept, is a squeeze.
 SQUEEZE_TIGHT_REPLIES = 2
 # Holding replies beyond the tight count over which the "kept" score falls from 1 to 0.
 SQUEEZE_ROOM_SPAN = 5
 
-# Swindle (fighting back). Only moves made at or below this edge (centipawns, negative) count: clearly losing.
-SWINDLE_MAX_CP = 200
+# Swindle (fighting back). Only moves made with at most this EP count: clearly losing (≈ -2 pawns).
+SWINDLE_MAX_EP = 0.325
 
-# Clock (time use). A position is critical when the best move is this much better than the second (centipawns):
-# finding the one move is worth thinking for.
-CLOCK_CRITICAL_CP = 100
-# A move costing at most this many centipawns versus the best counts as sound.
-CLOCK_SOUND_CP = 50
+# Clock (time use). A position is critical when the best move is this much EP better than the second: finding the
+# one move is worth thinking for (≈ a pawn when level; a won position stays won, so it isn't critical).
+CLOCK_CRITICAL_EP = 0.08
+# A move costing at most this EP versus the best counts as sound.
+CLOCK_SOUND_EP = SAFE_TOL
 # Time thresholds as fractions of the starting clock (1+0: quick ≤ 2 s, slow ≥ 5 s, a real think ≥ 3 s).
 CLOCK_QUICK_FRACTION = 1 / 30
 CLOCK_SLOW_FRACTION = 1 / 12
 CLOCK_THINK_FRACTION = 1 / 20
 
-# Prophylaxis (stopping the opponent's idea). Centipawns. A threat counts when the opponent's best move after a
-# pass beats their normal standing by this much.
-PROPH_THREAT_CP = 150
-# The user's move kept the position (stopped or met the threat) when it cost at most this.
-PROPH_SOUND_CP = 50
-# The threat came through when the move cost at least this and the threat was their best reply or what they played.
-PROPH_LET_CP = 150
+# Prophylaxis (stopping the opponent's idea). A threat counts when the opponent's best move after a pass beats
+# their normal standing by this much EP (≈ 1.5 pawns when level).
+PROPH_THREAT_EP = 0.13
+# The user's move kept the position (stopped or met the threat) when it cost at most this EP.
+PROPH_SOUND_EP = SAFE_TOL
+# The threat came through when the move cost at least this EP and the threat was their best reply or what they played.
+PROPH_LET_EP = 0.13

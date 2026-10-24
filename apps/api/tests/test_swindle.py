@@ -3,10 +3,11 @@
 from app.lenses.base import PlyContext, PositionData
 from app.lenses.swindle import SwindleLens
 from app.services.lens_service import increment_ms, spent_on
+from app.services.ep import cp_to_ep
 
 
 def faced(cp):
-    return PositionData(lines=[{"move_uci": "a", "cp": cp, "mate": None, "ep": 0.1}], safe_set_complete=True)
+    return PositionData(lines=[{"move_uci": "a", "cp": cp, "mate": None, "ep": cp_to_ep(cp)}], safe_set_complete=True)
 
 
 def left(probs, complete=True):
@@ -54,8 +55,8 @@ def test_clock_lens_verdicts():
     from app.lenses.clock import ClockLens
 
     def c(faced_cps, reply_cp, spent):
-        f = PositionData(lines=[{"move_uci": f"m{i}", "cp": cp, "mate": None, "ep": 0.5} for i, cp in enumerate(faced_cps)], safe_set_complete=True)
-        l = PositionData(lines=[{"move_uci": "r", "cp": reply_cp, "mate": None, "ep": 0.5}], safe_set_complete=True)
+        f = PositionData(lines=[{"move_uci": f"m{i}", "cp": cp, "mate": None, "ep": cp_to_ep(cp)} for i, cp in enumerate(faced_cps)], safe_set_complete=True)
+        l = PositionData(lines=[{"move_uci": "r", "cp": reply_cp, "mate": None, "ep": cp_to_ep(reply_cp)}], safe_set_complete=True)
         return ClockLens().score(PlyContext(ply=10, uci="m0", faced=f, left=l, spent_ms=spent, initial_ms=60_000))
 
     assert c([200, 50], -200, 4_000).verdict == "found"      # one clear move, found

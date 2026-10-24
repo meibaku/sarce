@@ -12,18 +12,18 @@ from __future__ import annotations
 from app.lenses import config
 from app.lenses.base import LensResult, PlyContext
 from app.lenses.chaos import nearest_elo, position_chaos
-from app.lenses.squeeze import line_cp
+from app.lenses.squeeze import line_cp, line_points
 
 
 class SwindleLens:
     name = "swindle"
-    version = "1"
+    version = "2"  # 2: "clearly losing" in EP (review F8)
 
     def score(self, ctx: PlyContext) -> LensResult | None:
         if ctx.faced is None or ctx.left is None or not ctx.faced.lines:
             return None
-        before = line_cp(ctx.faced.lines[0])
-        if before is None or before > -config.SWINDLE_MAX_CP:
+        before, ep_before = line_cp(ctx.faced.lines[0]), line_points(ctx.faced.lines[0])
+        if before is None or ep_before is None or ep_before > config.SWINDLE_MAX_EP:
             return None  # only moves made while clearly losing
         data = position_chaos(ctx.left)
         if data is None:

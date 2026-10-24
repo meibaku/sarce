@@ -5,6 +5,7 @@ import chess
 from app.lenses.base import PlyContext, PositionData
 from app.lenses.prophylaxis import ProphylaxisLens
 from app.services.position_evals import fen_key
+from app.services.ep import cp_to_ep
 from app.services.threats import null_move_threat
 
 # 1.e4 e5 2.Nf3 Nc6 3.Bc4 Qh4: White to move, and if White passed, ...Qxf2+ would be the threat.
@@ -33,10 +34,10 @@ def test_null_move_threat_asks_for_the_other_side():
 
 def ctx(uci, edge, reply_cp, threat_cp=900, reply_move="d8e7", reply=None):
     faced = PositionData(
-        lines=[{"move_uci": "d1e2", "cp": edge, "mate": None, "ep": 0.5}], safe_set_complete=True,
+        lines=[{"move_uci": "d1e2", "cp": edge, "mate": None, "ep": cp_to_ep(edge)}], safe_set_complete=True,
         key=fen_key(BOARD), threat={"threat_uci": "h4f2", "threat_cp": threat_cp},
     )
-    left = PositionData(lines=[{"move_uci": reply_move, "cp": reply_cp, "mate": None, "ep": 0.5}], safe_set_complete=True)
+    left = PositionData(lines=[{"move_uci": reply_move, "cp": reply_cp, "mate": None, "ep": cp_to_ep(reply_cp)}], safe_set_complete=True)
     return PlyContext(ply=6, uci=uci, faced=faced, left=left, reply_uci=reply)
 
 

@@ -10,6 +10,11 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   F2, F4 and F12 are marked done; F6 moves to the front after F4 showed Brilliant at 0.01% under rule v3
 
 ### Changed
+- Lenses in one unit (review F8): squeeze, swindle, clock and prophylaxis judge edges and costs in expected points
+  like chaos, not centipawns. Thresholds equal the old ones in a level position, so a pawn given back at +8 no
+  longer counts as "gave air" and a won position where every move still wins is no longer "critical". Squeeze's
+  room count stays in centipawns (documented: EP compresses on the losing side). Lens versions → 2; re-score with
+  `scripts/rescore_lenses.py` (stored data, no engine)
 - Honest uncertainty (review F4), in a new `services/uncertainty.py`:
   - Brilliant % shows its Wilson 95% range ("likely 3.2–5.0%") on Home, You and Recap, web and phone.
   - The You trend is Brilliant % over rolling 20-game windows, drawn as a line in its shaded range, instead of one
