@@ -43,6 +43,30 @@ function clock(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
+function hhmm(t: number) {
+  return new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+const CLEARED: Record<string, string> = { offline: "back online", stalled: "progressing again", drop: "speed back" };
+
+/** The useful part of an event's detail: game, timings, positions, and what an alert or recovery was about. */
+function eventDetail(ev: MonitorEvent) {
+  const d = (ev.detail ?? {}) as Record<string, unknown>;
+  const num = (k: string) => (typeof d[k] === "number" ? (d[k] as number) : null);
+  const parts = [
+    ev.game_id ? ev.game_id.slice(0, 8) : null,
+    num("seconds") != null ? dur(num("seconds")) : null,
+    num("positions") != null ? `${num("positions")} positions` : null,
+    num("stuckS") != null ? `no progress for ${dur(num("stuckS"))}` : null,
+    num("silentS") != null ? `silent for ${dur(num("silentS"))}` : null,
+    num("perHourNow") != null ? `${num("perHourNow")}/h, was ${num("perHourBefore")}/h` : null,
+    typeof d.cleared === "string" ? CLEARED[d.cleared] ?? d.cleared : null,
+    typeof d.bundle === "string" ? `bundle ${d.bundle.slice(0, 8)}` : null,
+    typeof d.error === "string" ? d.error : null,
+  ];
+  return parts.filter(Boolean).join(" · ");
+}
+
 function Meter({ value, width = "w-full", tone = "bg-accent" }: { value: number | null; width?: string; tone?: string }) {
   const pct = value == null ? 0 : Math.max(0, Math.min(100, value));
   return (
@@ -110,12 +134,10 @@ function EngineRow({ e, events, open, onToggle }: { e: MonitorEngine; events: Mo
             <div className="flex flex-col gap-1 text-[12px]">
               {e.game_id && <span className="font-mono text-[11px] text-muted">game {e.game_id}{g?.played_at ? ` · played ${new Date(g.played_at).toLocaleString()}` : ""}</span>}
               {events.length === 0 && <span className="text-muted">No events for this engine yet.</span>}
-              {events.slice(0, 6).map((ev) => (
+              {events.slice(0, 12).map((ev) => (
                 <span key={ev.id} className={WARN.has(ev.kind) ? "text-checkin" : "text-ink-2"}>
                   <span className="font-mono text-[11px] text-muted">{clock(ev.at)}</span> {KIND[ev.kind] ?? ev.kind}
-                  {ev.game_id ? ` · ${ev.game_id.slice(0, 8)}` : ""}
-                  {typeof ev.detail?.seconds === "number" ? ` · ${dur(ev.detail.seconds as number)}` : ""}
-                  {typeof ev.detail?.positions === "number" ? ` · ${ev.detail.positions} positions` : ""}
+                  {eventDetail(ev) ? ` · ${eventDetail(ev)}` : ""}
                 </span>
               ))}
             </div>
@@ -187,38 +209,103 @@ function MachineCard({ m, events, openEngines, toggle }: { m: MonitorMachine; ev
   );
 }
 
+/**
+ * Games per hour per machine and in total. The axis spans the data actually there (at most 24 h), not a fixed day:
+ * a monitor started an hour ago would otherwise be a spike against the right edge. The current bucket is left out
+ * until it's complete, or it would always look like a drop.
+ */
 function Throughput({ history }: { history: MonitorHistory }) {
-  const W = 900, H = 150, P = 28;
-  const start = new Date(history.from).getTime(), end = new Date(history.to).getTime();
-  const machines = Object.keys(history.series);
+  const W = 900, H = 180, L = 36, R = 14, T = 12, B = 24;
+  const bucketMs = history.bucketMin * 60_000;
   const perHour = 60 / history.bucketMin;
-  const max = Math.max(1, ...machines.flatMap((m) => Object.values(history.series[m]).map((v) => v * perHour)));
-  const x = (t: number) => P + ((t - start) / (end - start)) * (W - P * 2);
-  const y = (v: number) => H - P / 2 - (v / max) * (H - P);
+  const current = Math.floor(new Date(history.to).getTime() / bucketMs) * bucketMs;
+  const machines = Object.keys(history.series).sort();
+  const lines = machines.map((m) =>
+    Object.entries(history.series[m])
+      .map(([t, v]) => [new Date(t).getTime(), v * perHour] as [number, number])
+      .filter(([t]) => t < current)
+      .sort((a, b) => a[0] - b[0]),
+  );
+  const totals = new Map<number, number>();
+  lines.flat().forEach(([t, v]) => totals.set(t, (totals.get(t) ?? 0) + v));
+  const total = [...totals.entries()].sort((a, b) => a[0] - b[0]);
+  const caption = (
+    <figcaption className="flex flex-wrap items-baseline gap-4">
+      <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-muted">
+        Games per hour{total.length ? ` · since ${hhmm(total[0][0])}` : ""}
+      </span>
+      {total.length > 0 && (
+        <span className="flex items-center gap-1 text-[11px]">
+          <span className="inline-block h-[3px] w-4 rounded bg-ink" />
+          all machines
+        </span>
+      )}
+      {machines.map((m, i) => (
+        <span key={m} className="flex items-center gap-1 text-[11px]">
+          <span className="inline-block h-[3px] w-4 rounded" style={{ background: SERIES[i % SERIES.length] }} />
+          {m}
+        </span>
+      ))}
+      <span className="ml-auto text-[11px] text-muted">{history.bucketMin}-minute buckets · dashed: restarts, drops, stalls, offline</span>
+    </figcaption>
+  );
+  if (total.length === 0) {
+    return (
+      <figure className="flex flex-col gap-2 rounded-[8px] border border-line bg-surface px-4 py-3">
+        {caption}
+        <p className="py-6 text-[12px] text-muted">The first point appears once a full {history.bucketMin} minutes of work is in.</p>
+      </figure>
+    );
+  }
+  const start = total[0][0];
+  // To now: the gap after the last point is the bucket still filling, and recent marks land where they happened.
+  const end = Math.max(new Date(history.to).getTime(), start + bucketMs);
+  const peak = Math.max(1, ...total.map(([, v]) => v));
+  const step = [5, 10, 20, 25, 50, 100, 200, 500].find((st) => peak / st <= 4) ?? 1000;
+  const top = Math.ceil(peak / step) * step;
+  const x = (t: number) => L + ((t - start) / (end - start)) * (W - L - R);
+  const y = (v: number) => T + (1 - v / top) * (H - T - B);
+  const tickMs = [10, 30, 60, 120, 180, 360].map((m) => m * 60_000).find((ms) => (end - start) / ms <= 6) ?? 720 * 60_000;
+  const ticks: number[] = [];
+  for (let t = Math.ceil(start / tickMs) * tickMs; t <= end; t += tickMs) ticks.push(t);
+  const pts = (series: [number, number][]) => series.map(([t, v]) => `${x(t).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
   return (
     <figure className="flex flex-col gap-2 rounded-[8px] border border-line bg-surface px-4 py-3">
-      <figcaption className="flex flex-wrap items-baseline gap-4">
-        <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-muted">Games per hour · last 24 h</span>
-        {machines.map((m, i) => (
-          <span key={m} className="flex items-center gap-1 text-[11px]">
-            <span className="inline-block h-[3px] w-4 rounded" style={{ background: SERIES[i % SERIES.length] }} />
-            {m}
-          </span>
+      {caption}
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-[180px] w-full" role="img" aria-label="Games per hour, per machine and in total">
+        {Array.from({ length: top / step + 1 }, (_, i) => i * step).map((v) => (
+          <g key={v}>
+            <line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke={v === 0 ? "var(--color-line)" : "var(--color-hair)"} />
+            <text x={L - 6} y={y(v) + 3} fontSize="10" textAnchor="end" fill="var(--color-muted)">{v}</text>
+          </g>
         ))}
-        <span className="ml-auto text-[11px] text-muted">ticks: restarts, drops, stalls, offline</span>
-      </figcaption>
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-[150px] w-full" role="img" aria-label="Games per hour per machine, last 24 hours">
-        <line x1={P} x2={W - P} y1={y(0)} y2={y(0)} stroke="var(--color-line)" />
-        <text x={2} y={y(max) + 4} fontSize="10" fill="var(--color-muted)">{Math.round(max)}</text>
-        {history.marks.map((mk, i) => (
-          <line key={i} x1={x(new Date(mk.at).getTime())} x2={x(new Date(mk.at).getTime())} y1={P / 2} y2={y(0)} stroke={WARN.has(mk.kind) ? "var(--color-checkin)" : "var(--color-line-3)"} strokeDasharray="2 3">
-            <title>{`${clock(mk.at)} · ${KIND[mk.kind] ?? mk.kind}${mk.machine ? ` · ${mk.machine}` : ""}`}</title>
-          </line>
+        {ticks.map((t) => (
+          <text key={t} x={x(t)} y={H - 6} fontSize="10" textAnchor="middle" fill="var(--color-muted)">{hhmm(t)}</text>
         ))}
-        {machines.map((m, i) => {
-          const pts = Object.entries(history.series[m]).sort(([a], [b]) => a.localeCompare(b)).map(([t, v]) => `${x(new Date(t).getTime()).toFixed(1)},${y(v * perHour).toFixed(1)}`);
-          return <polyline key={m} points={pts.join(" ")} fill="none" stroke={SERIES[i % SERIES.length]} strokeWidth="2" strokeLinejoin="round" />;
-        })}
+        {history.marks
+          .filter((mk) => new Date(mk.at).getTime() >= start)
+          .map((mk, i) => {
+            const at = x(new Date(mk.at).getTime());
+            return (
+              <line key={i} x1={at} x2={at} y1={T} y2={y(0)} stroke={WARN.has(mk.kind) ? "var(--color-checkin)" : "var(--color-line-3)"} strokeDasharray="2 3">
+                <title>{`${clock(mk.at)} · ${KIND[mk.kind] ?? mk.kind}${mk.machine ? ` · ${mk.machine}` : ""}`}</title>
+              </line>
+            );
+          })}
+        {lines.map((series, i) =>
+          series.length === 1 ? (
+            // A single point draws no line: a dot, so a machine that just started still shows.
+            <circle key={machines[i]} cx={x(series[0][0])} cy={y(series[0][1])} r="2.5" fill={SERIES[i % SERIES.length]} />
+          ) : (
+            <polyline key={machines[i]} points={pts(series)} fill="none" stroke={SERIES[i % SERIES.length]} strokeWidth="1.5" strokeLinejoin="round" />
+          ),
+        )}
+        <polyline points={pts(total)} fill="none" stroke="var(--color-ink)" strokeWidth="2.25" strokeLinejoin="round" />
+        {total.map(([t, v]) => (
+          <circle key={t} cx={x(t)} cy={y(v)} r="3" fill="var(--color-ink)">
+            <title>{`${hhmm(t)}–${hhmm(t + bucketMs)} · ${Math.round(v)} games/h`}</title>
+          </circle>
+        ))}
       </svg>
     </figure>
   );
@@ -357,10 +444,7 @@ export function MonitorView() {
               <span className="truncate font-mono text-[11px] text-muted">{ev.machine ?? "–"}{ev.engine != null ? ` #${ev.engine}` : ""}</span>
               <span className={WARN.has(ev.kind) ? "text-checkin" : ""}>
                 {KIND[ev.kind] ?? ev.kind}
-                {ev.game_id ? ` · ${ev.game_id.slice(0, 8)}` : ""}
-                {typeof ev.detail?.seconds === "number" ? ` · ${dur(ev.detail.seconds as number)}` : ""}
-                {typeof ev.detail?.positions === "number" ? ` · ${ev.detail.positions} positions` : ""}
-                {typeof ev.detail?.error === "string" ? ` · ${ev.detail.error}` : ""}
+                {eventDetail(ev) ? ` · ${eventDetail(ev)}` : ""}
               </span>
             </li>
           ))}

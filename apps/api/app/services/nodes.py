@@ -37,7 +37,9 @@ CHUNK = 60  # keys per `in` filter
 API_DIR = Path(__file__).resolve().parents[2]  # apps/api
 NODE_DIR = API_DIR.parent / "node"  # apps/node
 # The settings a node must mirror so its searches are the server's (sent with /config, applied before import).
-MIRRORED = ("analysis_nodes", "analysis_multipv", "analysis_multipv_cap", "safe_set_tol", "ep_decided_low", "ep_decided_high")
+MIRRORED = (
+    "analysis_nodes", "analysis_multipv", "analysis_multipv_cap", "safe_set_tol", "ep_decided_low", "ep_decided_high", "node_workers",
+)
 
 
 def now() -> datetime:
@@ -90,6 +92,7 @@ class NodeService:
             "settings": {name.upper(): str(getattr(settings, name)) for name in MIRRORED},
             "threatNodes": THREAT_NODES,
             "leaseSeconds": LEASE_S,
+            "workers": settings.node_workers or None,  # None: the node's own WORKERS
         }
 
     def claim(self, node: str) -> dict | None:

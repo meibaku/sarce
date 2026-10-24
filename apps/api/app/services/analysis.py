@@ -146,19 +146,28 @@ class AnalysisService:
         busy with this game, and the game's end (finished, failed, or finished from a node's search) is an event.
         """
         started = time.monotonic()
+        claim = {"ours": False}  # set once this call has flipped the game to 'processing'
         with monitor.track_game(game_id) as tracker:
             try:
-                result = await self._analyze_game(game_id)
+                result = await self._analyze_game(game_id, claim)
             except Exception as exc:
-                monitor.background(monitor.event, "game_failed", monitor.MACHINE, None, game_id)
+                # Only the call that claimed the game may hand it back: a caller that failed before claiming (a
+                # database timeout reading the row) would otherwise requeue a game another worker is analysing,
+                # and it would be analysed twice.
+                if claim["ours"]:
+                    self._release(game_id, exc)
+                monitor.background(monitor.event, "game_failed", monitor.MACHINE, tracker.slot, game_id)
                 logger.debug("monitor: game %s failed: %s", game_id, exc)
                 raise
         if result:
             # Positions searched or looked up, the same measure nodes report; off the event loop.
-            monitor.background(monitor.game_finished, game_id, round(time.monotonic() - started), len(tracker.seen) or tracker.done, result.get("totalMoves"))
+            monitor.background(
+                monitor.game_finished, game_id, round(time.monotonic() - started), len(tracker.seen) or tracker.done,
+                result.get("totalMoves"), tracker.slot,
+            )
         return result
 
-    async def _analyze_game(self, game_id: str) -> dict | None:
+    async def _analyze_game(self, game_id: str, claim: dict | None = None) -> dict | None:
         sb = get_supabase()
         res = sb.table("games").select("*").eq("id", game_id).maybe_single().execute()
         if not res or not res.data:
@@ -178,6 +187,8 @@ class AnalysisService:
             claimed = sb.table("games").update({"analysis_status": "processing"}).eq("id", game_id).eq("analysis_status", "pending").execute()
             if not claimed.data:
                 return None
+            if claim is not None:
+                claim["ours"] = True
         elif row.get("analysis_status") == "processing":
             return None  # someone is on it (a crash's leftovers go back to pending at startup)
         else:
@@ -188,6 +199,8 @@ class AnalysisService:
             )
             if not claimed.data:
                 return None
+            if claim is not None:
+                claim["ours"] = True
         tracker = monitor.current.get()
         if tracker:
             tracker.phase("searching", total=len(moves) + 1)
@@ -202,6 +215,8 @@ class AnalysisService:
             tries = _attempts[game_id] = _attempts.get(game_id, 0) + 1
             retry = is_transient(exc) and tries < MAX_ATTEMPTS
             sb.table("games").update({"analysis_status": "pending" if retry else "failed"}).eq("id", game_id).execute()
+            if claim is not None:
+                claim["ours"] = False  # settled here: nothing left to hand back
             raise
 
         # Clear prior moves if re-analyzing
@@ -438,6 +453,21 @@ class AnalysisService:
             logger.info("Requeued %d games interrupted mid-analysis", len(rows))
         return len(rows)
 
+    @staticmethod
+    def requeue_orphans(suspects: set[str]) -> set[str]:
+        """
+        Games marked 'processing' that no analysis in this process is running: a claim whose database answer was
+        lost (committed, but the call raised), so no call owns it to hand back. Requeued once seen on two sweeps in
+        a row, conditionally, so a game that finished or was released in between is left alone. Returns this
+        sweep's suspects for the next one. Only the process that analyses games runs it.
+        """
+        rows = get_supabase().table("games").select("id").eq("analysis_status", "processing").limit(500).execute().data or []
+        orphans = {r["id"] for r in rows} - monitor.busy_games()
+        for game_id in orphans & suspects:
+            get_supabase().table("games").update({"analysis_status": "pending"}).eq("id", game_id).eq("analysis_status", "processing").execute()
+            logger.warning("Requeued game %s: 'processing' with no analysis running", game_id)
+        return orphans - suspects
+
     async def finish_node_games(self) -> int:
         """
         Analyses the games paired nodes have finished searching (ADR 0010): every position is cached, so each takes
@@ -501,10 +531,9 @@ class AnalysisService:
         results = []
         for row, outcome in zip(res.data or [], outcomes):
             if isinstance(outcome, BaseException):
-                # One bad game must not stop the batch. An engine failure already marked it failed; a failure
-                # while storing results left it 'processing', where nothing would ever pick it up again.
+                # One bad game must not stop the batch. analyze_game already handed the game back if it had
+                # claimed it (a failure while storing results would otherwise leave it 'processing' for good).
                 logger.error("Analysis failed for game %s: %s", row["id"], outcome)
-                self._release(row["id"], outcome)
             elif outcome:
                 results.append(outcome)
         return results

@@ -42,6 +42,19 @@ async def node_finisher_loop(poll_s: float = 20) -> None:
         await asyncio.sleep(poll_s)
 
 
+async def orphan_loop(every_s: float = 120) -> None:
+    """Every couple of minutes, games left 'processing' with nothing analysing them go back to the queue."""
+    suspects: set[str] = set()
+    while True:
+        try:
+            suspects = await asyncio.to_thread(games.analysis_service.requeue_orphans, suspects)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            pass  # the database is busy: the next sweep tries again
+        await asyncio.sleep(every_s)
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """Run the analysis job worker alongside the API when the queue is enabled."""
@@ -56,6 +69,9 @@ async def lifespan(_app: FastAPI):
         handlers = analysis_handlers(games.analysis_service.analyze_pending)
         worker = asyncio.create_task(worker_loop(JobQueue(), handlers, settings.job_poll_seconds))
     ticker = asyncio.create_task(monitor_loop())
+    sweeper = None
+    if settings.job_queue_enabled or settings.auto_sync_enabled or settings.node_token:
+        sweeper = asyncio.create_task(orphan_loop())
     finisher = None
     if settings.node_token:
         # Paired nodes (ADR 0010): games they finished searching are analysed here from the cache.
@@ -74,6 +90,8 @@ async def lifespan(_app: FastAPI):
             syncer.cancel()
         if finisher:
             finisher.cancel()
+        if sweeper:
+            sweeper.cancel()
         ticker.cancel()
         play.bot_service.close()
 
