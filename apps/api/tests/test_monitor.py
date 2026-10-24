@@ -124,3 +124,16 @@ def test_gateway_refuses_a_malformed_report():
         assert bad.status_code == 422 and not rep.called
         ok = client.post("/nodes/report", headers={"X-Sarce-Node": "s3cret"}, json={"node": "desk", "engines": [{"engine": 0, "state": "searching", "extra": 1}]})
         assert ok.status_code == 200 and rep.call_args.args[2][0]["engine"] == 0
+
+
+def test_monitor_routes_and_the_stream():
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    client = TestClient(app)
+    snap = {"at": "t", "queue": {"pending": 1}, "machines": [], "alerts": []}
+    with patch("app.services.monitor.snapshot", return_value=snap):
+        assert client.get("/monitor/snapshot").json()["queue"]["pending"] == 1
+    with patch("app.services.monitor.events", return_value=[{"id": 1, "kind": "claimed"}]):
+        assert client.get("/monitor/events?limit=5").json()["events"][0]["kind"] == "claimed"
