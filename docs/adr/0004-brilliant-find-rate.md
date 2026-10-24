@@ -54,3 +54,16 @@ difficulty, the "mirror, not judge" view, not engine accuracy.
 
 - `tests/test_brilliant_find_rate.py` covers the clause, the re-classification and the v2 vector.
 - `tests/test_philosophy_contracts.py` unchanged: the v1 builder still produces version 1.
+
+## Addendum (2026-10-24): whose rating, on which scale (review F1, F11a)
+
+- The clause is judged at the **mover's own rating** (`games.user_rating`, from the PGN), not the opponent's:
+  "hard to find" is about the player who found it. The rung is the nearest 100, which the human model supports,
+  not the nearest 400-point ladder step. The opponent's rating is the fallback when yours is missing.
+- Every rating is first converted to the human model's scale (`app/services/rating_map.py`, VERSION 1): Maia-2
+  is conditioned on Lichess ratings, and Chess.com pools sit hundreds of points lower (Chess.com rapid 660 ≈
+  Lichess rapid 1,170). The table is the public ChessGoals survey (July 2026), keyed on Chess.com blitz.
+- The same conversion applies wherever a rating meets the model: the lens ladder (chaos, survival, swindle), the
+  chaos map rung, and Review's "who falls for this" line.
+- Style vectors move to version 4 (`find-rate-20@mover+real-offer`). Stored games are recomputed from scratch with
+  rule v4 (ADR 0009), which the backfill there applies; until then they stay on version 3.

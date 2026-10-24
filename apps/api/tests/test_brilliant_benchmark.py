@@ -65,3 +65,15 @@ def test_stored_best_eval_keeps_a_better_than_best_search():
     assert bb.stored_best_eval(m) == 0.5
     assert bb.stored_best_eval({**m, "uci": "d2d4"}) == 1.0
     assert bb.stored_best_eval({"uci": "e2e4", "best_uci": "d2d4", "pv": []}) is None
+
+
+def test_reference_rung_uses_the_players_own_elo():
+    import chess.pgn
+
+    game = chess.pgn.Game()
+    game.headers.update({"White": "Tal, Mikhail", "Black": "X", "WhiteElo": "2630", "BlackElo": "2550"})
+    assert bb.reference_rung(game, "white") == 2600
+    del game.headers["WhiteElo"]
+    assert bb.reference_rung(game, "white") == 2600  # the opponent's 2550, rounded
+    del game.headers["BlackElo"]
+    assert bb.reference_rung(game, "white") == 2400

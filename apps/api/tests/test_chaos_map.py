@@ -69,7 +69,9 @@ def test_chaos_move_prefers_the_sound_move_that_is_hard_to_answer():
 
 
 def test_opponent_rung_is_the_nearest_ladder_step():
-    assert chaos_map.opponent_rung([game(SICILIAN, rating=1150), game(SICILIAN, rating=1290)]) == 1200
+    # Chess.com rapid 1150 and 1290 are about Lichess 1,540 and 1,650 on the model's scale (review F1).
+    assert chaos_map.opponent_rung([game(SICILIAN, rating=1150), game(SICILIAN, rating=1290)]) == 1600
+    assert chaos_map.opponent_rung([{**game(SICILIAN, rating=1150), "source": "lichess"}]) == 1200
     assert chaos_map.opponent_rung([{"pgn": ""}]) == 1200
 
 

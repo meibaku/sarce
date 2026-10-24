@@ -20,7 +20,7 @@ import chess
 import chess.pgn
 
 from app.services.brilliant import CLAUSES, brilliant_clauses
-from app.services.brilliant_find_rate import apply_rule, rung_for
+from app.services.brilliant_find_rate import apply_rule, mover_rung, rung_for
 from app.services.move_classifier import MoveClassifier
 from app.services.position_evals import game_lines
 from app.services.reference import _matches_player_name
@@ -48,6 +48,18 @@ def player_color(game: chess.pgn.Game, player: str) -> str | None:
     if _matches_player_name(game.headers.get("Black", ""), player):
         return "black"
     return None
+
+
+def reference_rung(game: chess.pgn.Game, color: str) -> int:
+    """
+    The find-rate rung for a reference game, as for your games (the mover's own rating, nearest 100; ADR 0004
+    addendum). Over-the-board Elo sits close to Lichess's scale at master level, so it is used as is. Old games
+    often have no Elo: then the opponent's, then the ladder's top rung.
+    """
+    own = game.headers.get("WhiteElo" if color == "white" else "BlackElo", "")
+    other = game.headers.get("BlackElo" if color == "white" else "WhiteElo", "")
+    raw = own if own.isdigit() else other
+    return int(round(int(raw) / 100.0)) * 100 if raw.isdigit() else rung_for(2400)
 
 
 def first_failure(clauses: dict[str, bool | None]) -> str | None:
@@ -101,8 +113,7 @@ def benchmark_game(pgn_text: str, player: str, engine, model) -> dict | None:
     board, moves = game.board(), list(game.mainline_moves())
     lines = game_lines(board, moves, engine, MemoryEvalStore())
     classified = MoveClassifier().classify_game(board, moves, color, lines=lines)
-    raw = game.headers.get("BlackElo" if color == "white" else "WhiteElo", "")
-    elo = rung_for(int(raw) if raw.isdigit() else None)
+    elo = reference_rung(game, color)
 
     boards: list[chess.Board] = []
     temp = board.copy()
@@ -190,7 +201,7 @@ def player_report(owner_id: str, games_read: int = 2000) -> dict:
     games: list[dict] = []
     while len(games) < games_read:  # paged: PostgREST caps a response at 1,000 rows
         batch = (
-            sb.table("games").select("id, pgn, opponent_rating").eq("user_id", owner_id).eq("analysis_status", "complete")
+            sb.table("games").select("id, pgn, opponent_rating, user_rating, source, time_control").eq("user_id", owner_id).eq("analysis_status", "complete")
             .neq("source", "sarce_bot").order("played_at", desc=True).order("id")
             .range(len(games), min(games_read, len(games) + 1000) - 1).execute().data
             or []
@@ -222,7 +233,7 @@ def player_report(owner_id: str, games_read: int = 2000) -> dict:
             stopped: Counter[str] = Counter()
             candidates = [m for m in mine if "real_sacrifice" in (m.get("signals") or [])]
             plies = boards_before(g.get("pgn") or "") if candidates else []
-            elo = rung_for(g.get("opponent_rating"))
+            elo = mover_rung(g)
             for m in candidates:
                 if m["ply"] >= len(plies):
                     continue

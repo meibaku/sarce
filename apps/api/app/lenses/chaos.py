@@ -83,7 +83,7 @@ class ChaosLens:
     """Scores the trouble the user's move created for the opponent."""
 
     name = "chaos"
-    version = "1"
+    version = "2"  # 2: opponent rating on the human model's scale (review F1)
 
     def score(self, ctx: PlyContext) -> LensResult | None:
         if ctx.left is None:
