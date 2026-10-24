@@ -42,6 +42,8 @@ export interface HomeData {
   };
   doors: { kicker: string; accentKicker?: boolean; title: string; action: string; href: string }[];
   quietUntil?: string;
+  /** "Since your last visit: …" (plan 3.4a). */
+  session?: string;
 }
 
 function DoorTile({ door }: { door: HomeData["doors"][number] }) {
@@ -58,7 +60,7 @@ function DoorTile({ door }: { door: HomeData["doors"][number] }) {
 }
 
 export function HomeView({ data }: { data: HomeData }) {
-  const { latest, brilliant, doors, quietUntil } = data;
+  const { latest, brilliant, doors, quietUntil, session } = data;
   const quiet = Boolean(quietUntil);
 
   return (
@@ -71,6 +73,7 @@ export function HomeView({ data }: { data: HomeData }) {
           <TextLink href="/settings">End early</TextLink>
         </div>
       )}
+      {!quiet && session && <p className="text-[13px] leading-[1.5] text-ink-2">{session}</p>}
 
       <AutoGrid min={380}>
         <Card lead className="gap-[14px]">

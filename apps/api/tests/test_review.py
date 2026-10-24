@@ -60,3 +60,14 @@ class TestRoutes:
             res = client.put("/games/g/moves/36/intent", json={"type": "bluff", "note": "go"})
         assert res.status_code == 200 and res.json() == {"type": "bluff", "note": "go"}
         assert save.call_args.args[:4] == ("g", 36, "bluff", "go")
+
+
+def test_site_links_use_half_moves_played():
+    from app.services.review import site_link, site_move_url
+
+    cc = site_link(None, "https://www.chess.com/game/live/185792420892")
+    assert cc == {"name": "Chess.com", "url": "https://www.chess.com/game/live/185792420892", "style": "query"}
+    assert site_move_url(cc, 9) == "https://www.chess.com/game/live/185792420892?move=10"
+    li = site_link("lichess", "https://lichess.org/abcd1234")
+    assert site_move_url(li, 0) == "https://lichess.org/abcd1234#1"
+    assert site_link("chess_com", "game-1") is None

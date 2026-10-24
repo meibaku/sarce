@@ -10,6 +10,7 @@ sacrifices and chaos are never described as failures.
 from __future__ import annotations
 
 import math
+from datetime import datetime, timezone
 
 from app.db.supabase import get_supabase
 from app.services.uncertainty import ROLLING_GAMES, ROLLING_POINTS, ROLLING_STEP, wilson
@@ -202,6 +203,33 @@ def gap_line(pct: float | None, lo: float, hi: float) -> str:
     return f"Inside your {lo:g}–{hi:g}% band."
 
 
+def session_read(games_newest_first: list[dict], real_by_game: dict[str, int], since: str | None) -> dict | None:
+    """
+    The games analysed since your last visit (plan 3.4a): how many, how many felt like you, the real problems set and
+    the Brilliant moves. `since` is the client's last-visit time; None or nothing new gives None.
+    """
+    if not since:
+        return None
+    try:
+        cutoff = datetime.fromisoformat(since.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if cutoff.tzinfo is None:
+        cutoff = cutoff.replace(tzinfo=timezone.utc)
+    new = [
+        g for g in games_newest_first
+        if g.get("played_at") and datetime.fromisoformat(g["played_at"].replace("Z", "+00:00")) > cutoff
+    ]
+    if not new:
+        return None
+    return {
+        "games": len(new),
+        "feltLikeYou": sum(1 for g in new if g.get("felt_like_you") == "yes"),
+        "realProblems": sum(real_by_game.get(g["id"], 0) for g in new),
+        "brilliant": sum(1 for g in new if float((g.get("analysis") or {}).get("brilliant_pct") or 0) > 0),
+    }
+
+
 def style_streak(games_newest_first: list[dict], real_by_game: dict[str, int]) -> int:
     """Games in a row, newest first, with at least one real problem or brilliant move."""
     streak = 0
@@ -226,13 +254,13 @@ def _paged(build) -> list[dict]:
 class HomeService:
     """Loads Home for one user (and optionally one Chess.com username)."""
 
-    def home(self, user_id: str | None, username: str | None) -> dict:
+    def home(self, user_id: str | None, username: str | None, since: str | None = None) -> dict:
         sb = get_supabase()
 
         def games_query():
             q = (
                 sb.table("games")
-                .select("id, played_at, opponent, result, time_control, user_color, clocks_ms, game_analyses(brilliant_pct, total_moves)")
+                .select("id, played_at, opponent, result, time_control, user_color, clocks_ms, felt_like_you, game_analyses(brilliant_pct, total_moves)")
                 .eq("analysis_status", "complete")
                 .neq("source", "sarce_bot")  # bot games are practice
                 .order("played_at", desc=True)
@@ -281,6 +309,7 @@ class HomeService:
         return {
             "latest": self._latest(latest, [r for r in lens_rows if r["game_id"] == latest["id"]]),
             "brilliant": brilliant,
+            "session": session_read(games, real_by_game, since),
             "stats": {
                 "streak": style_streak(games, real_by_game) if enough else None,
                 "real": real,

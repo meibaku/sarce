@@ -34,12 +34,12 @@ _chaos_map_building: set[str] = set()  # owners whose map is being rebuilt right
 
 
 @router.get("/home")
-async def get_home(username: str | None = Query(None), user_id: str | None = Query(None)):
-    """Home screen: the latest game's style read and moments, and the Brilliant card."""
+async def get_home(username: str | None = Query(None), user_id: str | None = Query(None), since: str | None = Query(None)):
+    """Home screen: the latest game's style read and moments, the Brilliant card, and games since `since`."""
     name = normalize_chess_com_username(username) if username else None
     try:
         # Heavy, synchronous database work: run it off the event loop so other requests keep flowing.
-        return await asyncio.to_thread(home_service.home, scoped_user_id(user_id, username), name)
+        return await asyncio.to_thread(home_service.home, scoped_user_id(user_id, username), name, since)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 

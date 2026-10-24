@@ -11,6 +11,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- On top of the sites (plan 3.4a): Review links the move on the board to the same move on Chess.com (`?move=N`) or
+  Lichess (`#N`), web and Expo. Home opens with a line for the games analysed since your last visit ("6 games
+  analysed, 2 that felt like you, 1 real problem set"); `/users/home?since=` returns `session`
 - A personal next band (plan 1.3): Home and Settings show a dashed step on the Brilliant gauge, from just above your
   likely range (its 95% upper bound) to half as much again, on the way to the goal band, with one line naming it.
   Web and Expo; `/users/home` returns `nextLo`/`nextHi`. Hidden within half a point of the goal
