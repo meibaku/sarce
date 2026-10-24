@@ -11,6 +11,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- Fingerprints by time control (plan 3.8): You's "By time control" card shows the nine traits for the chosen class,
+  each with its 95% range, and one sentence naming where your two main classes differ beyond noise ("In rapid you
+  set problems more often; in bullet you keep a winning position tight more often"). Each class reads up to 100 of
+  its own newest games, reaching past the 500-game window when recent games are all one speed. Web and Expo
 - `docs/PHASE3_PLAN.md`: Phase 3 (product) in waves: items needing no engine first (3.1, 3.8, 3.9, 3.4a, 3.3), then
   weekly focus and quests and opponent-aware chaos, with style cards and the style twin waiting on Phase 2 and the
   owner-gated items listed with suggested defaults

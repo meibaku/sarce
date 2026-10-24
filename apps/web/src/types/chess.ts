@@ -423,7 +423,17 @@ export interface YouApi {
   /** `refs` holds each scored reference player's value on the axis (data/reference_axes.json). */
   axes: { name: string; you: number | null; refs?: Record<string, number | null> }[] | null;
   references?: Record<string, { games: number; model: string | null }>;
-  timeControls: { class: "bullet" | "blitz" | "rapid"; games: number; pct: number | null; spread: number | null; calibrated: boolean }[];
+  /** `traits`: the nine traits in that class alone (plan 3.8), dashed under MIN_EVENTS, with a 95% range for shares. */
+  timeControls: {
+    class: "bullet" | "blitz" | "rapid";
+    games: number;
+    pct: number | null;
+    spread: number | null;
+    calibrated: boolean;
+    traits?: Record<string, { value: number | null; lo: number | null; hi: number | null; events: number }>;
+  }[];
+  /** Where your two most-played classes differ beyond noise; `traits` empty when they overlap. */
+  timeGap?: { classes: string[]; traits: { trait: string; more: string; less: string; ratio: number }[]; sentence: string } | null;
   /** Converting advantages (squeeze lens) across the window; null before any clearly winning position. */
   /** Fighting back (swindle lens): problems set while clearly losing, and games saved from lost positions. */
   fight?: {
