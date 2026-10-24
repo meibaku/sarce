@@ -128,7 +128,6 @@ export interface StyleOpening {
 
 export interface StyleProfile {
   gamesAnalyzed: number;
-  styleLabel: string;
   favoriteOpening: { eco: string | null; name: string } | null;
   openings: StyleOpening[];
   phaseDistribution: Record<string, number>;

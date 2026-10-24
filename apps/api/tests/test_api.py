@@ -44,7 +44,6 @@ class TestAnalysisRoutes:
     def test_style_profile_normalizes_chess_com_username(self, mock_get_profile):
         mock_get_profile.return_value = {
             "gamesAnalyzed": 0,
-            "styleLabel": "No analyzed games",
             "favoriteOpening": None,
             "openings": [],
             "phaseDistribution": {},

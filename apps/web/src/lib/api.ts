@@ -386,6 +386,8 @@ export interface TrapSet {
   seen: number;
   caught: number;
   rate: number;
+  /** The rate we can stand behind: the 95% lower bound of caught/seen; traps are ranked by it. */
+  likely: number;
   gainPawns: number;
   slip: string;
   defence: string;

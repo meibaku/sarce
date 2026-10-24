@@ -67,7 +67,7 @@ export function TrapsSetCard() {
               />
               <div className="flex min-w-[220px] flex-1 flex-col gap-2 text-[13px] leading-[1.5]">
                 <span className="text-[15px] font-medium">
-                  After {current.move}, {pct(current.rate)} of opponents went wrong.
+                  After {current.move}, {pct(current.rate)} of opponents went wrong (likely at least {pct(current.likely)}).
                 </span>
                 <span className="text-ink-2">
                   Caught {current.caught} of {current.seen}. The usual slip is {current.slip}, worth about {current.gainPawns.toFixed(1)} pawns to you.
@@ -92,7 +92,9 @@ export function TrapsSetCard() {
                     caught {t.caught} of {t.seen} · they slip with {t.slip}
                   </span>
                 </span>
-                <span className="font-mono text-[13px] font-medium text-accent-text">{pct(t.rate)}</span>
+                <span className="font-mono text-[13px] font-medium text-accent-text" title={`${pct(t.rate)} seen; likely at least ${pct(t.likely)}`}>
+                  ≥{pct(t.likely)}
+                </span>
               </button>
             ))}
           </div>

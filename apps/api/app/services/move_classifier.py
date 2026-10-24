@@ -150,6 +150,7 @@ class MoveClassifier:
                     eval_before=eval_before,
                     eval_after=eval_after,
                     best_eval=best_eval_after,
+                    alternatives=[(c["move"].uci(), c.get("eval")) for c in pv_candidates if c.get("move")],
                 )
                 if brilliant:
                     quality = MoveQuality.BRILLIANT

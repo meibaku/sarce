@@ -107,7 +107,7 @@ export type ChaosMapPosition = {
 export const getChaosMap = () => api<{ positions: ChaosMapPosition[]; building: boolean }>("/users/chaos-map");
 export const rebuildChaosMap = () => api<{ building: boolean }>("/users/chaos-map", { method: "POST" });
 /** Your traps (the web's TrapSet in apps/web/src/lib/api.ts). */
-export type TrapSet = { fen: string; line: string; move: string; seen: number; caught: number; rate: number; gainPawns: number; slip: string; defence: string };
+export type TrapSet = { fen: string; line: string; move: string; seen: number; caught: number; rate: number; likely: number; gainPawns: number; slip: string; defence: string };
 export const getTrapsSet = () => api<{ traps: TrapSet[]; building: boolean }>("/users/traps-set");
 export const rebuildTrapsSet = () => api<{ building: boolean }>("/users/traps-set", { method: "POST" });
 export const importGames = (site: "chess_com" | "lichess", username: string) =>

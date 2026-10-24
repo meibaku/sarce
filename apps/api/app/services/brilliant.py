@@ -2,7 +2,8 @@
 Tal-style brilliant move detection.
 
 A brilliant move is a sound sacrifice — material given up without a large eval drop.
-See docs/PHASES.md for full criteria.
+See docs/PHASES.md for full criteria. Rule v4 (ADR 0009) judges soundness, lost positions and "forced" in expected
+points: a quarter-pawn means a lot when level and nothing when the game is decided.
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ from __future__ import annotations
 import chess
 
 from app.config import settings
+from app.services.ep import cp_to_ep
 
 PIECE_VALUES = {
     chess.PAWN: 1,
@@ -25,6 +27,16 @@ MAX_BRILLIANT_EVAL_LOSS = 0.25
 # ADR 0004: a Brilliant move must also be hard to find — players at the relevant rating play it at
 # most this often (human model probability of the played move).
 FIND_RATE_MAX = 0.20
+
+# Rule v4 (ADR 0009), in expected points from the mover's side.
+SOUND_EP_LOSS = 0.03  # sound: at most this much EP below the best move
+LOST_EP = 0.10  # no Brilliant when already lost: the same "decided" line chaos uses (lenses.config.DECIDED_LOW)
+ALTERNATIVE_EP = 0.10  # not forced: another move kept you within this much EP of the best
+
+
+def pawns_ep(pawns: float | None) -> float | None:
+    """Expected points for an evaluation in pawns (mover's side)."""
+    return None if pawns is None else cp_to_ep(pawns * 100)
 
 
 def hard_to_find(probs: dict[str, float] | None, move_uci: str) -> bool | None:
@@ -110,13 +122,44 @@ def real_offer(board: chess.Board, move: chess.Move) -> int:
     return 0
 
 
-def has_reasonable_alternatives(board: chess.Board, move: chess.Move) -> bool:
-    """Move is not forced — more than one legal option existed."""
+def has_reasonable_alternatives(
+    board: chess.Board, move: chess.Move, alternatives: list[tuple[str, float | None]] | None = None
+) -> bool:
+    """
+    Not forced (ADR 0009): another move kept you within ALTERNATIVE_EP of the best, so the sacrifice was a choice.
+    `alternatives` are the engine's lines before the move as (uci, eval in pawns). Without lines for any other
+    move, more than one legal move is enough (nothing says the others lost).
+    """
     legal = list(board.legal_moves)
-    return len(legal) > 1 and move in legal
+    if len(legal) < 2 or move not in legal:
+        return False
+    scored = [(uci, pawns_ep(ev)) for uci, ev in alternatives or [] if ev is not None]
+    others = [ep for uci, ep in scored if uci != move.uci()]
+    if not others:
+        return True
+    best = max(ep for _, ep in scored)
+    return any(best - ep <= ALTERNATIVE_EP for ep in others)
 
 
-CLAUSES = ("real_sacrifice", "sound", "not_already_winning", "not_forced", "hard_to_find")
+CLAUSES = ("real_sacrifice", "sound", "not_lost", "not_already_winning", "not_forced", "hard_to_find")
+BOARD_CLAUSES = CLAUSES[:-1]  # judged at classification; the find-rate clause needs the human model (post-pass)
+
+
+def best_eval_from_row(m: dict) -> float | None:
+    """
+    The best move's evaluation for a stored `game_moves` row, as classification compared it: eval_after plus the
+    centipawn loss. The loss is clamped at zero, but a clamped zero means the move scored at least as well as the
+    best line, which passes the one-sided soundness test either way (and old engine-searched games stored a
+    separate search of the best move that the PV doesn't hold).
+    """
+    if m.get("eval_after") is None:
+        return None
+    return m["eval_after"] + float(m.get("cp_loss") or 0) / 100
+
+
+def alternatives_from_row(m: dict) -> list[tuple[str, float | None]]:
+    """The engine lines before a stored move, as (uci, eval) for `has_reasonable_alternatives`."""
+    return [(p["uci"], p.get("eval")) for p in m.get("pv") or [] if p.get("uci")]
 
 
 def brilliant_clauses(
@@ -126,21 +169,23 @@ def brilliant_clauses(
     eval_after: float | None,
     best_eval: float | None,
     probs: dict[str, float] | None = None,
+    alternatives: list[tuple[str, float | None]] | None = None,
 ) -> dict[str, bool | None]:
     """
     Each Brilliant clause on its own, in CLAUSES order: True/False, or None when it can't be judged (no evaluation,
-    or no human-model data for the find-rate clause). `is_brilliant_move` is the first four; the find-rate clause
+    or no human-model data for the find-rate clause). `is_brilliant_move` is BOARD_CLAUSES; the find-rate clause
     (ADR 0004) is applied afterwards by the post-pass. Used to show which clause stops a move (review F6).
+    Rule v4 (ADR 0009): sound, not_lost and not_forced are in expected points.
     """
     real = material_sacrifice(board, move) >= MIN_BRILLIANT_SACRIFICE_VALUE and real_offer(board, move) >= MIN_BRILLIANT_SACRIFICE_VALUE
     has_evals = eval_before is not None and eval_after is not None and best_eval is not None
-    # Keep Brilliant above the normal "good move" band even if env margin is looser.
-    allowed_eval_loss = min(settings.brilliant_eval_margin, MAX_BRILLIANT_EVAL_LOSS)
     return {
         "real_sacrifice": real,  # ADR 0007: a minor piece or more genuinely on offer
-        "sound": abs(eval_after - best_eval) <= allowed_eval_loss if has_evals else None,
+        # One-sided: a move that searched better than the best line isn't unsound.
+        "sound": pawns_ep(best_eval) - pawns_ep(eval_after) <= SOUND_EP_LOSS if has_evals else None,
+        "not_lost": pawns_ep(eval_before) >= LOST_EP if has_evals else None,
         "not_already_winning": eval_before <= settings.brilliant_winning_margin if has_evals else None,
-        "not_forced": has_reasonable_alternatives(board, move),
+        "not_forced": has_reasonable_alternatives(board, move, alternatives),
         "hard_to_find": hard_to_find(probs, move.uci()),
     }
 
@@ -151,19 +196,20 @@ def is_brilliant_move(
     eval_before: float | None,
     eval_after: float | None,
     best_eval: float | None,
+    alternatives: list[tuple[str, float | None]] | None = None,
 ) -> bool:
     """
-    Tal-specific brilliant detection. ALL conditions must hold (see `brilliant_clauses`):
+    Tal-specific brilliant detection, rule v4. ALL conditions must hold (see `brilliant_clauses`):
 
     1. Real piece sacrifice (minor piece or larger, not a pawn), genuinely on offer (ADR 0007)
-    2. Eval after move within excellent-or-better margin of best available
-    3. Position not already crushing (+3 pawns default)
-    4. Not a forced-only move
+    2. Sound: at most SOUND_EP_LOSS expected points below the best move (ADR 0009)
+    3. Not already lost: at least LOST_EP before the move (ADR 0009)
+    4. Not already crushing (+3 pawns default, BRILLIANT_WINNING_MARGIN)
+    5. Not forced: another move kept you within ALTERNATIVE_EP of the best (ADR 0009)
 
     The find-rate clause (ADR 0004) is applied afterwards by brilliant_find_rate.
-    Thresholds: BRILLIANT_EVAL_MARGIN, BRILLIANT_WINNING_MARGIN in .env
     """
     if eval_before is None or eval_after is None or best_eval is None:
         return False
-    clauses = brilliant_clauses(board, move, eval_before, eval_after, best_eval)
-    return all(clauses[c] for c in CLAUSES[:4])
+    clauses = brilliant_clauses(board, move, eval_before, eval_after, best_eval, alternatives=alternatives)
+    return all(clauses[c] for c in BOARD_CLAUSES)
