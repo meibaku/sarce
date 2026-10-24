@@ -331,7 +331,18 @@ export interface HomeApi {
 export type FeltAnswer = "yes" | "partly" | "no";
 
 /** GET /games/{id}/summary (app/services/summary.py). */
+/** Chaos budget (plan 3.9), in expected points: what setting problems cost, and what the replies gave back. */
+export interface ChaosBudget {
+  spent: number;
+  back: number;
+  net: number;
+  problems: number;
+  /** Replies outside the stored engine lines, left out of `back`. */
+  unknown: number;
+}
+
 export interface SummaryApi {
+  budget?: ChaosBudget | null;
   gameId: string;
   opponent: string | null;
   result: "win" | "loss" | "draw" | null;
@@ -432,6 +443,7 @@ export interface YouApi {
     calibrated: boolean;
     traits?: Record<string, { value: number | null; lo: number | null; hi: number | null; events: number }>;
   }[];
+  budget?: ChaosBudget | null;
   /** Where your two most-played classes differ beyond noise; `traits` empty when they overlap. */
   timeGap?: { classes: string[]; traits: { trait: string; more: string; less: string; ratio: number }[]; sentence: string } | null;
   /** Converting advantages (squeeze lens) across the window; null before any clearly winning position. */

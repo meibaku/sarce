@@ -29,6 +29,7 @@ from datetime import datetime, timedelta
 from app.db.supabase import get_supabase
 from app.services.reference_axes import AXES, axis_values, references
 from app.services.home import MIN_GAMES, PAGE, HomeService, format_time_control, rolling_brilliant, window_brilliant
+from app.services.budget import chaos_budget
 from app.services.uncertainty import MIN_EVENTS, direction, gated, wilson
 from app.services.summary import clock_label, move_label
 
@@ -36,6 +37,7 @@ WEEKS = 12
 TRAITS = ["Sacrifice", "Chaos", "Calm", "Initiative", "Defence", "Grip", "Fight", "Clock", "Foresight"]
 STEADY = 0.1  # relative change below which a trait counts as "holding steady"
 CHUNK = 100  # game ids per request, to keep URLs short
+BUDGET_GAMES = 20  # the chaos budget's window on You
 CLASS_GAMES = 100  # per time class for the side-by-side fingerprint (plan 3.8)
 TOP_UP_SCAN = 3000  # how far back to look for them
 
@@ -198,7 +200,7 @@ def fingerprint_sentence(rows: dict[str, list[float | None]]) -> str:
     return sentence + "."
 
 
-DETAIL_KEYS = ("faced_chaos", "elo", "p_fail", "spent_ms", "critical", "threat")
+DETAIL_KEYS = ("faced_chaos", "elo", "p_fail", "spent_ms", "critical", "threat", "objective_cost", "reply_ep_loss")
 LENS_COLUMNS = "game_id, ply, lens, score, verdict, " + ", ".join(f"{k}:details->{k}" for k in DETAIL_KEYS)
 
 
@@ -310,6 +312,8 @@ class YouService:
             "clock": self._clock(games, by_game_lens),
             "foresight": self._foresight(games, by_game_lens, by_game_moves),
             "sacrifices": self._sacrifices(user_id, username),
+            # The last BUDGET_GAMES games' chaos budget (plan 3.9).
+            "budget": chaos_budget([r for g in games[:BUDGET_GAMES] for r in by_game_lens.get(g["id"], [])]),
         }
 
     @staticmethod
