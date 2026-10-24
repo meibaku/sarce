@@ -135,9 +135,16 @@ class NodeService:
             ).eq("game_id", game_id).execute()
         return len(good_evals) + len(good_threats)
 
-    def done(self, game_id: str, node: str) -> None:
-        """The node has searched every position; the server's analysis will now find them all cached."""
-        get_supabase().table(TABLE).update({"done_at": now().isoformat(), "heartbeat_at": now().isoformat()}).eq("game_id", game_id).eq("node", node).execute()
+    def done(self, game_id: str, node: str) -> bool:
+        """
+        The node has searched every position; the server's analysis will now find them all cached. True only the
+        first time: a retried acknowledgement (its answer lost on the way back) changes nothing and counts nothing.
+        """
+        res = (
+            get_supabase().table(TABLE).update({"done_at": now().isoformat(), "heartbeat_at": now().isoformat()})
+            .eq("game_id", game_id).eq("node", node).is_("done_at", "null").execute()
+        )
+        return bool(res.data)
 
     def finished_games(self) -> list[str]:
         """Games a node has searched that the server hasn't analysed yet (the main API's finisher picks them up)."""

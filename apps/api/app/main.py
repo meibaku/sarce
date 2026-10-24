@@ -1,4 +1,5 @@
 import asyncio
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
@@ -9,6 +10,24 @@ from app.deps import authenticate
 from app.routers import analysis, brilliant, games, health, play, reference, scouting, shares, traps, users, videos
 from app.services.sync import sync_loop
 from app.services.job_queue import JobQueue, analysis_handlers, worker_loop
+
+
+async def monitor_loop(every_s: float = 5) -> None:
+    """The analysis monitor's tick: this machine's snapshot and alerts every few seconds, history trimmed hourly."""
+    from app.services import monitor
+
+    last_trim = 0.0
+    while True:
+        try:
+            await asyncio.to_thread(monitor.tick, settings.workers)
+            if time.monotonic() - last_trim > 3600:
+                await asyncio.to_thread(monitor.trim)
+                last_trim = time.monotonic()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            pass  # no monitor tables yet, or the database is busy: the next tick tries again
+        await asyncio.sleep(every_s)
 
 
 async def node_finisher_loop(poll_s: float = 20) -> None:
@@ -36,6 +55,7 @@ async def lifespan(_app: FastAPI):
     if settings.job_queue_enabled:
         handlers = analysis_handlers(games.analysis_service.analyze_pending)
         worker = asyncio.create_task(worker_loop(JobQueue(), handlers, settings.job_poll_seconds))
+    ticker = asyncio.create_task(monitor_loop())
     finisher = None
     if settings.node_token:
         # Paired nodes (ADR 0010): games they finished searching are analysed here from the cache.
@@ -54,6 +74,7 @@ async def lifespan(_app: FastAPI):
             syncer.cancel()
         if finisher:
             finisher.cancel()
+        ticker.cancel()
         play.bot_service.close()
 
 app = FastAPI(

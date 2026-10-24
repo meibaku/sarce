@@ -13,6 +13,11 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- Analysis monitor, data (dev mode, part 1): every machine and engine reports what it is doing. The server's own
+  analysis slots report each game's progress through its positions and their Stockfish's CPU and memory; Sarce Nodes
+  report every 5 s through the gateway (`/nodes/report`). Claims, finished and failed games, restarts and alerts
+  (offline, stalled engine, rate drop) go to `analysis_events`; games per machine per minute to
+  `analysis_throughput` (30 days kept). CPU and memory come from Windows directly (`procstats.py`, no package)
 - A live status window on each Sarce Node ("Sarce Node status" on its Desktop, `node/status.ps1`), redrawn every 2 s:
   the link, the whole queue (done, left, percent, time to go), games per hour per machine, each engine's game with a
   progress bar, CPU and memory, and the last log line. It reads files the node writes; `/nodes/status` is cached
