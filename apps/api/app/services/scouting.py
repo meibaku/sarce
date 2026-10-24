@@ -7,12 +7,16 @@ Privacy rules, all enforced here:
 - the fetched games are never stored, only the aggregate report;
 - anyone's reports can be removed on request (`delete_target`).
 
-Engine-free: openings, results, time controls and motif tendencies from the PGNs.
+Openings, results, time controls and motif tendencies come from the PGNs alone. "Where they go wrong" (plan 3.7,
+services/opponent_chaos.py) checks their most frequent opening positions with the engine, when one is available,
+and stores only the aggregate.
 """
 
 from __future__ import annotations
 
+import asyncio
 import io
+import logging
 from collections import Counter
 
 import chess
@@ -25,6 +29,8 @@ from app.services.lichess import LichessClient, normalize_lichess_username, pars
 from app.services.motifs import move_motifs
 from app.services.pgn_parser import parse_chess_com_game
 from app.services.style_profile import _pgn_opening
+
+logger = logging.getLogger(__name__)
 
 TABLE = "scouting_reports"
 SOURCES = ("chess_com", "lichess")
@@ -124,6 +130,7 @@ class ScoutingService:
         target = normalize(username)
         parsed = await self._fetch_parsed(target, source, min(max_games, MAX_GAMES))
         report = build_scouting_report(parsed)
+        report["whereTheyGoWrong"] = await asyncio.to_thread(self._where_they_go_wrong, parsed, source)
         res = (
             get_supabase()
             .table(TABLE)
@@ -140,6 +147,21 @@ class ScoutingService:
             .execute()
         )
         return to_api(res.data[0])
+
+    @staticmethod
+    def _where_they_go_wrong(parsed: list[dict], source: str) -> list[dict] | None:
+        """The engine part of the report (plan 3.7); None without an engine, so the rest still saves."""
+        from app.config import settings
+        from app.services.human_model import get_human_model
+        from app.services.opponent_chaos import where_they_go_wrong
+        from app.services.stockfish import StockfishEngine
+
+        try:
+            with StockfishEngine() as engine:
+                return where_they_go_wrong(parsed, source, engine, get_human_model(settings.human_model))
+        except Exception:
+            logger.exception("Where they go wrong: skipped")
+            return None
 
     def list_reports(self, owner_user_id: str) -> list[dict]:
         res = (
