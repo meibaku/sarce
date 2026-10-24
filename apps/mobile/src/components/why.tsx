@@ -53,7 +53,7 @@ export function WhyCard({ gameId, ply, orientation, onClose }: { gameId: string;
                   .catch(() => setReportError(moveKey));
               }}
             />
-            {reportError === moveKey && <T size={12} tone="muted">That didn't save. Try again.</T>}
+            {reportError === moveKey && <T size={12} tone="muted">{"That didn't save. Try again."}</T>}
           </View>
         ))}
       {data.chaos.pFail && (
