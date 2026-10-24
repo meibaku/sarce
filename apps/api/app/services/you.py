@@ -137,23 +137,26 @@ def class_traits(moves: list[dict], lens: list[dict]) -> dict[str, dict]:
 
 def time_gap(by_class: dict[str, dict], games_by_class: dict[str, int]) -> dict | None:
     """
-    Where your two most-played time classes differ beyond noise (their ranges don't overlap, review F4): up to
+    Where your two most-played time classes (by games in the window, before any top-up) differ beyond noise (their ranges don't overlap, review F4): up to
     three traits, largest relative difference first, and one sentence. None when nothing separates.
     """
     played = sorted((c for c, n in games_by_class.items() if n >= MIN_GAMES), key=lambda c: -games_by_class[c])[:2]
     if len(played) < 2:
         return None
     a, b = played
-    found = []
+    found, compared = [], 0
     for t in TRAITS:
         x, y = by_class[a][t], by_class[b][t]
         if x["lo"] is None or y["lo"] is None:
             continue
+        compared += 1
         way = direction((y["lo"], y["hi"]), (x["lo"], x["hi"]))  # "up" = higher in `a`
         if way:
             hi_cls, lo_cls = (a, b) if way == "up" else (b, a)
             ratio = max(x["value"], y["value"]) / max(1e-9, min(x["value"], y["value"]))
             found.append({"trait": t, "more": hi_cls, "less": lo_cls, "ratio": round(ratio, 2)})
+    if not compared:
+        return None  # too few events at one of the speeds to compare anything
     if not found:
         return {"classes": [a, b], "traits": [], "sentence": f"Your {a} and {b} traits overlap: the same player at both speeds."}
     found.sort(key=lambda f: -f["ratio"])
@@ -440,17 +443,19 @@ class YouService:
         if all(n <= 0 for n in need.values()):
             return []
         sb, extra, offset = get_supabase(), [], len(window)
+        seen = {g["id"] for g in window}  # pages can overlap the window when games share a played_at
         while offset < TOP_UP_SCAN and any(n > 0 for n in need.values()):
             batch = scoped(
                 sb.table("games").select("id, played_at, time_control, game_analyses(brilliant_pct, total_moves)")
-                .eq("analysis_status", "complete").neq("source", "sarce_bot").order("played_at", desc=True).order("id")
+                .eq("analysis_status", "complete").neq("source", "sarce_bot").order("played_at", desc=True)
             ).range(offset, offset + PAGE - 1).execute().data or []
             for g in batch:
                 c = time_class(g.get("time_control"))
-                if need[c] > 0:
+                if g["id"] not in seen and need[c] > 0:
+                    seen.add(g["id"])
                     a = g.pop("game_analyses", None)
                     g["analysis"] = a[0] if isinstance(a, list) and a else a
-                    extra.append(g)
+                    extra.append({**g, "top_up": True})
                     need[c] -= 1
             if len(batch) < PAGE:
                 break
@@ -471,12 +476,14 @@ class YouService:
         """Brilliant and the nine traits per time class, and where your two main classes differ (plan 3.8)."""
         out, by_class, counts = [], {}, {}
         for cls in ("bullet", "blitz", "rapid"):
-            subset = [g for g in games if time_class(g.get("time_control")) == cls]
+            played = [g for g in games if time_class(g.get("time_control")) == cls]
+            counts[cls] = sum(1 for g in played if not g.get("top_up"))  # how often you play it, in the window
+            subset = sorted(played, key=lambda g: g.get("played_at") or "", reverse=True)[:CLASS_GAMES]  # its newest
             card = window_brilliant(subset)
             traits = class_traits(
                 [m for g in subset for m in by_game_moves.get(g["id"], [])], [r for g in subset for r in by_game_lens.get(g["id"], [])]
             )
-            by_class[cls], counts[cls] = traits, len(subset)
+            by_class[cls] = traits
             out.append({"class": cls, "games": len(subset), "pct": card["pct"], "spread": card["spread"], "calibrated": cls == "bullet", "traits": traits})
         return out, time_gap(by_class, counts)
 

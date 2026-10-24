@@ -102,3 +102,21 @@ def test_class_traits_gate_and_range():
     traits = class_traits(moves, [])
     assert traits["Sacrifice"]["value"] == 0.03 and 0 < traits["Sacrifice"]["lo"] < 0.03 < traits["Sacrifice"]["hi"]
     assert traits["Chaos"]["value"] is None and traits["Initiative"]["lo"] is None
+
+
+def test_time_gap_needs_something_to_compare():
+    from app.services.you import TRAITS, time_gap
+
+    empty = {t: {"value": None, "lo": None, "hi": None, "events": 3} for t in TRAITS}
+    assert time_gap({"bullet": empty, "rapid": empty}, {"bullet": 50, "rapid": 40}) is None
+
+
+def test_each_class_reads_only_its_newest_games_and_ranks_by_play():
+    from app.services.you import CLASS_GAMES, YouService
+
+    games = [{"id": f"b{i}", "played_at": f"2026-10-{20 - i // 100:02d}T{i % 24:02d}:00", "time_control": "60"} for i in range(300)]
+    games += [{"id": f"r{i}", "played_at": "2025-01-01T00:00", "time_control": "600", "top_up": True} for i in range(100)]
+    games += [{"id": "z0", "played_at": "2026-10-21T00:00", "time_control": "180"}] * 1
+    controls, _ = YouService._time_controls(games, {}, {})
+    by = {c["class"]: c for c in controls}
+    assert by["bullet"]["games"] == CLASS_GAMES and by["rapid"]["games"] == CLASS_GAMES
