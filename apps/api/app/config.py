@@ -96,6 +96,8 @@ class Settings(BaseSettings):
     # migration is applied; when on, every analysed game also gets node-limited
     # MultiPV evaluations for the position after each ply.
     position_evals_enabled: bool = False
+    # Pairing secret for Sarce Nodes (ADR 0010); empty means the node gateway accepts no one.
+    node_token: str = ""
     analysis_nodes: int = 1_500_000
     analysis_multipv: int = 4
     analysis_multipv_cap: int = 8

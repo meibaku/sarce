@@ -425,6 +425,15 @@ class AnalysisService:
             query = query.eq("chess_com_username", chess_com_username)
 
         res = query.execute()
+        # Games a paired node is searching right now are left to it (ADR 0010); they come back cached.
+        try:
+            from app.services.nodes import live_leases
+
+            leased = live_leases()
+        except Exception:
+            leased = set()  # no lease table yet: nothing is leased
+        if leased:
+            res.data = [g for g in (res.data or []) if g["id"] not in leased]
         # Several games at once, each with its own single-threaded engine in a worker thread:
         # results stay deterministic (node-limited, fresh hash) and an 8-core PC does ~N× the work.
         gate = asyncio.Semaphore(settings.workers)

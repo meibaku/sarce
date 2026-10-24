@@ -11,6 +11,12 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- Sarce Nodes (ADR 0010, `docs/NODES.md`): helper computers search games for the server. A node leases a pending
+  game from the token-protected node gateway (`app/node_gateway.py`, its own process on a private address), searches
+  every position with the server's own code and Stockfish 18, and sends the rows back in batches; the server then
+  analyses the game from its cache and skips games under a live lease (`node_leases`). Built for power cuts: leases
+  expire, a restarted node resumes its game, and the runner restarts it and fetches new code from the gateway.
+  `apps/node/install.ps1` sets up Python, the code, Stockfish (SSE4.1 build on CPUs without AVX2) and a boot task
 - Weekly quests (plan 3.6): the week's focus becomes three drills from your own games where that trait's lens
   marked a chance (a squeeze you let go for Grip, a threat let through for Foresight, an almost-Brilliant sacrifice
   for Sacrifice), first in Train, with a reference player above you on that trait where one is scored ("Sacrifice,
