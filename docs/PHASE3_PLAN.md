@@ -40,17 +40,19 @@ Suggested PR order:
 history imports.
 
 **Today:**
-- The analysis queue is already newest-first (`analysis.analyze_pending` orders by `played_at desc`).
-- Import fetches every Chess.com monthly archive before analysis starts, so a long history delays the first game.
+- The analysis queue is already newest-first (`analysis.analyze_pending` orders by `played_at desc`), and the
+  background sync only fetches the newest month.
+- Onboarding calls `/games/import` (and `/games/import/lichess`), which fetches every Chess.com monthly archive
+  before storing anything, and the onboarding screens wait for that request. That route is the bottleneck.
 
 **Build:**
-1. **Import:** `SyncService.sync` imports the newest archive month first, then queues one analysis job
-   (`job_queue.queue_analysis`) right away. Older months follow in the background.
-2. **Lichess:** the newest 20 games are fetched first, then the rest, with the same queueing.
+1. **Import:** `/games/import` fetches archives newest first until it has 20 games, stores and queues them, and
+   answers. Older months follow in a background task and are queued when stored.
+2. **Lichess:** `/games/import/lichess` fetches the newest 20 games first, then the rest in the background,
+   skipping the first batch by id.
 3. **Measuring it:**
-   - Migration `games.analysed_at timestamptz`, set when analysis completes.
-   - Migration `profiles.first_read_at`, set the first time a game completes for that owner.
-   - The time from sign-up to first read appears in `/users/sync-status` and as a one-off script.
+   - `firstImportAt` and `firstReadAt` milestones in `profiles.settings`, written atomically by an RPC.
+   - The time from first import to first read appears in `GET /users/sync` as `firstReadSeconds`.
    - The goal is a first read in under 5 minutes for a 1,000-game history.
 4. **Onboarding:** the "2 more moments still being scored…" step polls sync status, so it shows the real first
    game rather than waiting for the backfill.
@@ -93,8 +95,10 @@ This needs F8, which is merged: every lens is in expected points.
 **Build:**
 1. **Pure function** `chaos_budget(lens_rows)` in a new `services/budget.py`:
    - spent = Σ objective cost of your moves that set a problem (chaos verdicts with `objective_cost`);
-   - back = Σ EP your opponents dropped on the replies that followed (survival/swindle `fell` plus the reply's EP
-     loss);
+   - back = Σ EP your opponents dropped on the replies that followed. No lens stores this today: survival scores
+     your replies, and swindle's `fell` is only yes/no. So the chaos lens (version 3) adds the opponent's actual
+     reply and its EP loss against their best reply, from the stored lines, on the same centipawn calibration as
+     `objective_cost`;
    - net = back − spent.
    - Stored lens details only, no engine.
 2. **API:** Summary gains `budget`, and You gains the last 20 games' budget (a rolling sum).
@@ -152,7 +156,7 @@ This needs rule v4, which is merged (ADR 0009).
    - Review shows "Almost Brilliant: it gave a little too much (0.05 EP)", linking to Why this move?.
 2. **Badge line:** under every `!!`, a short "Sarce Brilliant" label linking to the definition page.
 3. **Definition page** `/brilliant`, public and needing no account:
-   - the five clauses in plain words;
+   - all six clauses (`brilliant.CLAUSES`, including `hard_to_find`) in plain words;
    - the thresholds, read from the API so they can't drift;
    - three worked examples from the golden test games.
 4. **Expo:** the "almost" line on Review.
@@ -203,7 +207,9 @@ This needs rule v4, which is merged (ADR 0009).
 
 **Build:**
 1. **Quest:** the 3.2 focus plus a reference player whose value on that trait is far from yours.
-   - The reference value comes from `reference_axes`.
+   - The reference value comes from `reference_axes`, which only has Sacrifice, Chaos, Calm and Initiative. For
+     the other five traits the quest has no reference player: the target comes from your own range, until 2.1
+     scores the references on every trait.
    - The player is labelled "Tal (classical)" and flagged as provisional until 2.1 lands.
 2. **Drills:** three positions from your games where that trait's lens fired, for example squeeze chances you let
    go for Grip. They are queued in the existing Train queue (`drills`, `train.py`) with source `quest`.
