@@ -145,6 +145,22 @@ def keep_awake() -> None:
         ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001)
 
 
+def watch_parent() -> None:
+    """
+    End this engine process when the node's main process is gone. On Windows a parent killed hard leaves its
+    children running as orphans: they would keep an old bundle forever and double up with the next start's engines.
+    """
+    parent = mp.parent_process()
+
+    def watch() -> None:
+        while True:
+            time.sleep(5)
+            if parent is not None and not parent.is_alive():
+                os._exit(0)
+
+    threading.Thread(target=watch, daemon=True).start()
+
+
 def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> None:
     os.environ.update(settings_env)
     os.environ["STOCKFISH_PATH"] = env["STOCKFISH_PATH"]
@@ -158,6 +174,7 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
 
     name = f"{env['NODE']}-{index}"
     gw = Gateway(env["SERVER"], env["TOKEN"], name)
+    watch_parent()
     keep_awake()
     done_today, day, last_seconds = games_today(index), time.strftime("%Y-%m-%d"), None
     with StockfishEngine() as real_engine:
