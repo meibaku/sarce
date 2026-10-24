@@ -130,22 +130,25 @@ class ReferenceService:
         # The same pipeline as a player's games (review F6): the shared engine search, classification, then the
         # find-rate (ADR 0004) and real-offer (ADR 0007) post-pass. An evenly spaced sample across the career (the
         # corpus is in date order), and only games Tal is actually in.
-        from app.services.brilliant_benchmark import benchmark_game, summarize
+        from app.services.brilliant_benchmark import benchmark_game, even_sample, summarize
         from app.services.brilliant_find_rate import style_vector_v2
         from app.services.human_model import get_human_model
         from app.services.stockfish import StockfishEngine
 
         corpus = self._extract_pgns(zip_path, 100_000)
-        step = max(1, len(corpus) // max_games)
         model = get_human_model(settings.human_model)
         merged = {**EMPTY_DISTRIBUTION}
         results = []
 
         def run(pgn_text: str) -> dict | None:
-            with StockfishEngine() as engine:
-                return benchmark_game(pgn_text, TAL_PLAYER_NAME, engine, model)
+            try:
+                with StockfishEngine() as engine:
+                    return benchmark_game(pgn_text, TAL_PLAYER_NAME, engine, model)
+            except Exception:  # one odd PGN must not end the benchmark
+                logger.exception("Tal benchmark: game skipped")
+                return None
 
-        for pgn_text in corpus[::step][:max_games]:
+        for pgn_text in even_sample(corpus, max_games):
             result = await asyncio.to_thread(run, pgn_text)
             if not result:
                 continue
@@ -154,6 +157,8 @@ class ReferenceService:
                 merged[k] += result["qualities"].get(k, 0)
 
         analyzed = len(results)
+        if not analyzed:
+            raise RuntimeError("Tal benchmark: no games analysed (is Stockfish available?)")
         summary = summarize(results)
         brilliant_pct = BaselineService.brilliant_pct(merged)
         style_vector = {**style_vector_v2(build_style_vector_v1(merged, brilliant_pct), merged, brilliant_pct), "interval": summary["interval"]}

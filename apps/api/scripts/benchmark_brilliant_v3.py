@@ -24,7 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.config import settings
-from app.services.brilliant_benchmark import benchmark_game, player_report, summarize
+from app.services.brilliant_benchmark import benchmark_game, even_sample, player_report, summarize
 from app.services.human_model import get_human_model
 from app.services.reference import ReferenceService
 from app.services.stockfish import StockfishEngine
@@ -40,8 +40,7 @@ def save(key: str, summary: dict, **extra) -> None:
 
 def reference(zip_path: Path, player: str, key: str, games: int, workers: int) -> None:
     corpus = ReferenceService._extract_pgns(zip_path, 100_000)
-    step = max(1, len(corpus) // games)
-    pgns = corpus[::step][:games]
+    pgns = even_sample(corpus, games)
     model = get_human_model(settings.human_model)
 
     def one(args):
@@ -61,8 +60,10 @@ def reference(zip_path: Path, player: str, key: str, games: int, workers: int) -
             if i % 10 == 0:
                 s = summarize(results)
                 print(f"{i}/{len(pgns)} games · Brilliant {s['brilliantPct']}% {s['interval']} · stopped by {s['stoppedBy']}", flush=True)
+    if not results:  # e.g. no engine: keep the saved benchmark rather than overwrite it with nothing
+        sys.exit(f"No {player} games were benchmarked; {OUT.name} left unchanged")
     summary = summarize(results)
-    save(key, summary, model=model.name, source=f"pgnmentor.com {key} corpus, every {step}th of {len(corpus)} games")
+    save(key, summary, model=model.name, source=f"pgnmentor.com {key} corpus, {len(pgns)} evenly spaced of {len(corpus)} games")
     print(json.dumps(summary, indent=2))
 
 

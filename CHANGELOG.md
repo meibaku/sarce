@@ -15,8 +15,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   forced, hard to find); `is_brilliant_move` is now built on it
 - `services/brilliant_benchmark.py` and `scripts/benchmark_brilliant_v3.py`: Brilliant % under rule v3 with a
   game-level bootstrap interval, and the first clause stopping each real sacrifice, for a reference player (engine)
-  and for you (stored data, seconds). Locally: your Brilliant is 0.01% (0.00–0.02%). Of 257 real sacrifices, 233
-  failed "sound" and 21 came when already winning; only 2 reached the find-rate clause
+  and for you (stored data, seconds). Locally (1,626 games): your Brilliant is 0.02% (0.01–0.04%). Of 489 real
+  sacrifices, 440 failed "sound" and 31 came when already winning; 11 reached the find-rate clause
 
 ### Added
 - `docs/IMPLEMENTATION_PLAN.md`: every suggestion from the October review and its companion docs as ordered work

@@ -55,6 +55,38 @@ def first_failure(clauses: dict[str, bool | None]) -> str | None:
     return next((c for c in CLAUSES if clauses.get(c) is False), None)
 
 
+def outcome(clauses: dict[str, bool | None]) -> str:
+    """
+    Where a real sacrifice ends up under rule v3: the first failing clause, "no_evals" when soundness can't be judged
+    (Brilliant needs evaluations), else "brilliant". A missing human-model probability keeps the move Brilliant,
+    exactly as the find-rate post-pass does.
+    """
+    failed = first_failure(clauses)
+    if failed:
+        return failed
+    if clauses.get("sound") is None or clauses.get("not_already_winning") is None:
+        return "no_evals"
+    return "brilliant"
+
+
+def even_sample(corpus: list[str], n: int) -> list[str]:
+    """n games evenly spaced across the whole corpus (in date order), first to last."""
+    if len(corpus) <= n:
+        return list(corpus)
+    return [corpus[i * len(corpus) // n] for i in range(n)]
+
+
+def stored_best_eval(m: dict) -> float | None:
+    """
+    The best move's evaluation for a stored move. `cp_loss` is clamped at zero, so it can't recover a played move
+    that searched better than the best line; the stored PV can (the engine's choice scores its own eval_after).
+    """
+    if m.get("uci") and m.get("uci") == m.get("best_uci"):
+        return m.get("eval_after")
+    pv = m.get("pv") or []
+    return pv[0].get("eval") if pv else None
+
+
 def benchmark_game(pgn_text: str, player: str, engine, model) -> dict | None:
     """
     One reference game through the app's pipeline: {moves, brilliant, candidates, stopped_by}. `candidates` are moves
@@ -91,15 +123,13 @@ def benchmark_game(pgn_text: str, player: str, engine, model) -> dict | None:
     for m in updated:
         ply = m["ply"]
         move = chess.Move.from_uci(m["uci"])
-        best_eval = None if m.get("eval_after") is None else m["eval_after"] + (m.get("cp_loss") or 0) / 100
-        clauses = brilliant_clauses(boards[ply], move, m.get("eval_before"), m.get("eval_after"), best_eval)
+        clauses = brilliant_clauses(boards[ply], move, m.get("eval_before"), m.get("eval_after"), m.get("best_eval"))
         if not clauses["real_sacrifice"]:
             continue
         candidates += 1
         if all(clauses[c] for c in CLAUSES[:4]):
             clauses["hard_to_find"] = None if m.get("is_brilliant") else False
-        failed = first_failure(clauses)
-        stopped[failed or "brilliant"] += 1
+        stopped[outcome(clauses)] += 1
     return {
         "moves": len(updated),
         "brilliant": sum(1 for m in updated if m.get("is_brilliant")),
@@ -147,6 +177,9 @@ def player_report(owner_id: str, games_read: int = 2000) -> dict:
     """
     The same summary for your analysed games, from stored data: Brilliant % with its game-level interval, and the
     first clause that stopped each of your real sacrifices. No engine; human-model probabilities come from the cache.
+
+    Brilliant is recomputed from the clauses rather than read from `is_brilliant`, so games classified before the
+    find-rate or real-offer rules (or whose post-pass failed) are judged by rule v3 like the rest.
     """
     from app.config import settings
     from app.db.supabase import get_supabase
@@ -154,11 +187,17 @@ def player_report(owner_id: str, games_read: int = 2000) -> dict:
     from app.services.library import boards_before
 
     sb = get_supabase()
-    games = (
-        sb.table("games").select("id, pgn, opponent_rating").eq("user_id", owner_id).eq("analysis_status", "complete")
-        .neq("source", "sarce_bot").order("played_at", desc=True).limit(games_read).execute().data
-        or []
-    )
+    games: list[dict] = []
+    while len(games) < games_read:  # paged: PostgREST caps a response at 1,000 rows
+        batch = (
+            sb.table("games").select("id, pgn, opponent_rating").eq("user_id", owner_id).eq("analysis_status", "complete")
+            .neq("source", "sarce_bot").order("played_at", desc=True).order("id")
+            .range(len(games), min(games_read, len(games) + 1000) - 1).execute().data
+            or []
+        )
+        games += batch
+        if len(batch) < 1000:
+            break
     model, store = get_human_model(settings.human_model), SupabaseProbStore()
     results = []
     for start in range(0, len(games), 100):
@@ -166,7 +205,7 @@ def player_report(owner_id: str, games_read: int = 2000) -> dict:
         moves: list[dict] = []
         while True:  # paged: PostgREST caps a response at 1,000 rows
             batch = (
-                sb.table("game_moves").select("game_id, ply, uci, eval_before, eval_after, cp_loss, is_brilliant, signals")
+                sb.table("game_moves").select("game_id, ply, uci, eval_before, eval_after, best_uci, pv, signals")
                 .in_("game_id", [g["id"] for g in part]).order("id").range(len(moves), len(moves) + 999).execute().data
                 or []
             )
@@ -188,12 +227,12 @@ def player_report(owner_id: str, games_read: int = 2000) -> dict:
                 if m["ply"] >= len(plies):
                     continue
                 board, move = plies[m["ply"]]
-                best_eval = None if m.get("eval_after") is None else m["eval_after"] + (m.get("cp_loss") or 0) / 100
+                best_eval = stored_best_eval(m)
                 clauses = brilliant_clauses(board, move, m.get("eval_before"), m.get("eval_after"), best_eval)
                 if all(clauses[c] for c in CLAUSES[:4]):
                     clauses["hard_to_find"] = brilliant_clauses(
                         board, move, m["eval_before"], m["eval_after"], best_eval, cached_move_probs(board, elo, model, store)
                     )["hard_to_find"]
-                stopped[first_failure(clauses) or "brilliant"] += 1
-            results.append({"moves": len(mine), "brilliant": sum(1 for m in mine if m.get("is_brilliant")), "candidates": len(candidates), "stopped_by": dict(stopped)})
+                stopped[outcome(clauses)] += 1
+            results.append({"moves": len(mine), "brilliant": stopped["brilliant"], "candidates": len(candidates), "stopped_by": dict(stopped)})
     return summarize(results)

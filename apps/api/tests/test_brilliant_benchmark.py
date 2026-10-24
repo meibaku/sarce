@@ -44,3 +44,24 @@ def test_bootstrap_resamples_whole_games():
     s = bb.summarize([{"brilliant": b, "moves": n, "candidates": 0, "stopped_by": {}} for b, n in per_game])
     assert s["brilliantPct"] == 0.5 and s["interval"][0] < 0.5 < s["interval"][1]
     assert bb.bootstrap_interval([]) is None
+
+
+def test_outcome_separates_unjudged_from_brilliant():
+    assert bb.outcome({"real_sacrifice": True, "sound": None, "not_already_winning": None, "not_forced": True, "hard_to_find": None}) == "no_evals"
+    assert bb.outcome({"real_sacrifice": True, "sound": True, "not_already_winning": True, "not_forced": True, "hard_to_find": None}) == "brilliant"
+    assert bb.outcome({"real_sacrifice": True, "sound": True, "not_already_winning": True, "not_forced": True, "hard_to_find": False}) == "hard_to_find"
+
+
+def test_even_sample_spans_the_whole_corpus():
+    corpus = [str(i) for i in range(399)]
+    picked = bb.even_sample(corpus, 200)
+    assert len(picked) == 200 and picked[0] == "0" and int(picked[-1]) > 390
+    assert bb.even_sample(corpus[:5], 200) == corpus[:5]
+
+
+def test_stored_best_eval_keeps_a_better_than_best_search():
+    # cp_loss is clamped at 0, so only the PV shows the played move searched 0.5 above the best line.
+    m = {"uci": "e2e4", "best_uci": "d2d4", "eval_after": 1.0, "pv": [{"eval": 0.5}]}
+    assert bb.stored_best_eval(m) == 0.5
+    assert bb.stored_best_eval({**m, "uci": "d2d4"}) == 1.0
+    assert bb.stored_best_eval({"uci": "e2e4", "best_uci": "d2d4", "pv": []}) is None
