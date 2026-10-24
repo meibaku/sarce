@@ -50,6 +50,18 @@ def player_color(game: chess.pgn.Game, player: str) -> str | None:
     return None
 
 
+def reference_rung(game: chess.pgn.Game, color: str) -> int:
+    """
+    The find-rate rung for a reference game, as for your games (the mover's own rating, nearest 100; ADR 0004
+    addendum). Over-the-board Elo sits close to Lichess's scale at master level, so it is used as is. Old games
+    often have no Elo: then the opponent's, then the ladder's top rung.
+    """
+    own = game.headers.get("WhiteElo" if color == "white" else "BlackElo", "")
+    other = game.headers.get("BlackElo" if color == "white" else "WhiteElo", "")
+    raw = own if own.isdigit() else other
+    return int(round(int(raw) / 100.0)) * 100 if raw.isdigit() else rung_for(2400)
+
+
 def first_failure(clauses: dict[str, bool | None]) -> str | None:
     """The first clause, in CLAUSES order, that is False; None when none fails."""
     return next((c for c in CLAUSES if clauses.get(c) is False), None)
@@ -101,8 +113,7 @@ def benchmark_game(pgn_text: str, player: str, engine, model) -> dict | None:
     board, moves = game.board(), list(game.mainline_moves())
     lines = game_lines(board, moves, engine, MemoryEvalStore())
     classified = MoveClassifier().classify_game(board, moves, color, lines=lines)
-    raw = game.headers.get("BlackElo" if color == "white" else "WhiteElo", "")
-    elo = rung_for(int(raw) if raw.isdigit() else None)
+    elo = reference_rung(game, color)
 
     boards: list[chess.Board] = []
     temp = board.copy()
