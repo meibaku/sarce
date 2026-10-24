@@ -143,6 +143,17 @@ export function PrepView() {
                 />
                 <List title="TIME CONTROLS" items={report.timeControls.slice(0, 3).map((t) => `${t.name} (${t.games})`)} />
               </AutoGrid>
+              {report.whereTheyGoWrong && report.whereTheyGoWrong.length > 0 && (
+                <List
+                  title="WHERE THEY GO WRONG · FROM THEIR OWN GAMES"
+                  items={report.whereTheyGoWrong.map(
+                    (w) =>
+                      `After ${w.line || "the opening"}: ${w.wrong} of ${w.seen} times wrong` +
+                      (w.slip ? `, usually ${w.slip}${w.slipLossEp != null ? ` (gives up ${w.slipLossEp.toFixed(2)})` : ""}` : "") +
+                      `. ${w.best} holds; ${Math.round(w.pFail * 100)}% at ${w.elo} miss it.`,
+                  )}
+                />
+              )}
             </Card>
           );
         })}
