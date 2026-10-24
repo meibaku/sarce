@@ -307,13 +307,24 @@ def history(hours: int = 24, bucket_min: int = 10) -> dict:
         rows += batch
         if len(batch) < 1000:
             break
-    buckets: dict[str, dict[str, int]] = {}
+    def bucket_of(minute: datetime) -> datetime:
+        return (minute - timedelta(minutes=minute.minute % bucket_min)).replace(second=0, microsecond=0)
+
+    counts: dict[str, dict[datetime, int]] = {}
     for r in rows:
-        minute = datetime.fromisoformat(r["minute"])
-        start = minute - timedelta(minutes=minute.minute % bucket_min)
-        key = start.replace(second=0, microsecond=0).isoformat()
-        buckets.setdefault(r["machine"], {}).setdefault(key, 0)
-        buckets[r["machine"]][key] += r["games"]
+        start = bucket_of(datetime.fromisoformat(r["minute"]))
+        counts.setdefault(r["machine"], {}).setdefault(start, 0)
+        counts[r["machine"]][start] += r["games"]
+    # Every bucket from a machine's first to now, zero where nothing finished: a drop has to show as a drop, not as
+    # a line drawn straight across the gap.
+    buckets: dict[str, dict[str, int]] = {}
+    last = bucket_of(t)
+    for machine, seen in counts.items():
+        series, at = {}, min(seen)
+        while at <= last:
+            series[at.isoformat()] = seen.get(at, 0)
+            at += timedelta(minutes=bucket_min)
+        buckets[machine] = series
     marks = (
         sb.table(EVENTS).select("at, kind, machine, detail").gt("at", since.isoformat())
         .in_("kind", ["offline", "stalled", "rate_drop", "recovered", "node_started", "updated"]).order("at").execute().data
@@ -363,12 +374,17 @@ def node_report(machine: str, stats: dict, engines: list[dict], bundle: str | No
         rows.append({
             "machine": machine, "engine": int(e["engine"]), "state": str(e.get("state") or "unknown")[:20], "game_id": e.get("gameId"),
             "done": int(e.get("done") or 0), "total": int(e.get("total") or 0),
-            "started_at": _iso(e.get("startedAt")), "progress_at": _iso(e.get("progressAt")),
+            "started_at": _ago(e.get("startedAgo")), "progress_at": _ago(e.get("progressAgo")),
             "cpu": e.get("cpu"), "rss_mb": e.get("rssMb"), "games_today": int(e.get("gamesToday") or 0),
             "last_game_s": e.get("lastGameSeconds"), "updated_at": now().isoformat(),
         })
     if rows:
         sb.table("engine_snapshots").upsert(rows, on_conflict="machine,engine").execute()
+
+
+def _ago(seconds) -> str | None:
+    """A node's "this long ago" on the server's clock (node clocks drift when offline)."""
+    return None if seconds is None else (now() - timedelta(seconds=float(seconds))).isoformat()
 
 
 def _iso(epoch) -> str | None:

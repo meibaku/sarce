@@ -208,6 +208,21 @@ export function SettingsView({
                   : "Not set up on this server: add Claude credentials (ANTHROPIC_API_KEY) to the API to use it."}
               </span>
             </div>
+            {/* Developer mode: the analysis monitor, for running Sarce across several machines. */}
+            <div className="flex flex-col gap-1 border-t border-hair pt-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[13px] font-medium">Developer mode</span>
+                <Switch label="Developer mode" on={Boolean(data.devMode)} onChange={(on) => onChange({ devMode: on })} />
+              </div>
+              <span className="text-[12px] leading-[1.45] text-muted">
+                Shows the analysis monitor: every machine and engine at work, per game, with resources and drops.
+              </span>
+              {data.devMode && (
+                <TextLink href="/dev/monitor" className="self-start !text-[12px]">
+                  Open the analysis monitor
+                </TextLink>
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-[18px]">
               <button
                 type="button"

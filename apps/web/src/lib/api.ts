@@ -439,3 +439,21 @@ export async function getSyncStatus() {
 export async function syncNow() {
   return fetchApi<{ started: boolean }>(`/users/sync`, { method: "POST" });
 }
+
+/** The analysis monitor (dev mode). The live view subscribes to `monitorStreamUrl()` (server-sent events). */
+export async function getMonitorSnapshot() {
+  return fetchApi<import("@/types/chess").MonitorSnapshot>("/monitor/snapshot");
+}
+
+export async function getMonitorHistory(hours = 24, bucket = 10) {
+  return fetchApi<import("@/types/chess").MonitorHistory>(`/monitor/history?hours=${hours}&bucket=${bucket}`);
+}
+
+export async function getMonitorEvents(limit = 100, machine?: string) {
+  const q = machine ? `&machine=${encodeURIComponent(machine)}` : "";
+  return fetchApi<{ events: import("@/types/chess").MonitorEvent[] }>(`/monitor/events?limit=${limit}${q}`);
+}
+
+export function monitorStreamUrl() {
+  return `${API_BASE}/monitor/stream`;
+}

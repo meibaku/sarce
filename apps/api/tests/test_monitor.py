@@ -124,3 +124,75 @@ def test_gateway_refuses_a_malformed_report():
         assert bad.status_code == 422 and not rep.called
         ok = client.post("/nodes/report", headers={"X-Sarce-Node": "s3cret"}, json={"node": "desk", "engines": [{"engine": 0, "state": "searching", "extra": 1}]})
         assert ok.status_code == 200 and rep.call_args.args[2][0]["engine"] == 0
+
+
+def test_monitor_routes_and_the_stream():
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    client = TestClient(app)
+    snap = {"at": "t", "queue": {"pending": 1}, "machines": [], "alerts": []}
+    with patch("app.services.monitor.snapshot", return_value=snap):
+        assert client.get("/monitor/snapshot").json()["queue"]["pending"] == 1
+    with patch("app.services.monitor.events", return_value=[{"id": 1, "kind": "claimed"}]):
+        assert client.get("/monitor/events?limit=5").json()["events"][0]["kind"] == "claimed"
+
+
+def test_node_times_are_placed_on_the_servers_clock():
+    sb = MagicMock()
+    sb.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value.data = []
+    with patch("app.services.monitor.get_supabase", return_value=sb), patch("app.services.monitor.event"):
+        monitor.node_report("desk", {}, [{"engine": 0, "state": "searching", "startedAgo": 90, "progressAgo": 5}], "b", None)
+    row = sb.table.return_value.upsert.call_args_list[-1].args[0][0]
+    from datetime import datetime
+
+    started = datetime.fromisoformat(row["started_at"])
+    assert 85 <= (monitor.now() - started).total_seconds() <= 95
+
+
+def test_only_operators_read_the_monitor_when_signed_in():
+    from fastapi.testclient import TestClient
+
+    from app import deps
+    from app.main import app
+    from app.routers import monitor as monitor_router
+
+    client = TestClient(app)
+    snap = {"at": "t", "queue": {}, "machines": [], "alerts": []}
+    user = SimpleNamespace(user=SimpleNamespace(id="u-1"))
+    sb = MagicMock()
+    sb.auth.get_user.return_value = user
+    signed_in = {"Authorization": "Bearer tok"}
+    with patch.object(deps, "get_supabase", return_value=sb), patch("app.services.monitor.snapshot", return_value=snap):
+        with patch.object(monitor_router.settings, "monitor_operators", []):
+            assert client.get("/monitor/snapshot", headers=signed_in).status_code == 403
+            assert client.get("/monitor/snapshot").status_code == 200  # local-first: the machine's owner
+        with patch.object(monitor_router.settings, "monitor_operators", ["u-1"]):
+            assert client.get("/monitor/snapshot", headers=signed_in).status_code == 200
+
+
+def test_history_fills_quiet_buckets_with_zero():
+    t = monitor.now().replace(second=0, microsecond=0)
+    t = t - timedelta(minutes=t.minute % 10)
+    rows = [{"minute": (t - timedelta(minutes=40)).isoformat(), "machine": "desk", "games": 3}, {"minute": t.isoformat(), "machine": "desk", "games": 2}]
+    sb = MagicMock()
+    sb.table.return_value.select.return_value.gt.return_value.order.return_value.range.return_value.execute.return_value = SimpleNamespace(data=rows)
+    sb.table.return_value.select.return_value.gt.return_value.in_.return_value.order.return_value.execute.return_value = SimpleNamespace(data=[])
+    with patch("app.services.monitor.get_supabase", return_value=sb):
+        series = monitor.history(1, 10)["series"]["desk"]
+    assert list(series.values()) == [3, 0, 0, 0, 2]
+
+
+def test_a_game_already_processing_is_left_alone():
+    import asyncio
+
+    from app.services.analysis import AnalysisService
+
+    sb = MagicMock()
+    sb.table.return_value.select.return_value.eq.return_value.maybe_single.return_value.execute.return_value = SimpleNamespace(
+        data={"id": "g", "pgn": '[Event "x"]\n\n1. e4 e5 *', "user_color": "white", "analysis_status": "processing"}
+    )
+    with patch("app.services.analysis.get_supabase", return_value=sb), patch.object(AnalysisService, "_classify") as classify:
+        assert asyncio.run(AnalysisService()._analyze_game("g")) is None
+    assert not classify.called and not sb.table.return_value.update.called

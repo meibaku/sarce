@@ -623,6 +623,8 @@ export interface SettingsApi {
   aiHelp?: boolean;
   /** Whether the server has Claude credentials at all (read-only). */
   aiAvailable?: boolean;
+  /** Developer mode: the analysis monitor (/dev/monitor). */
+  devMode?: boolean;
   kept?: { games: number; notes: number };
 }
 
@@ -653,4 +655,69 @@ export interface SyncStatus {
   processing: number;
   autoSync: boolean;
   chaosPass: boolean;
+}
+
+/** The analysis monitor (dev mode, apps/api/app/services/monitor.py). */
+export interface MonitorEngine {
+  machine: string;
+  engine: number;
+  state: string;
+  game_id: string | null;
+  done: number;
+  total: number;
+  started_at: string | null;
+  progress_at: string | null;
+  cpu: number | null;
+  rss_mb: number | null;
+  games_today: number;
+  last_game_s: number | null;
+  updated_at: string;
+  game: { opponent: string | null; opponent_rating: number | null; user_color: string | null; time_control: string | null; played_at: string | null; source: string | null } | null;
+  elapsedS: number | null;
+  etaS: number | null;
+  stale: boolean;
+}
+
+export interface MonitorMachine {
+  machine: string;
+  role: "server" | "node";
+  cpu: number | null;
+  mem_used: number | null;
+  mem_total_gb: number | null;
+  uptime_s: number | null;
+  process_started_at: string | null;
+  bundle: string | null;
+  engines: number;
+  updated_at: string;
+  online: boolean;
+  silentS: number;
+  engineRows: MonitorEngine[];
+  rate: { lastHour: number; last10: number; perHourNow: number; positionsLastHour: number } | null;
+}
+
+export interface MonitorSnapshot {
+  at: string;
+  queue: { pending: number; processing: number; complete: number; failed: number; total: number };
+  perHour: number;
+  etaHours: number | null;
+  machines: MonitorMachine[];
+  alerts: { key: string; kind: string; machine: string; [detail: string]: unknown }[];
+}
+
+export interface MonitorEvent {
+  id: number;
+  at: string;
+  machine: string | null;
+  engine: number | null;
+  kind: string;
+  game_id: string | null;
+  detail: Record<string, unknown>;
+}
+
+export interface MonitorHistory {
+  from: string;
+  to: string;
+  bucketMin: number;
+  series: Record<string, Record<string, number>>;
+  marks: { at: string; kind: string; machine: string | null; detail: Record<string, unknown> }[];
 }

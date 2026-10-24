@@ -312,6 +312,12 @@ def main() -> int:
                 except (OSError, ValueError):
                     continue
                 e["cpu"], e["rssMb"] = sampler.process(e.get("pid"), e.get("sfPid"))
+                # Ages, not timestamps: an offline machine's clock drifts (days, on this desktop), so the server
+                # places these on its own clock.
+                now = time.time()
+                # Clamped: a clock stepped backwards must not make the gateway refuse the whole report.
+                e["startedAgo"] = max(0.0, now - e["startedAt"]) if e.get("startedAt") else None
+                e["progressAgo"] = max(0.0, now - e["progressAt"]) if e.get("progressAt") else None
                 engines.append(e)
             gw.call("/nodes/report", {"machine": sampler.machine(), "engines": engines, "bundle": local, "startedAt": started_at}, timeout=10)
         except Exception:
