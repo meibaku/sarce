@@ -189,7 +189,7 @@ def next_band(hi: float | None, goal_lo: float) -> tuple[float, float] | None:
     lo = max(0.1, math.ceil(round(hi * 10, 6)) / 10)
     if goal_lo - lo < 0.5:  # less than half a point short: the next step is the goal band itself
         return None
-    return lo, round(min(goal_lo, lo + max(0.5, lo / 2)), 1)
+    return lo, min(goal_lo, round(lo + max(0.5, lo / 2), 1))  # round first: the cap must hold for fractional goals
 
 
 def gap_line(pct: float | None, lo: float, hi: float) -> str:

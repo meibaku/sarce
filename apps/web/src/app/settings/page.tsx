@@ -17,6 +17,15 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [sync, setSync] = useState<SyncStatus | null>(null);
 
+  // Brilliant and the next band come from Home; the band depends on the goal, so it is re-read after a goal change.
+  const loadHome = () =>
+    getHome()
+      .then((h) => {
+        setBrilliant(h.brilliant.pct);
+        setNext(h.brilliant.nextLo != null && h.brilliant.nextHi != null ? { lo: h.brilliant.nextLo, hi: h.brilliant.nextHi } : null);
+      })
+      .catch(() => undefined);
+
   useEffect(() => {
     getSettings()
       .then((s) => {
@@ -24,12 +33,7 @@ export default function SettingsPage() {
         applyTheme(s.theme); // the profile's choice wins over this device's copy
       })
       .catch(() => setError("Sarce can't reach its analysis service."));
-    getHome()
-      .then((h) => {
-        setBrilliant(h.brilliant.pct);
-        if (h.brilliant.nextLo != null && h.brilliant.nextHi != null) setNext({ lo: h.brilliant.nextLo, hi: h.brilliant.nextHi });
-      })
-      .catch(() => undefined);
+    loadHome();
     getSyncStatus().then(setSync).catch(() => undefined);
   }, []);
 
@@ -51,14 +55,19 @@ export default function SettingsPage() {
           onExport={() => downloadJournal().catch(() => setError("The journal couldn't be exported. Try again."))}
           onChange={(changes) => {
             const previous = data;
+            const goalChanged = "goalLo" in changes || "goalHi" in changes;
             setData({ ...data, ...changes });
+            if (goalChanged) setNext(null); // stale until the saved goal's band is read back
             if (changes.theme) applyTheme(changes.theme);
             updateSettings(changes)
               .then((saved) => {
                 resetMotionPrefs();
                 // The PUT answer has the stored settings only: keep the read-only facts from the GET.
                 setData((d) => ({ ...saved, kept: d?.kept, aiAvailable: d?.aiAvailable }));
-                if ("goalLo" in changes || "goalHi" in changes) showToast("Goal changed. Every gauge follows it.", "think");
+                if (goalChanged) {
+                  loadHome();
+                  showToast("Goal changed. Every gauge follows it.", "think");
+                }
                 else if ("quietUntil" in changes)
                   showToast(changes.quietUntil ? "Quiet week on. Numbers are hidden." : "Quiet week over. Numbers are back.", changes.quietUntil ? "sleep" : "stretch");
               })

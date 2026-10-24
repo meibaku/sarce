@@ -94,3 +94,9 @@ def test_next_band_is_one_step_above_the_likely_range():
     assert next_band(5.8, 6) is None  # the step would already be the goal band
     assert next_band(4.5, 6) == (4.5, 6)  # capped at the goal
     assert next_band(None, 6) is None
+
+
+def test_next_band_never_passes_a_fractional_goal():
+    from app.services.home import next_band
+
+    assert next_band(4.5, 6.06) == (4.5, 6.06)
