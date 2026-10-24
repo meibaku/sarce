@@ -110,20 +110,29 @@ def track_game(game_id: str):
         tracker = Tracker(game_id, slot)
         _slots[slot] = tracker
     token = current.set(tracker)
-    tracker.write(force=True)
+    background(tracker.write, True)  # never a database round trip on the API's event loop
     try:
         yield tracker
     finally:
         current.reset(token)
         with _slots_lock:
             _slots.pop(slot, None)
-        try:
-            get_supabase().table("engine_snapshots").upsert({
-                "machine": MACHINE, "engine": slot, "state": "idle", "game_id": None, "done": 0, "total": 0,
-                "last_game_s": int((now() - tracker.started).total_seconds()), "updated_at": now().isoformat(),
-            }, on_conflict="machine,engine").execute()
-        except Exception:
-            pass
+        background(_idle, slot, int((now() - tracker.started).total_seconds()))
+
+
+def background(fn, *args) -> None:
+    """Run a best-effort monitor write off the caller's thread (the API's event loop must never wait on it)."""
+    threading.Thread(target=fn, args=args, daemon=True).start()
+
+
+def _idle(slot: int, seconds: int) -> None:
+    try:
+        get_supabase().table("engine_snapshots").upsert({
+            "machine": MACHINE, "engine": slot, "state": "idle", "game_id": None, "done": 0, "total": 0,
+            "last_game_s": seconds, "updated_at": now().isoformat(),
+        }, on_conflict="machine,engine").execute()
+    except Exception:
+        pass
 
 
 class CountingStore:
@@ -318,6 +327,23 @@ def events(limit: int = 100, machine: str | None = None) -> list[dict]:
     if machine:
         q = q.eq("machine", machine)
     return q.execute().data or []
+
+
+def game_finished(game_id: str, seconds: int, positions: int, moves: int | None) -> None:
+    """A server analysis ended: counted for this machine, unless a node had searched it (then the node got the count)."""
+    if searched_by_node(game_id):
+        event("finished_from_node", game_id=game_id, seconds=seconds)
+    else:
+        bump(MACHINE, 1, positions)
+        event("game_done", game_id=game_id, seconds=seconds, moves=moves, positions=positions)
+
+
+def searched_by_node(game_id: str) -> bool:
+    try:
+        rows = get_supabase().table("node_leases").select("done_at").eq("game_id", game_id).limit(1).execute().data or []
+        return bool(rows and rows[0].get("done_at"))
+    except Exception:
+        return False
 
 
 def node_report(machine: str, stats: dict, engines: list[dict], bundle: str | None, started_epoch: float | None) -> None:

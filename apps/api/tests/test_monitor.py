@@ -110,3 +110,17 @@ def test_uptime_is_unsigned():
     from app.services.procstats import uptime_s
 
     assert uptime_s() > 0
+
+
+def test_gateway_refuses_a_malformed_report():
+    from fastapi.testclient import TestClient
+
+    from app.node_gateway import app
+    from app.services import nodes
+
+    with patch.object(nodes.settings, "node_token", "s3cret"), patch("app.services.monitor.node_report") as rep:
+        client = TestClient(app)
+        bad = client.post("/nodes/report", headers={"X-Sarce-Node": "s3cret"}, json={"node": "desk", "engines": [{}]})
+        assert bad.status_code == 422 and not rep.called
+        ok = client.post("/nodes/report", headers={"X-Sarce-Node": "s3cret"}, json={"node": "desk", "engines": [{"engine": 0, "state": "searching", "extra": 1}]})
+        assert ok.status_code == 200 and rep.call_args.args[2][0]["engine"] == 0

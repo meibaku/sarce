@@ -146,28 +146,17 @@ class AnalysisService:
         busy with this game, and the game's end (finished, failed, or finished from a node's search) is an event.
         """
         started = time.monotonic()
-        with monitor.track_game(game_id):
+        with monitor.track_game(game_id) as tracker:
             try:
                 result = await self._analyze_game(game_id)
             except Exception as exc:
-                monitor.event("game_failed", game_id=game_id, error=str(exc)[:200])
+                monitor.background(monitor.event, "game_failed", monitor.MACHINE, None, game_id)
+                logger.debug("monitor: game %s failed: %s", game_id, exc)
                 raise
         if result:
-            seconds = round(time.monotonic() - started)
-            if self._searched_by_node(game_id):
-                monitor.event("finished_from_node", game_id=game_id, seconds=seconds)
-            else:
-                monitor.bump(monitor.MACHINE, 1, int(result.get("totalMoves") or 0))
-                monitor.event("game_done", game_id=game_id, seconds=seconds, moves=result.get("totalMoves"))
+            # Positions searched or looked up, the same measure nodes report; off the event loop.
+            monitor.background(monitor.game_finished, game_id, round(time.monotonic() - started), len(tracker.seen) or tracker.done, result.get("totalMoves"))
         return result
-
-    @staticmethod
-    def _searched_by_node(game_id: str) -> bool:
-        try:
-            rows = get_supabase().table("node_leases").select("done_at").eq("game_id", game_id).limit(1).execute().data or []
-            return bool(rows and rows[0].get("done_at"))
-        except Exception:
-            return False
 
     async def _analyze_game(self, game_id: str) -> dict | None:
         sb = get_supabase()
