@@ -237,21 +237,27 @@ export function MonitorView() {
     };
     getMonitorSnapshot().then(setSnap).catch(() => setError("The API isn't answering."));
     let source: EventSource | null = null;
+    // A stream that opens but never delivers (a buffering proxy) falls back to polling too.
+    const silent = setTimeout(() => { source?.close(); startPolling(); }, 10_000);
     try {
       source = new EventSource(monitorStreamUrl());
       source.addEventListener("snapshot", (ev) => {
+        clearTimeout(silent);
         setSnap(JSON.parse((ev as MessageEvent).data));
         setLive("stream");
         setError(null);
       });
       source.onerror = () => {
+        clearTimeout(silent);
         source?.close();
         startPolling();
       };
     } catch {
+      clearTimeout(silent);
       startPolling();
     }
     return () => {
+      clearTimeout(silent);
       source?.close();
       if (poll) clearInterval(poll);
     };

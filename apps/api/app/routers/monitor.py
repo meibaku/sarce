@@ -59,4 +59,7 @@ async def stream(request: Request):
                 yield f"event: problem\ndata: {json.dumps({'detail': str(exc)[:200]})}\n\n"
             await asyncio.sleep(STREAM_S)
 
-    return StreamingResponse(feed(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+    # no-transform: a compressing proxy (Next's rewrites gzip by default) would otherwise hold events back.
+    return StreamingResponse(
+        feed(), media_type="text/event-stream", headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"}
+    )
