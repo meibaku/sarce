@@ -91,6 +91,7 @@ export function RecapView({ data, onSetFocus }: { data: RecapApi; onSetFocus: (i
         <div className="flex flex-col gap-[3px] rounded-[6px] border border-line bg-surface p-3">
           <span className="font-mono text-[10px] text-muted">last focus</span>
           <span className="text-[13px]">{data.lastFocus?.line ?? data.lastFocus?.label ?? "None set yet"}</span>
+          {data.questLine && <span className="text-[12px] text-muted">{data.questLine}</span>}
         </div>
       </div>
 

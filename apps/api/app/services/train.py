@@ -172,8 +172,13 @@ def missed_sacrifice(board: chess.Board, played: chess.Move, best_uci: str | Non
 
 
 class TrainService:
-    def queue(self, user_id: str | None, owner_id: str, focus: str | None, first: str | None = None) -> dict:
-        """The queue; `first` (a drill key, e.g. from the library's "Defend it yourself") goes to the front."""
+    def queue(
+        self, user_id: str | None, owner_id: str, focus: str | None, first: str | None = None, quest: list[dict] | None = None
+    ) -> dict:
+        """
+        The queue; `first` (a drill key, e.g. from the library's "Defend it yourself") goes to the front, then this
+        week's quest drills (plan 3.6), then the rest by focus.
+        """
         sb = get_supabase()
         q = (
             sb.table("games")
@@ -286,6 +291,7 @@ class TrainService:
             "safe_reply": [trap_items, missed, other_side, chaos, tal, saved],
             "calm_after_sacrifice": [other_side, missed, trap_items, chaos, tal, saved],
         }.get(focus or "", [missed, chaos, trap_items, tal, other_side, saved])
+        order = [list(quest or [])] + order
         wanted = next((i for pool in order for i in pool if i["key"] == first), None) if first else None
         pools = [[i for i in pool if i["key"] not in due and i is not wanted] for pool in order]
         if wanted:

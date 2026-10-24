@@ -88,9 +88,11 @@ export default function Train() {
         One queue
       </T>
       <T mono size={11} tone="muted">
-        {data.focus
-          ? `aimed at this week's focus: ${data.focus.toLowerCase()}`
-          : `${data.waiting} waiting · pick a focus in your weekly recap`}
+        {data.quest
+          ? `this week's quest: ${data.quest.trait}${data.quest.reference ? `, like ${data.quest.reference.label}` : ""} · ${data.quest.done} of ${data.quest.drillCount} done`
+          : data.focus
+            ? `aimed at this week's focus: ${data.focus.toLowerCase()}`
+            : `${data.waiting} waiting · pick a focus in your weekly recap`}
       </T>
       {/* The queue (handoff): number, source chip, where it came from, title and detail. */}
       <View

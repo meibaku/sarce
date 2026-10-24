@@ -177,9 +177,20 @@ async def delete_position(position_id: str, user_id: str | None = Query(None)):
 @router.get("/train")
 async def get_train(user_id: str | None = Query(None), drill: str | None = Query(None, max_length=200)):
     """Train queue: drills from your games, the trap atlas and saved positions, aimed at this week's focus."""
+    from app.services.focus import FocusService
+    from app.services.quests import QuestService
+
     owner = resolve_user_id(user_id)
+    scoped = scoped_user_id(user_id, None)
     focus = recap_service.current_focus(owner, "weekly")
-    data = await asyncio.to_thread(train_service.queue, scoped_user_id(user_id, None), owner, focus, first=drill)
+
+    def build() -> dict:
+        # This week's quest (plan 3.6): the focus trait's drills go first in the queue.
+        quest = QuestService().quest(scoped, owner, FocusService().weekly(scoped, focus))
+        data = train_service.queue(scoped, owner, focus, first=drill, quest=(quest or {}).get("drills"))
+        return {**data, "quest": {k: v for k, v in quest.items() if k != "drills"} | {"drillCount": len(quest["drills"])} if quest else None}
+
+    data = await asyncio.to_thread(build)
     return {**data, "focus": FOCUSES.get(focus or "")}
 
 

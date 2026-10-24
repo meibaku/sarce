@@ -74,6 +74,22 @@ export function TrainView({ data, onAnswer, aiHelp = false }: { data: TrainApi; 
         </span>
       </div>
 
+      {data.quest && (
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-[8px] border border-line bg-surface px-4 py-3">
+          <span className="font-mono text-[11px] text-accent-text">This week&apos;s quest</span>
+          <span className="text-[14px] font-medium">
+            {data.quest.trait}: {data.quest.phrase}
+            {data.quest.reference ? `, like ${data.quest.reference.label}` : ""}
+          </span>
+          <span className="basis-full text-[13px] text-ink-2">
+            {data.quest.drillCount
+              ? `${data.quest.done} of ${data.quest.drillCount} quest drills done; they're first in the queue.`
+              : "No drills for it in your recent games yet."}
+            {data.quest.reference ? ` ${data.quest.reference.axis}: ${data.quest.reference.player} ${data.quest.reference.theirs}, you ${data.quest.reference.yours}.` : ""}
+          </span>
+        </div>
+      )}
+
       <PositionSetter aiHelp={aiHelp} onSaved={() => setSaved((n) => n + 1)} />
 
       <AutoGrid min={380} className="items-start">

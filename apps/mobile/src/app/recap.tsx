@@ -79,6 +79,7 @@ export default function Recap() {
         <View style={box}>
           <T mono size={10} tone="muted">last focus</T>
           <T size={13}>{data.lastFocus?.line ?? data.lastFocus?.label ?? "None set yet"}</T>
+          {data.questLine && <T size={12} tone="muted">{data.questLine}</T>}
         </View>
       </View>
 

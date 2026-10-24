@@ -526,6 +526,8 @@ export interface RecapApi {
   brilliant: { pct: number | null; spread: number | null; lo?: number | null; hi?: number | null; games: number; change: number | null; trend?: "up" | "down" | null };
   best: { gameId: string; ply: number; label: string } | null;
   lastFocus: { id: string; label: string | null; line: string | null } | null;
+  /** "Quest · Grip: 2 of 3 drills · held" (plan 3.6). */
+  questLine?: string | null;
   streakWeeks: number;
   focuses: { id: string; label: string }[];
 }
@@ -562,6 +564,18 @@ export interface TrainApi {
   items: DrillItem[];
   waiting: number;
   focus: string | null;
+  /** This week's quest (plan 3.6); its drills are first in `items`. */
+  quest?: {
+    trait: string;
+    phrase: string;
+    value: number;
+    target: number;
+    unit: "share" | "score";
+    reference: { player: string; label: string; axis: string; theirs: number; yours: number } | null;
+    drillCount: number;
+    done: number;
+    verdict: string;
+  } | null;
 }
 
 export type Confidence = "guessed" | "unsure" | "sure";
