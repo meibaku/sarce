@@ -17,7 +17,7 @@ from app.lenses.squeeze import line_cp, line_points
 
 class SwindleLens:
     name = "swindle"
-    version = "2"  # 2: "clearly losing" in EP (review F8)
+    version = "3"  # 3: "clearly losing" in EP (review F8); 2: opponent rating on the model's scale (F1)
 
     def score(self, ctx: PlyContext) -> LensResult | None:
         if ctx.faced is None or ctx.left is None or not ctx.faced.lines:
