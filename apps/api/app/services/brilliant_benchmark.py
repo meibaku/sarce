@@ -20,7 +20,7 @@ import chess
 import chess.pgn
 
 from app.services.brilliant import CLAUSES, brilliant_clauses
-from app.services.brilliant_find_rate import apply_rule, rung_for
+from app.services.brilliant_find_rate import apply_rule, mover_rung, rung_for
 from app.services.move_classifier import MoveClassifier
 from app.services.position_evals import game_lines
 from app.services.reference import _matches_player_name
@@ -190,7 +190,7 @@ def player_report(owner_id: str, games_read: int = 2000) -> dict:
     games: list[dict] = []
     while len(games) < games_read:  # paged: PostgREST caps a response at 1,000 rows
         batch = (
-            sb.table("games").select("id, pgn, opponent_rating").eq("user_id", owner_id).eq("analysis_status", "complete")
+            sb.table("games").select("id, pgn, opponent_rating, user_rating, source, time_control").eq("user_id", owner_id).eq("analysis_status", "complete")
             .neq("source", "sarce_bot").order("played_at", desc=True).order("id")
             .range(len(games), min(games_read, len(games) + 1000) - 1).execute().data
             or []
@@ -222,7 +222,7 @@ def player_report(owner_id: str, games_read: int = 2000) -> dict:
             stopped: Counter[str] = Counter()
             candidates = [m for m in mine if "real_sacrifice" in (m.get("signals") or [])]
             plies = boards_before(g.get("pgn") or "") if candidates else []
-            elo = rung_for(g.get("opponent_rating"))
+            elo = mover_rung(g)
             for m in candidates:
                 if m["ply"] >= len(plies):
                     continue

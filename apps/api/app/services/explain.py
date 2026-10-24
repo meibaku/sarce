@@ -20,6 +20,7 @@ import io
 import chess
 import chess.pgn
 
+from app.services.rating_map import opponent_model_elo
 from app.config import settings
 from app.db.supabase import get_supabase
 from app.services.brilliant import FIND_RATE_MAX, MAX_BRILLIANT_EVAL_LOSS, MIN_BRILLIANT_SACRIFICE_VALUE
@@ -129,7 +130,7 @@ class ExplainService:
 
     def why(self, game_id: str, ply: int) -> dict | None:
         sb = get_supabase()
-        games = sb.table("games").select("pgn, user_color, opponent_rating").eq("id", game_id).limit(1).execute().data or []
+        games = sb.table("games").select("pgn, user_color, opponent_rating, source, time_control").eq("id", game_id).limit(1).execute().data or []
         if not games:
             return None
         game = games[0]
@@ -146,7 +147,7 @@ class ExplainService:
         lens = {r["lens"]: r for r in sb.table("move_lens_scores").select("lens, score, verdict, details").eq("game_id", game_id).eq("ply", ply).execute().data or []}
         chaos, survival = lens.get("chaos") or {}, lens.get("survival") or {}
 
-        rung = nearest_rung(game.get("opponent_rating"))
+        rung = nearest_rung(opponent_model_elo(game))
         probs_rows = sb.table("human_probs").select("probs").eq("fen_key", fen_key(board)).eq("elo", rung).limit(1).execute().data or []
         find_prob = (probs_rows[0]["probs"] or {}).get(row["uci"], 0.0) if probs_rows else None
 

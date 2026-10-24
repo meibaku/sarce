@@ -24,6 +24,13 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   F2, F4 and F12 are marked done; F6 moves to the front after F4 showed Brilliant at 0.01% under rule v3
 
 ### Changed
+- Ratings on the human model's scale (review F1): Maia-2 is conditioned on Lichess ratings, so every Chess.com
+  rating is converted first (`services/rating_map.py`, from the public ChessGoals survey, July 2026) wherever it
+  meets the model: lens ladder, chaos map, Review's "who falls for this", Why this move. A Chess.com rapid 660
+  opponent is now judged as the ~1,170 player they are, not the bottom rung. Chaos and survival lens versions bump
+- The Brilliant find-rate clause is judged at your own rating, converted and to the nearest 100, instead of the
+  opponent's at 400-point rungs (review F11a, ADR 0004 addendum); `games.user_rating` is a new generated column
+  from the PGN. Style vectors → version 4
 - Honest uncertainty (review F4), in a new `services/uncertainty.py`:
   - Brilliant % shows its Wilson 95% range ("likely 3.2–5.0%") on Home, You and Recap, web and phone.
   - The You trend is Brilliant % over rolling 20-game windows, drawn as a line in its shaded range, instead of one

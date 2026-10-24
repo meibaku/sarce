@@ -19,6 +19,7 @@ from app.lenses import config as lens_config
 from app.services.chaos_validation import clock_bucket, decider_clock_ms
 from app.services.ep import cp_to_ep
 from app.services.threats import THREAT_NODES
+from app.services.rating_map import opponent_model_elo
 from app.services.human_model import get_human_model
 from app.services.position_evals import fen_key
 
@@ -237,7 +238,7 @@ class LensService:
         sb = get_supabase()
         game = (
             sb.table("games")
-            .select("id, pgn, opponent_rating, clocks_ms, time_control")
+            .select("id, pgn, opponent_rating, source, clocks_ms, time_control")
             .eq("id", game_id)
             .maybe_single()
             .execute()
@@ -267,7 +268,7 @@ class LensService:
             moves,
             {row["fen_key"]: row for row in evals},
             probs_by_key,
-            game.data.get("opponent_rating"),
+            opponent_model_elo(game.data),  # the human model's scale (review F1)
             clocks_ms=game.data.get("clocks_ms"),
             initial_clock_ms=initial_clock_ms(game.data.get("time_control")),
             inc_ms=increment_ms(game.data.get("time_control")),
