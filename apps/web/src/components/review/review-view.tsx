@@ -164,6 +164,16 @@ export function ReviewView({
             hot={current && viewPly === current.ply ? current.hot : []}
             label={current ? `Position after ${current.label}` : "Starting position"}
           />
+          {data.site && viewPly != null && (
+            <a
+              href={`${data.site.url}${data.site.style === "hash" ? "#" : "?move="}${viewPly + 1}`}
+              target="_blank"
+              rel="noreferrer"
+              className="self-start font-mono text-[11px] text-accent-text underline-offset-2 hover:underline"
+            >
+              See this move on {data.site.name} ↗
+            </a>
+          )}
           {!twoMove && <IdeaArcs ideas={data.ideas} plies={data.positions.length} />}
           {current?.glyph === "!!" && (
             <Link href="/brilliant" className="self-start font-mono text-[11px] text-accent-text underline-offset-2 hover:underline">

@@ -319,6 +319,8 @@ export interface HomeApi {
     nextLo?: number | null;
     nextHi?: number | null;
   };
+  /** Games analysed since your last visit (plan 3.4a); null without `since` or when nothing is new. */
+  session?: { games: number; feltLikeYou: number; realProblems: number; brilliant: number } | null;
   stats: {
     streak: number | null;
     real: number;
@@ -331,7 +333,18 @@ export interface HomeApi {
 export type FeltAnswer = "yes" | "partly" | "no";
 
 /** GET /games/{id}/summary (app/services/summary.py). */
+/** Chaos budget (plan 3.9), in expected points: what setting problems cost, and what the replies gave back. */
+export interface ChaosBudget {
+  spent: number;
+  back: number;
+  net: number;
+  problems: number;
+  /** Replies outside the stored engine lines, left out of `back`. */
+  unknown: number;
+}
+
 export interface SummaryApi {
+  budget?: ChaosBudget | null;
   gameId: string;
   opponent: string | null;
   result: "win" | "loss" | "draw" | null;
@@ -379,6 +392,8 @@ export interface ReviewMoment extends HomeMoment {
 
 export interface ReviewApi {
   gameId: string;
+  /** The game on its site, for "see this move there" (plan 3.4a): Chess.com `?move=N`, Lichess `#N`, N = ply + 1. */
+  site?: { name: string; url: string; style: "query" | "hash" } | null;
   /** Real sacrifices that missed exactly one Brilliant clause (plan 3.3). */
   almostBrilliant?: { ply: number; label: string; clause: string; line: string }[];
   opponent: string | null;
@@ -425,7 +440,18 @@ export interface YouApi {
   /** `refs` holds each scored reference player's value on the axis (data/reference_axes.json). */
   axes: { name: string; you: number | null; refs?: Record<string, number | null> }[] | null;
   references?: Record<string, { games: number; model: string | null }>;
-  timeControls: { class: "bullet" | "blitz" | "rapid"; games: number; pct: number | null; spread: number | null; calibrated: boolean }[];
+  /** `traits`: the nine traits in that class alone (plan 3.8), dashed under MIN_EVENTS, with a 95% range for shares. */
+  timeControls: {
+    class: "bullet" | "blitz" | "rapid";
+    games: number;
+    pct: number | null;
+    spread: number | null;
+    calibrated: boolean;
+    traits?: Record<string, { value: number | null; lo: number | null; hi: number | null; events: number }>;
+  }[];
+  budget?: ChaosBudget | null;
+  /** Where your two most-played classes differ beyond noise; `traits` empty when they overlap. */
+  timeGap?: { classes: string[]; traits: { trait: string; more: string; less: string; ratio: number }[]; sentence: string } | null;
   /** Converting advantages (squeeze lens) across the window; null before any clearly winning position. */
   /** Fighting back (swindle lens): problems set while clearly losing, and games saved from lost positions. */
   fight?: {

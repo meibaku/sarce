@@ -133,6 +133,23 @@ export default function You() {
               {!time.calibrated && <Uncalibrated />}
             </View>
           )}
+          {time?.traits && (
+            <View style={{ gap: 4 }} accessibilityLabel={`Your traits in ${time.class}`}>
+              {Object.entries(time.traits).map(([name, t]) => (
+                <View key={name} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <T size={12} tone="ink2" style={{ width: 80 }}>{name}</T>
+                  <View style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: color.hair }}>
+                    {t.value != null && t.lo != null && t.hi != null && (
+                      <View style={{ position: "absolute", top: 0, bottom: 0, left: `${t.lo * 100}%`, width: `${(t.hi - t.lo) * 100}%`, borderRadius: 3, backgroundColor: color.accentTint }} />
+                    )}
+                    {t.value != null && <View style={{ position: "absolute", top: -2, bottom: -2, width: 2, marginLeft: -1, left: `${Math.min(1, t.value) * 100}%`, backgroundColor: color.accent }} />}
+                  </View>
+                  <T mono size={11} tone="muted" style={{ width: 36, textAlign: "right" }}>{t.value == null ? "—" : t.value.toFixed(2)}</T>
+                </View>
+              ))}
+            </View>
+          )}
+          {data.timeGap && <T size={13} tone="ink2">{data.timeGap.sentence}</T>}
         </Card>
       )}
 

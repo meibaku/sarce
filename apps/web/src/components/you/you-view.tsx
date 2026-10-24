@@ -249,7 +249,34 @@ export function YouView({ data }: { data: YouApi }) {
                 {!current.calibrated && <UncalibratedBadge />}
               </div>
               <StyleGauge compact value={current.pct} goalLo={data.goalLo} goalHi={data.goalHi} />
+              {current.traits && (
+                <div className="mt-1 flex flex-col gap-[5px]" aria-label={`Your traits in ${current.class}`}>
+                  {Object.entries(current.traits).map(([name, t]) => (
+                    <div key={name} className="grid grid-cols-[84px_minmax(0,1fr)_42px] items-center gap-2">
+                      <span className="text-[12px] text-ink-2">{name}</span>
+                      <div className="relative h-[6px] rounded-[3px] bg-hair">
+                        {t.value != null && (
+                          <>
+                            {t.lo != null && t.hi != null && (
+                              <div className="absolute top-0 bottom-0 rounded-[3px] bg-accent-tint" style={{ left: `${t.lo * 100}%`, width: `${(t.hi - t.lo) * 100}%` }} />
+                            )}
+                            <div className="absolute -top-[2px] -bottom-[2px] -ml-px w-[2px] bg-accent" style={{ left: `${Math.min(1, t.value) * 100}%` }} />
+                          </>
+                        )}
+                      </div>
+                      <span className="text-right font-mono text-[11px] text-muted">{t.value == null ? <Dashed /> : t.value.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
+          )}
+          {data.timeGap && <span className="border-t border-hair pt-2 text-[13px] leading-[1.5] text-ink-2">{data.timeGap.sentence}</span>}
+          {data.budget && (
+            <span className="border-t border-hair pt-2 font-mono text-[11px] text-muted" title="Expected points over your last 20 games">
+              chaos budget, last 20 games · {data.budget.spent.toFixed(2)} risked · {data.budget.back.toFixed(2)} came back
+              {data.budget.unknown > 0 && ` · ${data.budget.unknown} repl${data.budget.unknown === 1 ? "y" : "ies"} not scored`}
+            </span>
           )}
         </Card>
 

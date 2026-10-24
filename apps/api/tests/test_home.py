@@ -100,3 +100,17 @@ def test_next_band_never_passes_a_fractional_goal():
     from app.services.home import next_band
 
     assert next_band(4.5, 6.06) == (4.5, 6.06)
+
+
+def test_session_summary_and_cutoff():
+    from app.services.home import parse_since, summarise_session
+
+    games = [
+        {"id": "a", "felt_like_you": "yes", "analysis": {"brilliant_pct": 5.0}},
+        {"id": "b", "felt_like_you": None, "analysis": {"brilliant_pct": 0}},
+    ]
+    assert summarise_session(games, {"a": 1, "b": 2}) == {"games": 2, "feltLikeYou": 1, "realProblems": 3, "brilliant": 1}
+    assert summarise_session([], {}) is None
+    assert parse_since("2026-10-24T10:00:00Z").isoformat() == "2026-10-24T10:00:00+00:00"
+    assert parse_since("2026-10-24T10:00:00").tzinfo is not None
+    assert parse_since(None) is None and parse_since("not a date") is None

@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from app.lenses import config
 from app.lenses.base import LensResult, PlyContext, PositionData
+from app.lenses.squeeze import line_cp
+from app.services.ep import cp_to_ep
 
 
 def split_safe(lines: list[dict], safe_tol: float) -> tuple[list[dict], list[dict]]:
@@ -79,11 +81,26 @@ def is_decided(ep_before: float | None) -> bool:
     return ep_before is not None and not (config.DECIDED_LOW <= ep_before <= config.DECIDED_HIGH)
 
 
+def reply_loss(ctx: PlyContext, data: dict) -> dict:
+    """
+    The opponent's actual reply and the expected points it gave up against their best reply (chaos budget).
+    None when the game ended or the reply isn't among the stored engine lines.
+    """
+    if not ctx.reply_uci or ctx.left is None or not ctx.left.lines:
+        return {"reply": None, "reply_ep_loss": None}
+    # From centipawns, like `objective_cost`, so the budget's two sides use one calibration (stored line EP may
+    # come from the engine's WDL instead).
+    best = line_cp(ctx.left.lines[0])
+    played = next((line_cp(ln) for ln in ctx.left.lines if ln.get("move_uci") == ctx.reply_uci), None)
+    loss = None if best is None or played is None else round(max(0.0, cp_to_ep(best) - cp_to_ep(played)), 4)
+    return {"reply": ctx.reply_uci, "reply_ep_loss": loss}
+
+
 class ChaosLens:
     """Scores the trouble the user's move created for the opponent."""
 
     name = "chaos"
-    version = "2"  # 2: opponent rating on the human model's scale (review F1)
+    version = "3"  # 3: the opponent's actual reply and what it gave up (chaos budget, plan 3.9); 2: rating scale (F1)
 
     def score(self, ctx: PlyContext) -> LensResult | None:
         if ctx.left is None:
@@ -105,4 +122,4 @@ class ChaosLens:
                 verdict = "cheap_chaos"
             else:
                 verdict = "calculated_risk"
-        return LensResult(chaos, verdict, {**data, "elo": elo, "objective_cost": cost})
+        return LensResult(chaos, verdict, {**data, "elo": elo, "objective_cost": cost, **reply_loss(ctx, data)})

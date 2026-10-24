@@ -111,12 +111,31 @@ def plan_outcome(ply: int, ideas: list[dict]) -> str | None:
     return None
 
 
+def site_link(source: str | None, external_id: str | None) -> dict | None:
+    """
+    Where the game lives on its site, for "see this move there" links (plan 3.4a). Both sites take the number of
+    half-moves played: Chess.com as `?move=N`, Lichess as `#N`, so the move at 0-based ply p is N = p + 1.
+    """
+    if not external_id or not external_id.startswith("https://"):
+        return None
+    if source == "lichess" or "lichess.org" in external_id:
+        return {"name": "Lichess", "url": external_id.split("#")[0], "style": "hash"}
+    if "chess.com" in external_id:
+        return {"name": "Chess.com", "url": external_id.split("?")[0], "style": "query"}
+    return None
+
+
+def site_move_url(site: dict, ply: int) -> str:
+    sep = "#" if site["style"] == "hash" else "?move="
+    return f"{site['url']}{sep}{ply + 1}"
+
+
 class ReviewService:
     def review(self, game_id: str) -> dict | None:
         sb = get_supabase()
         rows = (
             sb.table("games")
-            .select("id, pgn, opponent, opponent_rating, source, result, time_control, user_color, clocks_ms")
+            .select("id, pgn, opponent, opponent_rating, source, external_id, result, time_control, user_color, clocks_ms")
             .eq("id", game_id)
             .limit(1)
             .execute()
@@ -221,6 +240,7 @@ class ReviewService:
             "timeControl": format_time_control(game.get("time_control")),
             "calibrated": calibrated,
             "initialFen": initial_fen,
+            "site": site_link(game.get("source"), game.get("external_id")),
             # Real sacrifices that missed exactly one Brilliant clause (plan 3.3).
             "almostBrilliant": [
                 {"ply": m["ply"], "label": move_label(m["ply"], m.get("san")), "clause": s[len(NEAR_PREFIX):], "line": f"Almost Brilliant: {NEAR_COPY.get(s[len(NEAR_PREFIX):], 'one clause missed')}."}

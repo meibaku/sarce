@@ -4,7 +4,7 @@
  * "Show the engine": the plan is measured against itself first.
  */
 import { useState } from "react";
-import { Pressable, TextInput, View } from "react-native";
+import { Linking, Pressable, TextInput, View } from "react-native";
 import type { IntentType, ReviewApi } from "@sarce/types";
 import { Board } from "@/components/board";
 import { Badge, Card, Choice, Edge, Label, Link, Loading, Primary, Screen, T, Uncalibrated, s } from "@/components/ui";
@@ -98,6 +98,12 @@ export function ReviewBody({ gameId, back }: { gameId: string; back?: boolean })
       </View>
 
       <Board fen={fen} orientation={data.userColor === "black" ? "black" : "white"} hot={m.hot} />
+      {data.site && (
+        <Link
+          label={`See this move on ${data.site.name} ↗`}
+          onPress={() => Linking.openURL(`${data.site!.url}${data.site!.style === "hash" ? "#" : "?move="}${m.ply + 1}`)}
+        />
+      )}
 
       {data.almostBrilliant && data.almostBrilliant.length > 0 && (
         // Real sacrifices one clause short of Brilliant (plan 3.3).
