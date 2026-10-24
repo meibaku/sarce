@@ -45,7 +45,18 @@ class StockfishEngine:
         # Output-only option: adds win/draw/loss to info lines without changing the search.
         if "UCI_ShowWDL" in self._engine.options:
             self._engine.configure({"UCI_ShowWDL": True})
+        from app.services import monitor
+
+        monitor.engine_started(self.pid)  # the analysis monitor reads this process's CPU and memory
         return self
+
+    @property
+    def pid(self) -> int | None:
+        """The Stockfish process id, for CPU and memory readings (None if unavailable)."""
+        try:
+            return self._engine.transport.get_pid() if self._engine else None
+        except Exception:
+            return None
 
     def __exit__(self, *args: object) -> None:
         if self._engine:

@@ -178,13 +178,14 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
     keep_awake()
     done_today, day, last_seconds = games_today(index), time.strftime("%Y-%m-%d"), None
     with StockfishEngine() as real_engine:
+        sf_pid = real_engine.pid  # the monitor reads this Stockfish's CPU and memory along with the worker's
         while True:
             if time.strftime("%Y-%m-%d") != day:  # midnight, even while idle
                 done_today, day = 0, time.strftime("%Y-%m-%d")
-            write_status(f"engine-{index}", {"engine": index, "state": "asking", "gamesToday": done_today, "lastGameSeconds": last_seconds})
+            write_status(f"engine-{index}", {"engine": index, "state": "asking", "gamesToday": done_today, "lastGameSeconds": last_seconds, "pid": os.getpid(), "sfPid": sf_pid})
             job = gw.call_retrying("/nodes/claim", {}).get("job")
             if not job:
-                write_status(f"engine-{index}", {"engine": index, "state": "idle", "gamesToday": done_today, "lastGameSeconds": last_seconds})
+                write_status(f"engine-{index}", {"engine": index, "state": "idle", "gamesToday": done_today, "lastGameSeconds": last_seconds, "pid": os.getpid(), "sfPid": sf_pid})
                 time.sleep(IDLE_S)
                 continue
             game_id, started, wall_start = job["gameId"], time.monotonic(), time.time()
@@ -197,17 +198,20 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
                 progress["last"] = time.monotonic()
                 write_status(f"engine-{index}", {
                     "engine": index, "state": phase, "gameId": game_id, "done": progress["positions"], "total": total,
-                    "threatsDone": progress["threats"], "startedAt": wall_start, "gamesToday": done_today, "lastGameSeconds": last_seconds,
+                    "threatsDone": progress["threats"], "startedAt": wall_start, "progressAt": progress.get("at", wall_start),
+                    "gamesToday": done_today, "lastGameSeconds": last_seconds, "pid": os.getpid(), "sfPid": sf_pid,
                 })
 
             def seen_position(key: str) -> None:
                 if key not in progress["seen"]:  # a position looked up and then searched counts once
                     progress["seen"].add(key)
                     progress["positions"] = len(progress["seen"])
+                    progress["at"] = time.time()
                     report("searching")
 
             def seen_threat(key: str) -> None:
                 progress["threats"] += 1
+                progress["at"] = time.time()
                 report("threats")
 
             engine = ProgressEngine(real_engine, seen_position)
@@ -247,7 +251,7 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
                 flush()
             finally:
                 stop.set()
-            gw.call_retrying("/nodes/done", {"gameId": game_id})
+            gw.call_retrying("/nodes/done", {"gameId": game_id, "positions": len(evals.rows) - len(job["evals"])})
             last_seconds = round(time.monotonic() - started)
             done_today += 1
             print(f"[{name}] {game_id}: {len(moves)} plies in {last_seconds}s", flush=True)
@@ -292,8 +296,25 @@ def main() -> int:
     for p in procs:
         p.start()
     last_check, last_ok = time.monotonic(), None
+    sys.path.insert(0, str(HERE.parent / "api"))
+    from app.services.procstats import Sampler  # noqa: E402  (from the bundle, like the workers' imports)
+
+    sampler, started_at = Sampler(), time.time()
     while True:
         time.sleep(SERVER_POLL_S)
+        # This machine and its engines for the analysis monitor: CPU and memory per worker plus its Stockfish.
+        try:
+            engines = []
+            for path in sorted(STATUS_DIR.glob("engine-*.json")):
+                try:
+                    e = json.loads(path.read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    continue
+                e["cpu"], e["rssMb"] = sampler.process(e.get("pid"), e.get("sfPid"))
+                engines.append(e)
+            gw.call("/nodes/report", {"machine": sampler.machine(), "engines": engines, "bundle": local, "startedAt": started_at}, timeout=10)
+        except Exception:
+            pass  # the monitor is optional; the work goes on
         # The laptop's picture of the whole queue, for the status window (the gateway caches it).
         try:
             summary = gw.call("/nodes/status", timeout=10)

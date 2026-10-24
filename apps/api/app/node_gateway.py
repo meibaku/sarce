@@ -15,6 +15,7 @@ import asyncio
 from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from pydantic import BaseModel, Field
 
+from app.services import monitor
 from app.services.nodes import NodeService, bundle, signature, token_ok
 
 service = NodeService()
@@ -40,6 +41,14 @@ class RowsRequest(NodeRequest):
 
 class DoneRequest(NodeRequest):
     gameId: str
+    positions: int = 0
+
+
+class ReportRequest(NodeRequest):
+    machine: dict = Field(default_factory=dict)
+    engines: list[dict] = Field(default_factory=list, max_length=64)
+    bundle: str | None = None
+    startedAt: float | None = None  # epoch seconds: when the node process started (a change is a restart)
 
 
 @app.get("/nodes/config")
@@ -57,7 +66,23 @@ async def get_bundle():
 @app.post("/nodes/claim")
 async def claim(body: NodeRequest):
     job = await asyncio.to_thread(service.claim, body.node)
+    if job:
+        machine, engine = split_node(body.node)
+        await asyncio.to_thread(monitor.event, "claimed", machine, engine, job["gameId"])
     return {"job": job}
+
+
+def split_node(node: str) -> tuple[str, int | None]:
+    """desktop-fuer0cc-2 -> (desktop-fuer0cc, 2): the machine and the engine number."""
+    machine, _, engine = node.rpartition("-")
+    return (machine, int(engine)) if engine.isdigit() and machine else (node, None)
+
+
+@app.post("/nodes/report")
+async def report(body: ReportRequest):
+    """A node's machine and engine snapshots, every few seconds (the analysis monitor)."""
+    await asyncio.to_thread(monitor.node_report, body.node, body.machine, body.engines, body.bundle, body.startedAt)
+    return {"ok": True}
 
 
 @app.post("/nodes/rows")
@@ -75,6 +100,9 @@ async def heartbeat(body: DoneRequest):
 @app.post("/nodes/done")
 async def done(body: DoneRequest):
     await asyncio.to_thread(service.done, body.gameId, body.node)
+    machine, engine = split_node(body.node)
+    await asyncio.to_thread(monitor.bump, machine, 1, body.positions)
+    await asyncio.to_thread(monitor.event, "node_game_done", machine, engine, body.gameId, positions=body.positions)
     return {"ok": True}
 
 

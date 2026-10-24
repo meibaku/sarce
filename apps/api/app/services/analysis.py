@@ -7,6 +7,7 @@ Phase 1 pipeline: pending game → Stockfish → game_moves + game_analyses → 
 from __future__ import annotations
 
 import asyncio
+import time
 from datetime import datetime, timezone
 import io
 import logging
@@ -16,6 +17,7 @@ import chess.pgn
 
 from app.config import settings
 from app.db.supabase import get_supabase
+from app.services import monitor
 from app.services.baseline import BaselineService, EMPTY_DISTRIBUTION
 from app.services.brilliant_find_rate import BrilliantFindRate
 from app.services.rating_map import opponent_model_elo
@@ -140,8 +142,34 @@ class AnalysisService:
         """
         Analyze a single game by ID.
 
-        Returns summary dict or None if game not found / parse failed.
+        Returns summary dict or None if game not found / parse failed. Reported to the analysis monitor: the slot is
+        busy with this game, and the game's end (finished, failed, or finished from a node's search) is an event.
         """
+        started = time.monotonic()
+        with monitor.track_game(game_id):
+            try:
+                result = await self._analyze_game(game_id)
+            except Exception as exc:
+                monitor.event("game_failed", game_id=game_id, error=str(exc)[:200])
+                raise
+        if result:
+            seconds = round(time.monotonic() - started)
+            if self._searched_by_node(game_id):
+                monitor.event("finished_from_node", game_id=game_id, seconds=seconds)
+            else:
+                monitor.bump(monitor.MACHINE, 1, int(result.get("totalMoves") or 0))
+                monitor.event("game_done", game_id=game_id, seconds=seconds, moves=result.get("totalMoves"))
+        return result
+
+    @staticmethod
+    def _searched_by_node(game_id: str) -> bool:
+        try:
+            rows = get_supabase().table("node_leases").select("done_at").eq("game_id", game_id).limit(1).execute().data or []
+            return bool(rows and rows[0].get("done_at"))
+        except Exception:
+            return False
+
+    async def _analyze_game(self, game_id: str) -> dict | None:
         sb = get_supabase()
         res = sb.table("games").select("*").eq("id", game_id).maybe_single().execute()
         if not res or not res.data:
@@ -156,6 +184,9 @@ class AnalysisService:
 
         board, moves = parsed
         sb.table("games").update({"analysis_status": "processing"}).eq("id", game_id).execute()
+        tracker = monitor.current.get()
+        if tracker:
+            tracker.phase("searching", total=len(moves) + 1)
 
         try:
             # In a worker thread (it opens its own engine): searching on the event loop froze the API.
@@ -256,7 +287,8 @@ class AnalysisService:
         if not settings.position_evals_enabled:
             return self.classifier.classify_game(board, moves, user_color)
         with StockfishEngine() as engine:
-            lines = game_lines(board, moves, engine, SupabaseEvalStore())
+            # Counting each lookup reports this game's progress to the analysis monitor.
+            lines = game_lines(board, moves, engine, monitor.CountingStore(SupabaseEvalStore()))
         return self.classifier.classify_game(board, moves, user_color, lines=lines)
 
     def _first_read(self, user_id: str | None) -> None:
@@ -305,6 +337,9 @@ class AnalysisService:
         The outcome is recorded in `games.chaos_data_status` so failed games can be
         found and backfilled instead of silently missing lens data.
         """
+        tracker = monitor.current.get()
+        if tracker:
+            tracker.phase("chaos pass")
         games = get_supabase().table("games")
         try:
             games.update({"clocks_ms": extract_clocks_ms(pgn_text)}).eq("id", game_id).execute()
