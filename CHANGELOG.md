@@ -11,6 +11,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- `docs/PHASE3_PLAN.md`: Phase 3 (product) in waves: items needing no engine first (3.1, 3.8, 3.9, 3.4a, 3.3), then
+  weekly focus and quests and opponent-aware chaos, with style cards and the style twin waiting on Phase 2 and the
+  owner-gated items listed with suggested defaults
 - A personal next band (plan 1.3): Home and Settings show a dashed step on the Brilliant gauge, from just above your
   likely range (its 95% upper bound) to half as much again, on the way to the goal band, with one line naming it.
   Web and Expo; `/users/home` returns `nextLo`/`nextHi`. Hidden within half a point of the goal
