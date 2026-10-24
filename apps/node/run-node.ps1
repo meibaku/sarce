@@ -31,7 +31,11 @@ function Update-Bundle {
     if (Test-Path $new) { Remove-Item -Recurse -Force $new }
     Expand-Archive -Path $zip -DestinationPath $new -Force
     Remove-Item $zip
-    & $python -m pip install --quiet --disable-pip-version-check -r (Join-Path $new "node\requirements-node.txt") | Out-Null
+    # Offline machines install from the wheels the kit left in C:\SarceNode\wheels; online ones from PyPI.
+    $wheels = Join-Path $root "wheels"
+    $source = if (Test-Path $wheels) { @("--no-index", "--find-links", $wheels) } else { @() }
+    & $python -m pip install --quiet --disable-pip-version-check @source -r (Join-Path $new "node\requirements-node.txt") | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "the new bundle's packages didn't install (offline: add their wheels to $wheels)" }
     # Swap only now that the new bundle is complete.
     foreach ($item in "api", "node", "VERSION") {
         $old = Join-Path $root $item

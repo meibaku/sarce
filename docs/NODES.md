@@ -50,6 +50,13 @@ The installer puts Python 3.12, the code and Stockfish 18 under `C:\SarceNode`. 
 SSE4.1 build, the same version as the server, so it gives the same results. It then registers a **Sarce Node**
 scheduled task that starts at boot, before anyone logs in. The log is `C:\SarceNode\node.log`.
 
+**No internet on the node?** Build an offline kit on the server once: a folder with the Python 3.12.10 installer,
+the node's wheels (`pip download -r apps/node/requirements-node.txt pip --only-binary=:all: --platform win_amd64
+--python-version 3.12 -d wheels`), the Stockfish zip, and a `SHA256SUMS.txt` listing all of them. Share the folder
+and add `-Kit \SERVER\SarceNodeKit` to the install command. The installer checks every file against the sums and
+installs with nothing from the internet. It keeps the wheels in `C:\SarceNode\wheels`, so updates stay offline
+too. The node needs only four small packages: python-chess, pydantic, pydantic-settings, python-dotenv.
+
 **Power cuts:** set the desktop's BIOS to *Restore on AC power loss → Power On*. After an outage, the desktop
 boots, the task starts the node, and the node waits until the laptop's gateway answers. It then re-leases the
 game it was on and carries on from the positions it already sent. A lease with no heartbeat for 5 minutes goes

@@ -1,8 +1,6 @@
-# What the Sarce Node needs to run the server's engine code (ADR 0010). No web server, no human model.
+# What the Sarce Node needs to run the server's engine code (ADR 0010): no web server, no database client, no
+# human model. Small enough to ship as wheels in the offline kit (docs/NODES.md).
 python-chess>=1.999
 pydantic>=2.13.5
 pydantic-settings>=2.15.0
 python-dotenv>=1.2.4
-httpx>=0.28.1
-# Imported (not used) by app.db.supabase, which the shared modules import.
-supabase>=2.31.0
