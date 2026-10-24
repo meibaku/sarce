@@ -184,6 +184,7 @@ class MoveClassifier:
                     "cp_loss": round(cp_loss, 1),
                     "eval_before": eval_before,
                     "eval_after": eval_after,
+                    "best_eval": best_eval_after,  # not stored; lets diagnostics repeat the soundness test
                     "is_brilliant": brilliant,
                     "phase": phase,
                     "signals": signals,
