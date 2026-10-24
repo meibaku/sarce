@@ -288,7 +288,7 @@ class AnalysisService:
             return self.classifier.classify_game(board, moves, user_color)
         with StockfishEngine() as engine:
             # Counting each lookup reports this game's progress to the analysis monitor.
-            lines = game_lines(board, moves, engine, monitor.CountingStore(SupabaseEvalStore()))
+            lines = game_lines(board, moves, monitor.CountingEngine(engine), monitor.CountingStore(SupabaseEvalStore()))
         return self.classifier.classify_game(board, moves, user_color, lines=lines)
 
     def _first_read(self, user_id: str | None) -> None:

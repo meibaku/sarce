@@ -51,7 +51,11 @@ def memory() -> tuple[float, float] | None:
 
 
 def uptime_s() -> int | None:
-    return int(ctypes.windll.kernel32.GetTickCount64() // 1000) if WINDOWS else None
+    if not WINDOWS:
+        return None
+    tick = ctypes.windll.kernel32.GetTickCount64
+    tick.restype = ctypes.c_uint64  # undeclared, ctypes reads a signed 32-bit int: negative after ~25 days
+    return int(tick() // 1000)
 
 
 def _process_times(pid: int) -> tuple[int, float | None] | None:

@@ -36,7 +36,7 @@ EVENTS = "analysis_events"
 
 current: contextvars.ContextVar[Tracker | None] = contextvars.ContextVar("analysis_tracker", default=None)
 _sampler = Sampler()
-_slots: set[int] = set()
+_slots: dict[int, "Tracker"] = {}  # busy server slots, refreshed by every tick so a long search still shows
 _slots_lock = threading.Lock()
 _active_alerts: set[str] = set()
 STARTED_AT = datetime.now(timezone.utc)
@@ -107,8 +107,8 @@ def track_game(game_id: str):
     """Mark a server analysis slot busy with this game for the duration (the context reaches worker threads)."""
     with _slots_lock:
         slot = next(i for i in range(1000) if i not in _slots)
-        _slots.add(slot)
-    tracker = Tracker(game_id, slot)
+        tracker = Tracker(game_id, slot)
+        _slots[slot] = tracker
     token = current.set(tracker)
     tracker.write(force=True)
     try:
@@ -116,7 +116,7 @@ def track_game(game_id: str):
     finally:
         current.reset(token)
         with _slots_lock:
-            _slots.discard(slot)
+            _slots.pop(slot, None)
         try:
             get_supabase().table("engine_snapshots").upsert({
                 "machine": MACHINE, "engine": slot, "state": "idle", "game_id": None, "done": 0, "total": 0,
@@ -142,6 +142,23 @@ class CountingStore:
         self.store.put(row)
 
 
+class CountingEngine:
+    """Wraps the engine: positions searched without a store lookup (decided ones) count towards progress too."""
+
+    def __init__(self, engine) -> None:
+        self.engine = engine
+
+    @property
+    def engine_version(self) -> str:
+        return self.engine.engine_version
+
+    def analyse(self, board, nodes: int, multipv: int):
+        tracker = current.get()
+        if tracker:
+            tracker.position(board.fen().rsplit(" ", 1)[0])
+        return self.engine.analyse(board, nodes=nodes, multipv=multipv)
+
+
 def engine_started(pid: int | None) -> None:
     """Called when a Stockfish process opens inside a tracked game, so its CPU and memory can be read."""
     tracker = current.get()
@@ -152,6 +169,10 @@ def engine_started(pid: int | None) -> None:
 # --- the API's tick: the server's machine snapshot, alerts, retention ---------------------------------------------
 
 def tick(engines: int) -> None:
+    with _slots_lock:
+        busy = list(_slots.values())
+    for tracker in busy:
+        tracker.write(force=True)  # fresh CPU and memory, and proof of life during a long search
     sb = get_supabase()
     stats = _sampler.machine()
     sb.table("machine_snapshots").upsert({

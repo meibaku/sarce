@@ -99,10 +99,11 @@ async def heartbeat(body: DoneRequest):
 
 @app.post("/nodes/done")
 async def done(body: DoneRequest):
-    await asyncio.to_thread(service.done, body.gameId, body.node)
-    machine, engine = split_node(body.node)
-    await asyncio.to_thread(monitor.bump, machine, 1, body.positions)
-    await asyncio.to_thread(monitor.event, "node_game_done", machine, engine, body.gameId, positions=body.positions)
+    first = await asyncio.to_thread(service.done, body.gameId, body.node)
+    if first:  # a retry of the same acknowledgement isn't a second game
+        machine, engine = split_node(body.node)
+        await asyncio.to_thread(monitor.bump, machine, 1, body.positions)
+        await asyncio.to_thread(monitor.event, "node_game_done", machine, engine, body.gameId, positions=body.positions)
     return {"ok": True}
 
 

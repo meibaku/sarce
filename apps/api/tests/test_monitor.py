@@ -81,3 +81,32 @@ def test_sampler_reads_this_process():
     cpu, rss = s.process(os.getpid())
     assert cpu is not None and rss and rss > 1
     assert s.machine()["memTotalGb"] > 0
+
+
+def test_engine_searches_count_and_done_counts_once():
+    from app.services import nodes
+
+    with patch("app.services.monitor.get_supabase", return_value=MagicMock()):
+        with monitor.track_game("g9") as t:
+            t.phase("searching", total=5)
+            engine = monitor.CountingEngine(SimpleNamespace(engine_version="sf", analyse=lambda b, nodes, multipv: []))
+            import chess
+
+            token = monitor.current.set(t)
+            engine.analyse(chess.Board(), nodes=1, multipv=1)
+            monitor.current.reset(token)
+            assert t.done == 1
+    sb = MagicMock()
+    sb.table.return_value.update.return_value.eq.return_value.eq.return_value.is_.return_value.execute.side_effect = [
+        SimpleNamespace(data=[{"game_id": "g"}]), SimpleNamespace(data=[]),
+    ]
+    with patch("app.services.nodes.get_supabase", return_value=sb):
+        assert nodes.NodeService().done("g", "desk-0") is True
+        assert nodes.NodeService().done("g", "desk-0") is False
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows counters")
+def test_uptime_is_unsigned():
+    from app.services.procstats import uptime_s
+
+    assert uptime_s() > 0
