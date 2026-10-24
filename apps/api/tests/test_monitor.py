@@ -137,3 +137,15 @@ def test_monitor_routes_and_the_stream():
         assert client.get("/monitor/snapshot").json()["queue"]["pending"] == 1
     with patch("app.services.monitor.events", return_value=[{"id": 1, "kind": "claimed"}]):
         assert client.get("/monitor/events?limit=5").json()["events"][0]["kind"] == "claimed"
+
+
+def test_node_times_are_placed_on_the_servers_clock():
+    sb = MagicMock()
+    sb.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value.data = []
+    with patch("app.services.monitor.get_supabase", return_value=sb), patch("app.services.monitor.event"):
+        monitor.node_report("desk", {}, [{"engine": 0, "state": "searching", "startedAgo": 90, "progressAgo": 5}], "b", None)
+    row = sb.table.return_value.upsert.call_args_list[-1].args[0][0]
+    from datetime import datetime
+
+    started = datetime.fromisoformat(row["started_at"])
+    assert 85 <= (monitor.now() - started).total_seconds() <= 95

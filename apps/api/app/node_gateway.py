@@ -61,8 +61,8 @@ class EngineReport(BaseModel):
     gameId: str | None = Field(default=None, max_length=40)
     done: int = Field(default=0, ge=0)
     total: int = Field(default=0, ge=0)
-    startedAt: float | None = None
-    progressAt: float | None = None
+    startedAgo: float | None = Field(default=None, ge=0)  # seconds, on the node's clock (its clock may be off)
+    progressAgo: float | None = Field(default=None, ge=0)
     cpu: float | None = Field(default=None, ge=0)
     rssMb: float | None = Field(default=None, ge=0)
     gamesToday: int = Field(default=0, ge=0)

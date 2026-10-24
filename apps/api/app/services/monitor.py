@@ -363,12 +363,17 @@ def node_report(machine: str, stats: dict, engines: list[dict], bundle: str | No
         rows.append({
             "machine": machine, "engine": int(e["engine"]), "state": str(e.get("state") or "unknown")[:20], "game_id": e.get("gameId"),
             "done": int(e.get("done") or 0), "total": int(e.get("total") or 0),
-            "started_at": _iso(e.get("startedAt")), "progress_at": _iso(e.get("progressAt")),
+            "started_at": _ago(e.get("startedAgo")), "progress_at": _ago(e.get("progressAgo")),
             "cpu": e.get("cpu"), "rss_mb": e.get("rssMb"), "games_today": int(e.get("gamesToday") or 0),
             "last_game_s": e.get("lastGameSeconds"), "updated_at": now().isoformat(),
         })
     if rows:
         sb.table("engine_snapshots").upsert(rows, on_conflict="machine,engine").execute()
+
+
+def _ago(seconds) -> str | None:
+    """A node's "this long ago" on the server's clock (node clocks drift when offline)."""
+    return None if seconds is None else (now() - timedelta(seconds=float(seconds))).isoformat()
 
 
 def _iso(epoch) -> str | None:
