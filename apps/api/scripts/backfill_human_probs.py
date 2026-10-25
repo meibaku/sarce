@@ -143,7 +143,8 @@ def main() -> int:
 
     written = 0
     for version, jobs in pending.items():
-        missing = [(key, fen) for key, fen in jobs.items() if key not in existing_keys(version)]
+        cached = existing_keys(version)
+        missing = [(key, fen) for key, fen in jobs.items() if key not in cached]
         print(f"{version}: unique={len(jobs)} missing={len(missing)}", flush=True)
         model = models[version]
         for start in range(0, len(missing), args.batch_size):
