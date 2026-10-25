@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -21,6 +22,17 @@ PAGE = 1000
 WRITE_BATCH = 250
 
 
+def execute(query, attempts: int = 5):
+    """Retry transient local/PostgREST pressure; a permanent error still fails the run."""
+    for attempt in range(attempts):
+        try:
+            return query.execute()
+        except Exception:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(0.5 * (2**attempt))
+
+
 def games(limit: int = 0, complete_only: bool = True) -> list[dict]:
     rows: list[dict] = []
     while not limit or len(rows) < limit:
@@ -30,9 +42,9 @@ def games(limit: int = 0, complete_only: bool = True) -> list[dict]:
         )
         if complete_only:
             query = query.eq("analysis_status", "complete")
-        batch = query.order("played_at").order("id").range(
-            len(rows), len(rows) + size - 1
-        ).execute().data or []
+        batch = execute(
+            query.order("played_at").order("id").range(len(rows), len(rows) + size - 1)
+        ).data or []
         rows.extend(batch)
         if len(batch) < size:
             break
@@ -62,8 +74,8 @@ def existing_keys(model_version: str) -> set[tuple[str, int]]:
         batch = (
             get_supabase().table(TABLE).select("fen_key, elo")
             .eq("model_version", model_version).range(len(rows), len(rows) + PAGE - 1)
-            .execute().data or []
         )
+        batch = execute(batch).data or []
         rows.extend(batch)
         if len(batch) < PAGE:
             return {(row["fen_key"], int(row["elo"])) for row in rows}
@@ -131,10 +143,10 @@ def main() -> int:
     models: dict[str, object] = {}
     pending: dict[str, dict[tuple[str, int], str]] = {}
     for index, game in enumerate(selected, 1):
-        classified = (
+        classified = execute(
             sb.table("game_moves").select("ply, eval_before, eval_after")
-            .eq("game_id", game["id"]).order("ply").execute().data or []
-        )
+            .eq("game_id", game["id"]).order("ply")
+        ).data or []
         try:
             model = get_human_model_for_game(settings.human_model, game)
             models[model.model_version] = model
@@ -166,10 +178,12 @@ def main() -> int:
                 for (key, _fen), probs in zip(part, probabilities) if probs
             ]
             for write_at in range(0, len(rows), WRITE_BATCH):
-                sb.table(TABLE).upsert(
-                    rows[write_at : write_at + WRITE_BATCH],
-                    on_conflict="fen_key,elo,model_version",
-                ).execute()
+                execute(
+                    sb.table(TABLE).upsert(
+                        rows[write_at : write_at + WRITE_BATCH],
+                        on_conflict="fen_key,elo,model_version",
+                    )
+                )
             written += len(rows)
             print(f"{version}: {min(start + len(part), len(missing))}/{len(missing)}", flush=True)
     print(f"done={len(selected) - failed} failed={failed} written={written}")
