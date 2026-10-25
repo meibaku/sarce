@@ -19,7 +19,9 @@ from app.services.position_evals import fen_key, iter_live_positions
 from app.services.rating_map import opponent_model_elo
 
 PAGE = 1000
-WRITE_BATCH = 250
+# Probability maps are wide JSON rows; small transactions stay under PostgREST's statement timeout
+# even when several deterministic shards finish inference together.
+WRITE_BATCH = 50
 
 
 def execute(query, attempts: int = 5):
