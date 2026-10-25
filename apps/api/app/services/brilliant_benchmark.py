@@ -180,7 +180,7 @@ def player_report(owner_id: str, games_read: int = 2000) -> dict:
     """
     from app.config import settings
     from app.db.supabase import get_supabase
-    from app.services.human_model import SupabaseProbStore, cached_move_probs, get_human_model
+    from app.services.human_model import SupabaseProbStore, cached_move_probs, get_human_model_for_game
     from app.services.library import boards_before
 
     sb = get_supabase()
@@ -195,7 +195,7 @@ def player_report(owner_id: str, games_read: int = 2000) -> dict:
         games += batch
         if len(batch) < 1000:
             break
-    model, store = get_human_model(settings.human_model), SupabaseProbStore()
+    store = SupabaseProbStore()
     results = []
     for start in range(0, len(games), 100):
         part = games[start : start + 100]
@@ -213,6 +213,7 @@ def player_report(owner_id: str, games_read: int = 2000) -> dict:
         for m in moves:
             by_game.setdefault(m["game_id"], []).append(m)
         for g in part:
+            model = get_human_model_for_game(settings.human_model, g)
             mine = by_game.get(g["id"], [])
             if not mine:
                 continue

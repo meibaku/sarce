@@ -27,7 +27,10 @@ class Maia2HumanModel(HumanModel):
 
     name = "maia2"
 
-    def __init__(self) -> None:
+    def __init__(self, model_type: str | None = None) -> None:
+        self.model_type = model_type or settings.maia2_model_type
+        if self.model_type not in ("blitz", "rapid"):
+            raise ValueError("Maia-2 checkpoint must be 'blitz' or 'rapid'")
         self._model = None
         self._prepared = None
         self._inference = None
@@ -37,7 +40,7 @@ class Maia2HumanModel(HumanModel):
     @property
     def version(self) -> str:
         # The checkpoint type changes the output, so it is part of the cache identity.
-        return f"0.11-{settings.maia2_model_type}"
+        return f"0.11-{self.model_type}"
 
     def _load(self) -> None:
         with self._load_lock:
@@ -49,7 +52,7 @@ class Maia2HumanModel(HumanModel):
                 raise RuntimeError(INSTALL_HINT) from exc
             # Downloads the checksum-pinned weights on first use (about 280 MB), then caches them.
             loaded = model.from_pretrained(
-                type=settings.maia2_model_type, device="cpu", save_root=settings.maia2_cache_dir
+                type=self.model_type, device="cpu", save_root=settings.maia2_cache_dir
             )
             self._prepared = inference.prepare()
             self._inference = inference
@@ -78,15 +81,15 @@ _shared: dict[str, Maia2HumanModel] = {}
 _shared_lock = threading.Lock()
 
 
-def shared_maia2_model() -> Maia2HumanModel:
+def shared_maia2_model(model_type: str | None = None) -> Maia2HumanModel:
     """
     One instance per checkpoint type for the whole process.
 
     Loading the weights takes seconds and a few hundred MB, so a batch of games must not
     reload them for every game. Inference is read-only, so sharing the instance is safe.
     """
-    model_type = settings.maia2_model_type
+    model_type = model_type or settings.maia2_model_type
     with _shared_lock:
         if model_type not in _shared:
-            _shared[model_type] = Maia2HumanModel()
+            _shared[model_type] = Maia2HumanModel(model_type)
         return _shared[model_type]

@@ -51,6 +51,16 @@ class TestMaia2Adapter:
         assert get_human_model("maia2") is get_human_model("maia2")
         assert calls["loads"] == 1
 
+    def test_checkpoint_instances_and_cache_versions_are_separate(self, monkeypatch):
+        monkeypatch.setattr("app.services.maia_model._shared", {})
+        blitz = get_human_model("maia2", "blitz")
+        rapid = get_human_model("maia2", "rapid")
+        assert blitz is get_human_model("maia2", "blitz")
+        assert rapid is get_human_model("maia2", "rapid")
+        assert blitz is not rapid
+        assert blitz.model_version == "maia2-0.11-blitz"
+        assert rapid.model_version == "maia2-0.11-rapid"
+
     def test_concurrent_first_use_loads_once(self, monkeypatch):
         calls = install_fake_maia2(monkeypatch, {"e2e4": 1.0})
         slow_load = sys.modules["maia2.model"].from_pretrained

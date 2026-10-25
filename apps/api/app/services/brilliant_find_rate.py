@@ -24,14 +24,14 @@ from app.services.brilliant import (
     hard_to_find,
     near_miss,
 )
-from app.services.human_model import ELO_LADDER, SupabaseProbStore, cached_move_probs, get_human_model
+from app.services.human_model import ELO_LADDER, SupabaseProbStore, cached_move_probs, get_human_model_for_game
 from app.services.library import boards_before
 from app.services.rating_map import opponent_model_elo, user_model_elo
 
 logger = logging.getLogger(__name__)
 
 RULE = "v4"  # ADR 0009: sound / not lost / not forced in expected points, find-rate at your rating, real offer
-VERSION = 5  # 5: rule v4 (ADR 0009); 4: find-rate at your converted rating (F1/F11a); 3: real offer (ADR 0007)
+VERSION = 6  # 6: speed-routed Maia provenance; 5: rule v4 (ADR 0009); 4: converted rating; 3: real offer
 
 
 def mover_rung(game: dict) -> int:
@@ -105,9 +105,12 @@ def apply_rule(moves: list[dict], probs_for, offered_for=lambda m: None) -> tupl
     return out, demoted
 
 
-def style_vector_v2(previous: dict | None, distribution: dict, brilliant_pct: float) -> dict:
+def style_vector_v2(previous: dict | None, distribution: dict, brilliant_pct: float, human_model: str) -> dict:
     """The stored vector with the new rule's numbers and version (ADR 0004)."""
-    return {**(previous or {}), "version": VERSION, "brilliantRule": RULE, "brilliantPct": round(brilliant_pct, 2), "distribution": distribution}
+    return {
+        **(previous or {}), "version": VERSION, "brilliantRule": RULE, "humanModel": human_model,
+        "brilliantPct": round(brilliant_pct, 2), "distribution": distribution,
+    }
 
 
 class BrilliantFindRate:
@@ -125,7 +128,7 @@ class BrilliantFindRate:
         )
         analysis = (sb.table("game_analyses").select("style_vector").eq("game_id", game_id).limit(1).execute().data or [{}])[0]
         plies = boards_before(game.get("pgn") or "")
-        model, store = get_human_model(settings.human_model), SupabaseProbStore()
+        model, store = get_human_model_for_game(settings.human_model, game), SupabaseProbStore()
         elo = mover_rung(game)
 
         def probs_for(ply: int):
@@ -147,6 +150,6 @@ class BrilliantFindRate:
         distribution = BaselineService.compute_distribution([m["quality"] for m in updated])
         pct = BaselineService.brilliant_pct(distribution)
         sb.table("game_analyses").update(
-            {"distribution": distribution, "brilliant_pct": pct, "style_vector": style_vector_v2(analysis.get("style_vector"), distribution, pct)}
+            {"distribution": distribution, "brilliant_pct": pct, "style_vector": style_vector_v2(analysis.get("style_vector"), distribution, pct, model.model_version)}
         ).eq("game_id", game_id).execute()
         return {"gameId": game_id, "changed": changed, "brilliantPct": pct, "elo": elo, "model": model.model_version}

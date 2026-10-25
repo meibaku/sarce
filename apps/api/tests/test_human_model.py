@@ -12,6 +12,7 @@ from app.services.human_model import (
     cached_move_probs,
     elo_ladder,
     get_human_model,
+    checkpoint_for_game,
 )
 
 MIGRATIONS = Path(__file__).resolve().parents[3] / "supabase" / "migrations"
@@ -125,6 +126,21 @@ class TestRegistry:
     def test_unknown_model(self):
         with pytest.raises(ValueError):
             get_human_model("maia-9000")
+
+    @pytest.mark.parametrize(
+        ("source", "time_control", "expected"),
+        [
+            ("chess_com", "60", "blitz"),
+            ("chess_com", "180+2", "blitz"),
+            ("chess_com", "600", "rapid"),
+            ("lichess", "180+2", "blitz"),
+            ("lichess", "900+10", "rapid"),
+            ("chess_com", "1/86400", "rapid"),
+            (None, None, "rapid"),
+        ],
+    )
+    def test_checkpoint_follows_game_speed(self, source, time_control, expected):
+        assert checkpoint_for_game({"source": source, "time_control": time_control}) == expected
 
 
 class TestMigration:

@@ -21,6 +21,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- Maia-2 analysis now selects the blitz checkpoint for bullet/blitz games and rapid for slower or unknown controls,
+  records that cache identity in style-vector version 6, and ships a resumable fixed-snapshot probability backfill.
 - `NODE_WORKERS` on the server sets the engines per Sarce Node (capped at its CPU threads); changing it restarts
   the nodes with the new count, so nobody has to visit the machine
 - Analysis monitor in the terminal (dev mode, part 3): `scripts/monitor_tui.py`, a Textual dashboard with the web
