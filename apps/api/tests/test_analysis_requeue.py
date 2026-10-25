@@ -6,7 +6,7 @@ import types
 from postgrest.exceptions import APIError
 
 from app.services import analysis
-from app.services.analysis import AnalysisService, is_transient
+from app.services.analysis import AnalysisService, is_transient, safe_failure
 
 
 class FakeGames:
@@ -52,6 +52,12 @@ def test_transient_errors():
     assert not is_transient(ValueError("bad pgn"))
 
 
+def test_failure_diagnostics_are_bounded_and_redacted():
+    kind, message = safe_failure(RuntimeError("token=very-secret\n" + "x" * 800))
+    assert kind == "RuntimeError" and "very-secret" not in message
+    assert "[redacted]" in message and len(message) == analysis.MAX_ERROR_LENGTH
+
+
 def test_a_storage_timeout_sends_the_game_back_to_pending(monkeypatch):
     db = FakeGames({"g1": "pending", "g2": "pending"})
     monkeypatch.setattr(analysis, "get_supabase", lambda: db)
@@ -82,6 +88,8 @@ class OneGame:
 
     def __init__(self):
         self.status = "pending"
+        self.attempts = 0
+        self.error = None
         self._update = None
 
     def table(self, _name):
@@ -98,8 +106,13 @@ class OneGame:
     def execute(self):
         if self._update:
             self.status = self._update["analysis_status"]
+            self.attempts = self._update.get("analysis_attempts", self.attempts)
+            self.error = self._update.get("analysis_error", self.error)
             return types.SimpleNamespace(data=[{"id": "g"}])  # the claim is conditional: it must see its row
-        return types.SimpleNamespace(data={"id": "g", "pgn": "1. e4 *", "user_color": "white", "analysis_status": self.status})
+        return types.SimpleNamespace(data={
+            "id": "g", "pgn": "1. e4 *", "user_color": "white",
+            "analysis_status": self.status, "analysis_attempts": self.attempts,
+        })
 
 
 def test_engine_timeouts_are_retried_a_few_times_then_marked_failed(monkeypatch):
@@ -107,7 +120,6 @@ def test_engine_timeouts_are_retried_a_few_times_then_marked_failed(monkeypatch)
 
     db = OneGame()
     monkeypatch.setattr(analysis, "get_supabase", lambda: db)
-    monkeypatch.setattr(analysis, "_attempts", {})
     service = AnalysisService.__new__(AnalysisService)
     service._parse_game = lambda pgn: (chess.Board(), [chess.Move.from_uci("e2e4")])
 
@@ -124,6 +136,17 @@ def test_engine_timeouts_are_retried_a_few_times_then_marked_failed(monkeypatch)
         statuses.append(db.status)
     # Back to the queue twice, then failed: a game that always fails cannot hold a worker forever.
     assert statuses == ["pending"] * (analysis.MAX_ATTEMPTS - 1) + ["failed"]
+    assert db.attempts == analysis.MAX_ATTEMPTS and db.error.startswith("TimeoutError:")
+
+    # A new service instance reads the durable counter instead of receiving a fresh in-process budget.
+    service = AnalysisService.__new__(AnalysisService)
+    service._parse_game, service._classify = lambda pgn: (chess.Board(), [chess.Move.from_uci("e2e4")]), classify
+    db.status = "pending"
+    try:
+        asyncio.run(service.analyze_game("g"))
+    except TimeoutError:
+        pass
+    assert db.status == "failed" and db.attempts == analysis.MAX_ATTEMPTS + 1
 
 
 def test_orphaned_processing_games_are_requeued_on_the_second_sweep(monkeypatch):

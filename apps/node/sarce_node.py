@@ -37,6 +37,10 @@ SERVER_POLL_S = 5
 VERSION_CHECK_S = 300
 
 
+class LeaseLost(RuntimeError):
+    """The server reassigned this game; unwind the worker so Stockfish closes before the supervisor restarts it."""
+
+
 def load_env() -> dict[str, str]:
     env: dict[str, str] = {}
     path = HERE.parent / "node.env"
@@ -190,6 +194,7 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
                 continue
             game_id, started, wall_start = job["gameId"], time.monotonic(), time.time()
             progress = {"positions": 0, "threats": 0, "last": 0.0, "seen": set()}
+            lease_lost = threading.Event()
             total = max(1, job["pgn"].count(".") * 2)  # a rough count until the PGN is read below
 
             def report(phase: str) -> None:
@@ -203,6 +208,8 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
                 })
 
             def seen_position(key: str) -> None:
+                if lease_lost.is_set():
+                    raise LeaseLost(game_id)
                 if key not in progress["seen"]:  # a position looked up and then searched counts once
                     progress["seen"].add(key)
                     progress["positions"] = len(progress["seen"])
@@ -210,6 +217,8 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
                     report("searching")
 
             def seen_threat(key: str) -> None:
+                if lease_lost.is_set():
+                    raise LeaseLost(game_id)
                 progress["threats"] += 1
                 progress["at"] = time.time()
                 report("threats")
@@ -221,7 +230,10 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
 
             def flush() -> None:
                 if evals.pending or threats.pending:
-                    gw.call_retrying("/nodes/rows", {"gameId": game_id, "evals": evals.pending, "threats": threats.pending})
+                    result = gw.call_retrying("/nodes/rows", {"gameId": game_id, "evals": evals.pending, "threats": threats.pending})
+                    if not result.get("active", False):
+                        lease_lost.set()
+                        raise LeaseLost(game_id)
                 evals.pending, threats.pending = [], []
                 evals.last = threats.last = time.monotonic()
 
@@ -233,7 +245,10 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
             def beat(gid: str = game_id) -> None:
                 while not stop.wait(HEARTBEAT_S):
                     try:
-                        gw.call("/nodes/heartbeat", {"gameId": gid}, timeout=20)
+                        result = gw.call("/nodes/heartbeat", {"gameId": gid}, timeout=20)
+                        if not result.get("active", False):
+                            lease_lost.set()
+                            return
                     except Exception:
                         pass
 

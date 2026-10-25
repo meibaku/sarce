@@ -114,14 +114,13 @@ async def report(body: ReportRequest):
 
 @app.post("/nodes/rows")
 async def rows(body: RowsRequest):
-    return {"stored": await asyncio.to_thread(service.put_rows, body.gameId, body.node, body.evals, body.threats)}
+    return await asyncio.to_thread(service.put_rows, body.gameId, body.node, body.evals, body.threats)
 
 
 @app.post("/nodes/heartbeat")
 async def heartbeat(body: DoneRequest):
     """Keeps a lease alive through long stretches with nothing to cache (decided positions)."""
-    await asyncio.to_thread(service.put_rows, body.gameId, body.node, [], [])
-    return {"ok": True}
+    return await asyncio.to_thread(service.put_rows, body.gameId, body.node, [], [])
 
 
 @app.post("/nodes/done")

@@ -5,6 +5,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Fixed
+- Analysis retries now survive API restarts and retain a bounded, sanitized operator diagnosis. Stale Sarce Node
+  workers are refused before cache writes and unwind when the server reports that their lease is no longer active.
 - A game could be analysed twice: the queue, failing to read a game (a database timeout under load), put it back
   to pending while the node-finisher was analysing it. Only the call that claimed a game hands it back now
 - Analysis monitor: the chart spans the history actually there (not a fixed day, which squeezed a fresh monitor
