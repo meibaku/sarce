@@ -68,6 +68,11 @@ class Maia2HumanModel(HumanModel):
         # Both players are given the same rating: the lens asks "how would a player of this
         # strength reply", and the opponent's own rating is not known for ladder rows.
         raw, _win = self._inference.inference_each(self._model, self._prepared, board.fen(), elo, elo)
+        return self._normalize(legal, raw)
+
+    @staticmethod
+    def _normalize(legal: set[str], raw: dict) -> dict[str, float]:
+        """Keep the cache contract identical for single and batched inference."""
         probs = {uci: float(p) for uci, p in raw.items() if uci in legal}
         for uci in legal - probs.keys():
             probs[uci] = 0.0
@@ -75,6 +80,35 @@ class Maia2HumanModel(HumanModel):
         if total <= 0:
             return {uci: 1.0 / len(legal) for uci in legal}
         return {uci: p / total for uci, p in probs.items()}
+
+    def move_probs_batch(
+        self, positions: list[tuple[str, int]], batch_size: int = 512
+    ) -> list[dict[str, float]]:
+        """Run the package's vectorized inference path for an operational backfill."""
+        if not positions:
+            return []
+        if self._model is None:
+            self._load()
+        try:
+            import pandas as pd
+        except ImportError as exc:  # installed by requirements-maia.txt in production
+            raise RuntimeError(INSTALL_HINT) from exc
+        boards = [chess.Board(fen) for fen, _elo in positions]
+        data = pd.DataFrame(
+            {
+                "board": [board.fen() for board in boards],
+                "move": [next(iter(board.legal_moves)).uci() for board in boards],
+                "active_elo": [elo for _fen, elo in positions],
+                "opponent_elo": [elo for _fen, elo in positions],
+            }
+        )
+        inferred, _accuracy = self._inference.inference_batch(
+            data, self._model, False, batch_size, 0
+        )
+        return [
+            self._normalize({move.uci() for move in board.legal_moves}, raw)
+            for board, raw in zip(boards, inferred["move_probs"].tolist())
+        ]
 
 
 _shared: dict[str, Maia2HumanModel] = {}

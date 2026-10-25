@@ -12,12 +12,13 @@ import chess.pgn
 
 from app.config import settings
 from app.db.supabase import get_supabase
-from app.services.human_model import SupabaseProbStore, cached_move_probs, elo_ladder, get_human_model_for_game
+from app.services.human_model import TABLE, elo_ladder, get_human_model_for_game
 from app.services.library import boards_before
 from app.services.position_evals import fen_key, iter_live_positions
 from app.services.rating_map import opponent_model_elo
 
 PAGE = 1000
+WRITE_BATCH = 250
 
 
 def games(limit: int = 0, complete_only: bool = True) -> list[dict]:
@@ -54,6 +55,20 @@ def snapshot_ids(path: Path) -> set[str]:
     return set(payload["gameIds"] if isinstance(payload, dict) else payload)
 
 
+def existing_keys(model_version: str) -> set[tuple[str, int]]:
+    """Read one checkpoint's cache identity in pages, avoiding a REST lookup per position."""
+    rows: list[dict] = []
+    while True:
+        batch = (
+            get_supabase().table(TABLE).select("fen_key, elo")
+            .eq("model_version", model_version).range(len(rows), len(rows) + PAGE - 1)
+            .execute().data or []
+        )
+        rows.extend(batch)
+        if len(batch) < PAGE:
+            return {(row["fen_key"], int(row["elo"])) for row in rows}
+
+
 def positions(game: dict, classified: list[dict]):
     parsed = chess.pgn.read_game(io.StringIO(game.get("pgn") or ""))
     if parsed is None:
@@ -76,6 +91,7 @@ def main() -> int:
     selection.add_argument("--all", action="store_true", help="Explicitly select every complete game")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--prewarm", action="store_true", help="Load and validate both Maia checkpoints first")
+    parser.add_argument("--batch-size", type=int, default=512, help="Maia inference batch size")
     parser.add_argument("--snapshot", type=Path, help="Only IDs in an existing snapshot manifest")
     parser.add_argument("--write-snapshot", type=Path, help="Atomically freeze the selected game IDs")
     args = parser.parse_args()
@@ -104,7 +120,9 @@ def main() -> int:
     if args.dry_run:
         return 0
 
-    sb, store, failed, computed = get_supabase(), SupabaseProbStore(), 0, 0
+    sb, failed = get_supabase(), 0
+    models: dict[str, object] = {}
+    pending: dict[str, dict[tuple[str, int], str]] = {}
     for index, game in enumerate(selected, 1):
         classified = (
             sb.table("game_moves").select("ply, eval_before, eval_after")
@@ -112,16 +130,41 @@ def main() -> int:
         )
         try:
             model = get_human_model_for_game(settings.human_model, game)
+            models[model.model_version] = model
+            jobs = pending.setdefault(model.model_version, {})
             for position in positions(game, classified):
                 for elo in elo_ladder(opponent_model_elo(game)):
-                    cached_move_probs(position, elo, model, store)
-                    computed += 1
+                    jobs.setdefault((fen_key(position), elo), position.fen())
         except Exception as exc:
             failed += 1
             print(f"{game['id']}: {type(exc).__name__}: {str(exc)[:160]}", flush=True)
         if index % 25 == 0:
-            print(f"{index}/{len(selected)} games, lookups={computed}, failed={failed}", flush=True)
-    print(f"done={len(selected) - failed} failed={failed} lookups={computed}")
+            print(f"{index}/{len(selected)} games indexed, failed={failed}", flush=True)
+
+    written = 0
+    for version, jobs in pending.items():
+        missing = [(key, fen) for key, fen in jobs.items() if key not in existing_keys(version)]
+        print(f"{version}: unique={len(jobs)} missing={len(missing)}", flush=True)
+        model = models[version]
+        for start in range(0, len(missing), args.batch_size):
+            part = missing[start : start + args.batch_size]
+            inputs = [(fen, key[1]) for key, fen in part]
+            if hasattr(model, "move_probs_batch"):
+                probabilities = model.move_probs_batch(inputs, args.batch_size)
+            else:
+                probabilities = [model.move_probs(chess.Board(fen), elo) for fen, elo in inputs]
+            rows = [
+                {"fen_key": key[0], "elo": key[1], "model_version": version, "probs": probs}
+                for (key, _fen), probs in zip(part, probabilities) if probs
+            ]
+            for write_at in range(0, len(rows), WRITE_BATCH):
+                sb.table(TABLE).upsert(
+                    rows[write_at : write_at + WRITE_BATCH],
+                    on_conflict="fen_key,elo,model_version",
+                ).execute()
+            written += len(rows)
+            print(f"{version}: {min(start + len(part), len(missing))}/{len(missing)}", flush=True)
+    print(f"done={len(selected) - failed} failed={failed} written={written}")
     return 1 if failed else 0
 
 
