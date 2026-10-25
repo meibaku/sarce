@@ -106,6 +106,7 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--prewarm", action="store_true", help="Load and validate both Maia checkpoints first")
     parser.add_argument("--batch-size", type=int, default=512, help="Maia inference batch size")
+    parser.add_argument("--chunk-size", type=int, default=4096, help="Rows prepared per resumable work chunk")
     parser.add_argument("--shard-count", type=int, default=1, help="Split the fixed ordering into resumable shards")
     parser.add_argument("--shard-index", type=int, default=0, help="Zero-based shard to process")
     parser.add_argument("--snapshot", type=Path, help="Only IDs in an existing snapshot manifest")
@@ -168,8 +169,8 @@ def main() -> int:
         missing = [(key, fen) for key, fen in jobs.items() if key not in cached]
         print(f"{version}: unique={len(jobs)} missing={len(missing)}", flush=True)
         model = models[version]
-        for start in range(0, len(missing), args.batch_size):
-            part = missing[start : start + args.batch_size]
+        for start in range(0, len(missing), args.chunk_size):
+            part = missing[start : start + args.chunk_size]
             inputs = [(fen, key[1]) for key, fen in part]
             if hasattr(model, "move_probs_batch"):
                 probabilities = model.move_probs_batch(inputs, args.batch_size)
