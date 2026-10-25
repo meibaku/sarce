@@ -70,17 +70,22 @@ def snapshot_ids(path: Path) -> set[str]:
 
 
 def existing_keys(model_version: str) -> set[tuple[str, int]]:
-    """Read one checkpoint's cache identity in pages, avoiding a REST lookup per position."""
+    """Read one checkpoint's cache identity with index-friendly keyset pagination."""
     rows: list[dict] = []
+    cursor: tuple[str, int] | None = None
     while True:
-        batch = (
-            get_supabase().table(TABLE).select("fen_key, elo")
-            .eq("model_version", model_version).range(len(rows), len(rows) + PAGE - 1)
+        query = (
+            get_supabase().table(TABLE).select("fen_key, elo").eq("model_version", model_version)
+            .order("fen_key").order("elo").limit(PAGE)
         )
-        batch = execute(batch).data or []
+        if cursor:
+            fen, elo = cursor
+            query = query.or_(f"fen_key.gt.{fen},and(fen_key.eq.{fen},elo.gt.{elo})")
+        batch = execute(query).data or []
         rows.extend(batch)
         if len(batch) < PAGE:
             return {(row["fen_key"], int(row["elo"])) for row in rows}
+        cursor = (batch[-1]["fen_key"], int(batch[-1]["elo"]))
 
 
 def positions(game: dict, classified: list[dict]):
