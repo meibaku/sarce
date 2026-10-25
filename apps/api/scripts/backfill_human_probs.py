@@ -20,16 +20,18 @@ from app.services.rating_map import opponent_model_elo
 PAGE = 1000
 
 
-def complete_games(limit: int = 0) -> list[dict]:
+def games(limit: int = 0, complete_only: bool = True) -> list[dict]:
     rows: list[dict] = []
     while not limit or len(rows) < limit:
         size = min(PAGE, limit - len(rows)) if limit else PAGE
-        batch = (
-            get_supabase().table("games")
-            .select("id, pgn, user_color, opponent_rating, source, time_control")
-            .eq("analysis_status", "complete").order("played_at").order("id")
-            .range(len(rows), len(rows) + size - 1).execute().data or []
+        query = get_supabase().table("games").select(
+            "id, pgn, user_color, opponent_rating, source, time_control"
         )
+        if complete_only:
+            query = query.eq("analysis_status", "complete")
+        batch = query.order("played_at").order("id").range(
+            len(rows), len(rows) + size - 1
+        ).execute().data or []
         rows.extend(batch)
         if len(batch) < size:
             break
@@ -91,18 +93,19 @@ def main() -> int:
                 raise RuntimeError(f"{checkpoint} checkpoint returned an invalid distribution")
             print(f"prewarmed={model.model_version}")
 
-    games = complete_games(args.limit)
+    selected = games(args.limit)
     if args.snapshot:
         allowed = snapshot_ids(args.snapshot)
-        games = [game for game in games if game["id"] in allowed]
+        selected = [game for game in selected if game["id"] in allowed]
     if args.write_snapshot:
-        write_snapshot(args.write_snapshot, games)
-    print(f"games={len(games)} dry_run={args.dry_run}")
+        # The acceptance manifest includes incomplete games too; they enter this backfill after retry succeeds.
+        write_snapshot(args.write_snapshot, games(complete_only=False))
+    print(f"games={len(selected)} dry_run={args.dry_run}")
     if args.dry_run:
         return 0
 
     sb, store, failed, computed = get_supabase(), SupabaseProbStore(), 0, 0
-    for index, game in enumerate(games, 1):
+    for index, game in enumerate(selected, 1):
         classified = (
             sb.table("game_moves").select("ply, eval_before, eval_after")
             .eq("game_id", game["id"]).order("ply").execute().data or []
@@ -117,8 +120,8 @@ def main() -> int:
             failed += 1
             print(f"{game['id']}: {type(exc).__name__}: {str(exc)[:160]}", flush=True)
         if index % 25 == 0:
-            print(f"{index}/{len(games)} games, lookups={computed}, failed={failed}", flush=True)
-    print(f"done={len(games) - failed} failed={failed} lookups={computed}")
+            print(f"{index}/{len(selected)} games, lookups={computed}, failed={failed}", flush=True)
+    print(f"done={len(selected) - failed} failed={failed} lookups={computed}")
     return 1 if failed else 0
 
 
