@@ -92,6 +92,8 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--prewarm", action="store_true", help="Load and validate both Maia checkpoints first")
     parser.add_argument("--batch-size", type=int, default=512, help="Maia inference batch size")
+    parser.add_argument("--shard-count", type=int, default=1, help="Split the fixed ordering into resumable shards")
+    parser.add_argument("--shard-index", type=int, default=0, help="Zero-based shard to process")
     parser.add_argument("--snapshot", type=Path, help="Only IDs in an existing snapshot manifest")
     parser.add_argument("--write-snapshot", type=Path, help="Atomically freeze the selected game IDs")
     args = parser.parse_args()
@@ -113,6 +115,11 @@ def main() -> int:
     if args.snapshot:
         allowed = snapshot_ids(args.snapshot)
         selected = [game for game in selected if game["id"] in allowed]
+    if args.shard_count < 1 or not 0 <= args.shard_index < args.shard_count:
+        parser.error("--shard-index must be between zero and --shard-count minus one")
+    selected = [
+        game for index, game in enumerate(selected) if index % args.shard_count == args.shard_index
+    ]
     if args.write_snapshot:
         # The acceptance manifest includes incomplete games too; they enter this backfill after retry succeeds.
         write_snapshot(args.write_snapshot, games(complete_only=False))
