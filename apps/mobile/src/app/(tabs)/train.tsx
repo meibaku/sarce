@@ -19,6 +19,7 @@ import {
   s,
 } from "@/components/ui";
 import { Mascot } from "@/components/mascot";
+import { LearningEvidenceCard } from "@/components/learning-card";
 import { answerDrill, checkDrill, getTrain } from "@/lib/api";
 import { color } from "@/lib/theme";
 import { useLoad } from "@/lib/use-load";
@@ -42,6 +43,7 @@ export default function Train() {
   if (failed || !data)
     return (
       <Screen title="train">
+        <LearningEvidenceCard />
         {failed ? (
           <Edge kind="offline" action="Try again" onAction={reload} />
         ) : (
@@ -52,6 +54,7 @@ export default function Train() {
   if (data.items.length === 0) {
     return (
       <Screen title="train">
+        <LearningEvidenceCard />
         <Edge
           kind="too-few"
           detail="Drills come back when they're due. Play a game and new ones arrive from it."
@@ -84,6 +87,7 @@ export default function Train() {
 
   return (
     <Screen title="train">
+      <LearningEvidenceCard />
       <T weight="medium" size={22}>
         One queue
       </T>
