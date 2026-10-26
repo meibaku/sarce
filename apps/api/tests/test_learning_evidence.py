@@ -13,6 +13,8 @@ def item(person: str, arm: str, phase: str, label: str, correct: bool, assistanc
         "item_label": label,
         "correct": correct,
         "assistance": assistance,
+        "cohort": "controlled",
+        "analysis_eligible": True,
     }
 
 
@@ -45,6 +47,7 @@ def test_primary_report_is_deterministic_and_player_clustered():
     assert first == primary_report(rows, resamples=500, seed=7)
     assert first["effectPercentagePoints"] == 50.0
     assert first["completeParticipants"] == {"experimental": 2, "activeControl": 2}
+    assert first["assessmentItems"]["experimental"] == {"baseline": 36, "day7": 36}
     assert first["bootstrap"]["unit"] == "participant"
 
 
@@ -52,4 +55,22 @@ def test_cross_arm_participant_is_rejected():
     rows = phase("p", "experimental", "baseline", True, True) + phase("p", "active_control", "day7", True, True)
     with pytest.raises(ValueError, match="more than one arm"):
         participant_changes(rows)
+
+
+def test_primary_analysis_excludes_qualitative_and_ineligible_attempts():
+    eligible = phase("e1", "experimental", "baseline", False, True) + phase("e1", "experimental", "day7", True, True)
+    eligible += phase("c1", "active_control", "baseline", False, True) + phase("c1", "active_control", "day7", False, True)
+    qualitative = [
+        {**row, "participant_key": "q1", "cohort": "qualitative", "analysis_eligible": False}
+        for row in phase("q1", "experimental", "baseline", True, True) + phase("q1", "experimental", "day7", True, True)
+    ]
+    sandbox = [
+        {**row, "participant_key": "sandbox", "analysis_eligible": False}
+        for row in phase("sandbox", "active_control", "baseline", True, True)
+        + phase("sandbox", "active_control", "day7", False, False)
+    ]
+    report = primary_report(eligible + qualitative + sandbox, resamples=100, seed=4)
+    assert report["completeParticipants"] == {"experimental": 1, "activeControl": 1}
+    assert report["attempts"] == 72
+    assert report["excludedAttempts"] == 72
 

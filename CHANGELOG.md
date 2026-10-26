@@ -14,6 +14,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   delayed checks, durable feedback and withdrawal.
 - A blinded, authenticated Learning Evidence reviewer workspace with independent votes and live precision,
   raw-agreement and Cohen's-kappa qualification gates.
+- Learning attempts now snapshot cohort and analysis eligibility; the fixed day-7 report fails closed against
+  qualitative, sandbox, ineligible and incomplete records before its 10,000-resample within-arm player bootstrap.
 
 ### Changed
 - ADR 0012 starts Learning Evidence Phase 2: Brilliant remains a first-class optional style goal, while recognition,

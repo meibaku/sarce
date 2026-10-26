@@ -11,6 +11,14 @@ BOOTSTRAP_SEED = 20_261_026
 FIXED_ASSESSMENT_ITEMS = 18
 
 
+def analysis_rows(rows: list[dict]) -> list[dict]:
+    """Fail closed to the snapshotted controlled cohort used by the preregistered estimand."""
+    return [
+        row for row in rows
+        if row.get("analysis_eligible") is True and row.get("cohort") == "controlled"
+    ]
+
+
 def balanced_accuracy(rows: list[dict]) -> float | None:
     """Average positive sensitivity and negative specificity; assisted responses remain incorrect."""
     positive = [row for row in rows if row["item_label"] == "positive"]
@@ -26,6 +34,7 @@ def balanced_accuracy(rows: list[dict]) -> float | None:
 
 def participant_changes(rows: list[dict]) -> dict[str, list[float]]:
     """Return complete baseline-to-day-7 changes by randomised arm."""
+    rows = analysis_rows(rows)
     grouped: dict[tuple[str, str], list[dict]] = defaultdict(list)
     arms: dict[str, str] = {}
     for row in rows:
@@ -64,6 +73,7 @@ def primary_report(
     if resamples < 100:
         raise ValueError("at least 100 bootstrap resamples are required")
     changes = participant_changes(rows)
+    eligible = analysis_rows(rows)
     experimental, control = changes["experimental"], changes["active_control"]
     if not experimental or not control:
         raise ValueError("both arms need complete baseline and day-7 participants")
@@ -74,7 +84,14 @@ def primary_report(
         for _ in range(resamples)
     )
     included = {
-        arm: len({str(row["participant_key"]) for row in rows if row.get("arm") == arm})
+        arm: len({str(row["participant_key"]) for row in eligible if row.get("arm") == arm})
+        for arm in changes
+    }
+    item_denominators = {
+        arm: {
+            phase: sum(row.get("arm") == arm and row.get("phase") == phase for row in eligible)
+            for phase in ("baseline", "day7")
+        }
         for arm in changes
     }
     return {
@@ -89,8 +106,13 @@ def primary_report(
             "activeControl": round(mean(control) * 100, 3),
         },
         "completeParticipants": {"experimental": len(experimental), "activeControl": len(control)},
-        "enrolledParticipants": {"experimental": included["experimental"], "activeControl": included["active_control"]},
-        "attempts": len(rows),
+        "observedParticipants": {"experimental": included["experimental"], "activeControl": included["active_control"]},
+        "assessmentItems": {
+            "experimental": item_denominators["experimental"],
+            "activeControl": item_denominators["active_control"],
+        },
+        "attempts": len(eligible),
+        "excludedAttempts": len(rows) - len(eligible),
         "bootstrap": {"unit": "participant", "resamples": resamples, "seed": seed},
     }
 

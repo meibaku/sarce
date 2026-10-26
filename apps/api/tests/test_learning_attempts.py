@@ -12,6 +12,8 @@ ENROLLMENT = {
     "participant_key": "20000000-0000-4000-8000-000000000001",
     "protocol_version": 1,
     "arm": "experimental",
+    "cohort": "controlled",
+    "analysis_eligible": True,
     "withdrawn_at": None,
 }
 PATTERN = {
@@ -50,6 +52,8 @@ def test_attempt_snapshots_versions_assignment_and_item_identity():
     assert row["correct"] is True
     assert row["participant_key"] == ENROLLMENT["participant_key"]
     assert row["protocol_version"] == row["scoring_version"] == 1
+    assert row["cohort"] == "controlled"
+    assert row["analysis_eligible"] is True
     assert row["family_key"] == "pin-on-file"
 
 
@@ -63,4 +67,14 @@ def test_withdrawn_or_unapproved_evidence_is_rejected():
         prepare_attempt(**{**kwargs, "enrollment": {**ENROLLMENT, "withdrawn_at": NOW.isoformat()}})
     with pytest.raises(ValueError, match="approved"):
         prepare_attempt(**{**kwargs, "pattern": {**PATTERN, "review_status": "candidate"}})
+
+
+def test_qualitative_attempt_is_snapshotted_out_of_primary_analysis():
+    row = prepare_attempt(
+        enrollment={**ENROLLMENT, "cohort": "qualitative"}, pattern=PATTERN,
+        client_attempt_id="40000000-0000-4000-8000-000000000002", phase="baseline",
+        response={"square": "e4"}, assistance="independent", confidence=4, latency_ms=100,
+        novel=True, presented_at=NOW, responded_at=NOW,
+    )
+    assert row["analysis_eligible"] is False
 
