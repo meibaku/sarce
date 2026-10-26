@@ -75,7 +75,8 @@ async def enrol(body: EnrollRequest, user_id: str = Depends(require_signed_in_us
 @router.get("/status")
 async def status(user_id: str = Depends(require_signed_in_user)):
     enrollment = await asyncio.to_thread(admission_store.status, user_id)
-    return {"enrolled": enrollment is not None, "enrollment": enrollment}
+    sessions = await asyncio.to_thread(session_store.progress, enrollment["id"]) if enrollment else []
+    return {"enrolled": enrollment is not None, "enrollment": enrollment, "sessions": sessions}
 
 
 @router.post("/withdraw")

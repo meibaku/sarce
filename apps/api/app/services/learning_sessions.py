@@ -198,3 +198,17 @@ class LearningSessionStore:
             "sessionId": session_id, "phase": session["phase"], "itemCount": session["item_count"],
             "answered": answered, "completedAt": session.get("completed_at"),
         }
+
+    def progress(self, enrollment_id: str) -> list[dict]:
+        """Return phase-level progress without exposing assignments, item labels or answers."""
+        rows = (
+            get_supabase().table("learning_sessions").select("id, phase, item_count, completed_at")
+            .eq("enrollment_id", enrollment_id).order("created_at").execute().data or []
+        )
+        return [
+            {
+                "sessionId": row["id"], "phase": row["phase"], "itemCount": row["item_count"],
+                "completedAt": row.get("completed_at"),
+            }
+            for row in rows
+        ]
