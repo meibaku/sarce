@@ -57,15 +57,17 @@ def test_failure_diagnostics_are_bounded_and_redacted():
     unquoted = "-".join(("very", "sensitive"))
     quoted = "-".join(("quoted", "sensitive"))
     api_value = "-".join(("another", "sensitive"))
+    basic_value = "-".join(("encoded", "sensitive"))
     diagnostic = (
         f"to{'ken'}={unquoted} "
         + '{"pass' + f'word": "{quoted}"}} '
         + f"api_{'key'}={api_value}\n"
+        + "Author" + f"ization: Ba{'sic'} {basic_value} "
         + "x" * 800
     )
     kind, message = safe_failure(RuntimeError(diagnostic))
     assert kind == "RuntimeError" and unquoted not in message
-    assert quoted not in message and api_value not in message
+    assert quoted not in message and api_value not in message and basic_value not in message
     assert "[redacted]" in message and len(message) == analysis.MAX_ERROR_LENGTH
 
 
