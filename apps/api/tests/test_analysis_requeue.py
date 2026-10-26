@@ -1,6 +1,7 @@
 """Games never stay stuck in 'processing' (app/services/analysis.py)."""
 
 import asyncio
+from pathlib import Path
 import types
 
 from postgrest.exceptions import APIError
@@ -59,6 +60,16 @@ def test_failure_diagnostics_are_bounded_and_redacted():
     assert kind == "RuntimeError" and "very-secret" not in message
     assert "quoted-secret" not in message and "another-secret" not in message
     assert "[redacted]" in message and len(message) == analysis.MAX_ERROR_LENGTH
+
+
+def test_failure_diagnostics_are_not_granted_to_client_roles():
+    migration = (
+        Path(__file__).resolve().parents[3]
+        / "supabase/migrations/20261025000000_analysis_failure_diagnostics.sql"
+    ).read_text(encoding="utf-8")
+    grants = migration.split("grant select (", 1)[1].split(") on public.games", 1)[0]
+    assert "revoke select on public.games from anon, authenticated" in migration
+    assert "analysis_error" not in grants and "analysis_failed_at" not in grants
 
 
 def test_a_storage_timeout_sends_the_game_back_to_pending(monkeypatch):
