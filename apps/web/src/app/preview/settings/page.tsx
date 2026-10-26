@@ -8,7 +8,7 @@ import type { SettingsApi } from "@/types/chess";
 /* Design preview: Settings as in the v1.0 handoff. */
 export default function PreviewSettings() {
   const [data, setData] = useState<SettingsApi>({
-    goalLo: 6, goalHi: 10, questionBudget: 1, quietUntil: null, sources: "both", theme: "light", playfulMascot: true, motion: "full",
+    goalLo: 0.2, goalHi: 0.6, questionBudget: 1, quietUntil: null, sources: "both", theme: "light", playfulMascot: true, motion: "full",
     kept: { games: 64, notes: 23 },
   });
   return (

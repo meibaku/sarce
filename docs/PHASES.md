@@ -12,9 +12,9 @@ This file tracks **what's built vs planned**. The phase definitions below match 
 
 ---
 
-## Phase 1 — MVP ✅ Complete
+## Product Phase 1 — MVP ✅ Complete
 
-**Goal:** Import games, classify moves, detect Brilliant plays, track 6–10% target, Tal benchmark.
+**Goal:** Import games, classify moves, detect Brilliant plays, track a Tal-calibrated target, Tal benchmark.
 
 | Stage | Feature | Status |
 |-------|---------|--------|
@@ -26,6 +26,14 @@ This file tracks **what's built vs planned**. The phase definitions below match 
 | 1.6 | Tests + CI + quality gates | ✅ |
 | 1.7 | Recent style moments + move drilldown | ✅ |
 | 1.8 | ECO opening extraction (`games.eco`, `games.opening`) | ✅ |
+
+### October Analysis Foundation A1 — ✅ Complete
+
+This is the later measurement-correctness programme from `IMPLEMENTATION_PLAN.md`, not the original MVP phase
+above. Its fixed 3,208-game snapshot is complete, Maia-2 is routed by speed with style-vector v6 provenance, and
+the 200-game Tal benchmark measured 0.29% Brilliant (95% game-bootstrap interval 0.17–0.41%). ADR 0011 therefore
+sets the default Tal band to 0.2–0.6% and “More solid” to 0.0–0.2%. Full evidence is in
+`docs/evidence/phase1-closeout.json`.
 
 ---
 

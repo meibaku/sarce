@@ -97,7 +97,7 @@ class TestPhilosophyDocAnchors:
         return (REPO_ROOT / "docs" / "PHILOSOPHY.md").read_text(encoding="utf-8")
 
     def test_mentions_brilliant_target(self, philosophy: str):
-        assert "6" in philosophy and "10" in philosophy
+        assert "0.2" in philosophy and "0.6" in philosophy
         assert "Brilliant" in philosophy
 
     def test_mentions_style_over_accuracy(self, philosophy: str):

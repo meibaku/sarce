@@ -26,8 +26,10 @@ work items with an order, a size, dependencies, and who has to decide what. Writ
 | 1.3 (part) | Personal next band on the gauge (Home, Settings, Expo) | #167 |
 | 4.7 | #54 and #55 closed as superseded (branches kept) | — |
 
-**Still open in Phase 1:** 1.2 (Tal's 200 games under rule v4, running locally) and the band half of 1.3. The
-owner decided to rebase the band on Tal's measured range (ADR once the number lands).
+**Analysis Foundation A1 completed 26 October 2026:** the fixed 3,208-game snapshot passed its data gates. Tal's
+200-game rule-v4 run measured 20 Brilliants in 7,013 moves: 0.29%, with a 0.17–0.41% game-bootstrap interval.
+ADR 0011 adopts 0.2–0.6% for Tal and 0.0–0.2% for “More solid”; the canonical report is
+`docs/evidence/phase1-closeout.json`. This “Phase 1” is distinct from the earlier Product Phase 1 MVP.
 
 **What F2 and F4 revealed** (shapes the order below):
 
@@ -36,14 +38,14 @@ owner decided to rebase the band on Tal's measured range (ADR once the number la
 - With the strict test, Tal (5 per 1,000) is still below Morphy (16) on only 7 events in 40 games, so the
   references need **F3** before the axis says anything.
 
-## Phase 1 — Measure correctly (engineering only, no outside decisions)
+## Analysis Foundation A1 — Measure correctly ✅ Complete
 
 Order matters: F6 and F1 change what Brilliant and chaos mean, and everything later builds on them.
 
 | # | Item | Approach | Size | Needs | Depends on |
 | --- | --- | --- | --- | --- | --- |
 | 1.1 | **F6a: benchmark runner** | `ReferenceService.process_tal_benchmark()` runs the same pipeline as a player's games, including the `BrilliantFindRate` post-pass | S | — | — |
-| 1.2 | **F6b: re-measure Brilliant under v3** | Run 1.1 on ≥ 200 Tal games, with a game-level bootstrap interval. Also report the distribution of clause failures for your games ("which clause stops Brilliant at 200 level?") | M | engine | 1.1 |
+| 1.2 | **F6b: re-measure Brilliant under v4** | Completed on 200 Tal games with a game-level bootstrap interval and personal clause-failure report | M | engine | 1.1 |
 | 1.3 | **F6c: the band and a personal next band** | If Tal is near 6–10%, keep it as "Tal tier". Otherwise change it via ADR (the band is CI-enforced). Either way, add a **next band**: your interval's upper bound plus one step, shown on the gauge and Settings | S–M | ADR if the band changes | 1.2, F4 ✓ |
 | 1.4 | **F1: rating → model Elo** | `rating_to_model_elo(source, time_control, rating)`, versioned, from published Chess.com↔Lichess tables, used everywhere a rating meets the human model (lens ladder, find-rate rung, chaos map rung). Bump lens and style-vector versions, then rescore | M | data (comparison table) | — |
 | 1.5 | **F11a: find-rate uses the mover's rating** | Use the mover's own converted rating at the 100-point rung `elo_ladder` already adds, not the opponent's at 400-point rungs | S | — | 1.4 |
@@ -121,7 +123,7 @@ that new measures wait for validation (F9).
 
 ## Decisions only you can make
 
-1. Keep or change the 6–10% band once Tal is re-measured (1.3).
+1. The band decision is complete: ADR 0011 records 0.2–0.6% from the Tal evidence.
 2. ADR 0009's three Brilliant clauses (1.6).
 3. Approving downloads: Chess.com↔Lichess rating tables, contrasting players' PGNs, Lichess database and evaluation
    dump (1.4, 2.2, 2.3, 4.3).

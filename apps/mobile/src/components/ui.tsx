@@ -145,11 +145,10 @@ export function Uncalibrated() {
   );
 }
 
-/** Brilliant % on the 0–15 scale with the goal band; dashed when it rests on fewer than five games. */
 /**
- * Brilliant gauge, as the web StyleGauge (docs/DESIGN.md): a 10px ink-outlined track on 0–15%, the goal band in
+ * Brilliant gauge, as the web StyleGauge: a 10px track fitted to the goal and observed values, the goal band in
  * accent tint, an optional dashed next band (plan 1.3), an optional ±spread hatch, a 2px ink marker at the value,
- * and 0 / lo / hi / 15% under it.
+ * and 0 / lo / hi / scale under it.
  */
 export function Gauge({
   value,
@@ -166,17 +165,18 @@ export function Gauge({
   next?: { lo: number; hi: number } | null;
   compact?: boolean;
 }) {
-  const at = (v: number) => (Math.max(0, Math.min(15, v)) / 15) * 100;
+  const scale = Math.min(15, Math.max(1, hi * 1.5, value ?? 0, (value ?? 0) + (spread ?? 0), next?.hi ?? 0));
+  const at = (v: number) => (Math.max(0, Math.min(scale, v)) / scale) * 100;
   const pct = (v: number) => `${at(v)}%` as const;
   const h = compact ? 8 : 10;
-  const hatch = value != null && spread ? { from: at(value - spread), to: at(Math.min(value + spread, 15)) } : null;
+  const hatch = value != null && spread ? { from: at(value - spread), to: at(Math.min(value + spread, scale)) } : null;
   return (
     <View style={{ gap: 6 }} accessibilityLabel={`Brilliant: ${value == null ? "not enough games yet" : `${value.toFixed(1)}%`}, goal ${lo}–${hi}%`}>
       <View style={{ height: h, borderWidth: 1.5, borderColor: color.ink, borderRadius: compact ? 5 : 6, backgroundColor: color.surface }}>
-        <View style={{ position: "absolute", top: -1.5, bottom: -1.5, left: pct(lo), width: `${((hi - lo) / 15) * 100}%`, backgroundColor: color.accentTint, borderWidth: 1.5, borderColor: color.accent }} />
+        <View style={{ position: "absolute", top: -1.5, bottom: -1.5, left: pct(lo), width: `${((hi - lo) / scale) * 100}%`, backgroundColor: color.accentTint, borderWidth: 1.5, borderColor: color.accent }} />
         {next && (
           <View
-            style={{ position: "absolute", top: -1.5, bottom: -1.5, left: pct(next.lo), width: `${((next.hi - next.lo) / 15) * 100}%`, minWidth: 3, borderWidth: 1.5, borderStyle: "dashed", borderColor: color.accent }}
+            style={{ position: "absolute", top: -1.5, bottom: -1.5, left: pct(next.lo), width: `${((next.hi - next.lo) / scale) * 100}%`, minWidth: 3, borderWidth: 1.5, borderStyle: "dashed", borderColor: color.accent }}
           />
         )}
         {hatch && (
@@ -193,7 +193,7 @@ export function Gauge({
           <T mono size={10} tone="muted" style={{ position: "absolute", left: 0 }}>0</T>
           <T mono size={10} tone="muted" style={{ position: "absolute", left: pct(lo), transform: [{ translateX: -4 }] }}>{String(lo)}</T>
           <T mono size={10} tone="muted" style={{ position: "absolute", left: pct(hi), transform: [{ translateX: -6 }] }}>{String(hi)}</T>
-          <T mono size={10} tone="muted" style={{ position: "absolute", right: 0 }}>15%</T>
+          <T mono size={10} tone="muted" style={{ position: "absolute", right: 0 }}>{`${Number(scale.toFixed(1))}%`}</T>
         </View>
       )}
     </View>

@@ -14,8 +14,8 @@ import { moveLabel } from "@/lib/format";
 import { color, font } from "@/lib/theme";
 
 const GOALS: { id: string; title: string; detail: string; lo: number; hi: number }[] = [
-  { id: "tal", title: "More Tal", detail: "Sacrifices and initiative · band 6–10%", lo: 6, hi: 10 },
-  { id: "solid", title: "More solid", detail: "Safer replies, fewer risks · band 2–4%", lo: 2, hi: 4 },
+  { id: "tal", title: "More Tal", detail: "Sacrifices and initiative · band 0.2–0.6%", lo: 0.2, hi: 0.6 },
+  { id: "solid", title: "More solid", detail: "Safer replies, fewer risks · band 0.0–0.2%", lo: 0, hi: 0.2 },
   { id: "none", title: "No goal yet", detail: "Sarce just mirrors your games for now", lo: 0, hi: 15 },
 ];
 

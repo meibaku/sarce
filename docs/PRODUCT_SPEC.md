@@ -2,7 +2,7 @@
 
 **Project:** Sarce (repo: [meibaku/sarce](https://github.com/meibaku/sarce))  
 **User:** Dratius  
-**Primary goal:** Build a personal chess companion that helps you develop a Mikhail Tal-inspired playing style — aggressive, sacrificial, tactical — with a target of **6–10% Brilliant** moves per game.
+**Primary goal:** Build a personal chess companion that helps you develop a Mikhail Tal-inspired playing style — aggressive, sacrificial, tactical — with an evidence-backed target of **0.2–0.6% Brilliant** moves.
 
 **Philosophy:** Chess apps today focus on *"what is the engine's best move?"* Sarce focuses on *"are you playing the kind of chess you want to play?"* It is a **style-development tool**, not a judge. See [PHILOSOPHY.md](./PHILOSOPHY.md) for the product constitution.
 
@@ -76,7 +76,7 @@ A move is **Brilliant** when **ALL** hold:
 |-------------|--------|
 | Per-game Brilliant % + full distribution | ✅ `game_analyses` |
 | Rolling baseline (last N games) | ✅ `user_baselines` |
-| Headline Brilliant % gauge (6–10% target band) | ✅ `BrilliantGauge` |
+| Headline Brilliant % gauge (0.2–0.6% default target band) | ✅ `BrilliantGauge` |
 | Plain-language style summary | ✅ `StyleSummary` |
 | Full move-quality breakdown | ✅ `DistributionChart` |
 | Brilliant % over time (line chart) | ✅ `BrilliantTimeline` |
@@ -264,7 +264,7 @@ Chronological library per game:
 | **Phase 1** | Import a game; see Brilliant % vs baseline; know if you played your target style |
 | **Phase 2** | Explore video positions with transcript context; searchable library |
 | **Phase 3** | Personal journal with intent + engine reality; awareness of calculated vs intuitive play |
-| **User goal** | Sustain **6–10% Brilliant** while understanding *why* each sacrifice was made |
+| **User goal** | Work toward **0.2–0.6% Brilliant** while understanding *why* each sacrifice was made |
 
 ---
 

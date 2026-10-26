@@ -12,7 +12,8 @@ import { setPrefs } from "@/lib/prefs";
 import { color, font } from "@/lib/theme";
 import { useLoad } from "@/lib/use-load";
 
-function Stepper({ value, onChange, min, max }: { value: number; onChange: (v: number) => void; min: number; max: number }) {
+function Stepper({ value, onChange, min, max, increment = 1 }: { value: number; onChange: (v: number) => void; min: number; max: number; increment?: number }) {
+  const nextValue = (delta: number) => Number((value + delta).toFixed(10));
   const btn = (label: string, next: number) => (
     <Pressable
       accessibilityRole="button"
@@ -27,9 +28,9 @@ function Stepper({ value, onChange, min, max }: { value: number; onChange: (v: n
   );
   return (
     <View style={s.row}>
-      {btn("−", value - 1)}
+      {btn("−", nextValue(-increment))}
       <T mono size={20} tone="accentText" style={{ minWidth: 56, textAlign: "center" }}>{`${value}%`}</T>
-      {btn("+", value + 1)}
+      {btn("+", nextValue(increment))}
     </View>
   );
 }
@@ -68,13 +69,13 @@ export default function Settings() {
         <T size={13} tone="ink2">Your target Brilliant band. Every gauge in the app follows it.</T>
         {(
           [
-            ["from", data.goalLo, 0, data.goalHi - 1, "goalLo"],
-            ["to", data.goalHi, data.goalLo + 1, 15, "goalHi"],
+            ["from", data.goalLo, 0, data.goalHi - 0.1, "goalLo"],
+            ["to", data.goalHi, data.goalLo + 0.1, 15, "goalHi"],
           ] as const
         ).map(([label, value, min, max, key]) => (
           <View key={label} style={[s.row, { gap: 12 }]}>
             <T size={13} tone="muted" style={{ width: 36 }}>{label}</T>
-            <Stepper value={value} min={min} max={max} onChange={(v) => change({ [key]: v })} />
+            <Stepper value={value} min={min} max={max} increment={0.1} onChange={(v) => change({ [key]: v })} />
           </View>
         ))}
         <Gauge value={null} lo={data.goalLo} hi={data.goalHi} compact />

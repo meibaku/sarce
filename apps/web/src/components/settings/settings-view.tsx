@@ -55,9 +55,9 @@ export function SettingsView({
           <section className="flex flex-col gap-3 rounded-[8px] border-[1.5px] border-ink bg-surface p-[18px]">
             <SectionLabel className="!text-accent-text">Style goal</SectionLabel>
             <span className="text-[13px] leading-[1.5] text-ink-2">Your target Brilliant band. Every gauge in the app follows it.</span>
-            <div className="flex flex-wrap items-center gap-x-[18px] gap-y-[10px]">
-              <Stepper label="from" value={data.goalLo} min={0} max={data.goalHi - 1} suffix="%" onChange={(v) => onChange({ goalLo: v })} />
-              <Stepper label="to" value={data.goalHi} min={data.goalLo + 1} max={15} suffix="%" onChange={(v) => onChange({ goalHi: v })} />
+            <div className="flex flex-col items-start gap-[10px] sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-[18px]">
+              <Stepper label="from" value={data.goalLo} min={0} max={data.goalHi - 0.1} increment={0.1} suffix="%" onChange={(v) => onChange({ goalLo: v })} />
+              <Stepper label="to" value={data.goalHi} min={data.goalLo + 0.1} max={15} increment={0.1} suffix="%" onChange={(v) => onChange({ goalHi: v })} />
             </div>
             <StyleGauge compact value={brilliant} goalLo={data.goalLo} goalHi={data.goalHi} next={next} />
             {next && (
