@@ -12,10 +12,12 @@ from app.config import settings
 from app.deps import current_user_id
 from app.services.learning_admission import LearningAdmissionStore, prepare_invite_batch
 from app.services.learning_sessions import LearningSessionStore
+from app.services.learning_review import LearningReviewStore
 
 router = APIRouter()
 admission_store = LearningAdmissionStore()
 session_store = LearningSessionStore()
+review_store = LearningReviewStore()
 
 
 def participant_enrollment(enrollment: dict) -> dict:
@@ -41,6 +43,12 @@ def require_signed_in_user() -> str:
 def require_learning_operator(user_id: str = Depends(require_signed_in_user)) -> str:
     if user_id not in settings.learning_operators:
         raise HTTPException(status_code=403, detail="Learning invitations are restricted to study operators")
+    return user_id
+
+
+def require_learning_reviewer(user_id: str = Depends(require_signed_in_user)) -> str:
+    if user_id not in {*settings.learning_reviewers, *settings.learning_operators}:
+        raise HTTPException(status_code=403, detail="Learning item review is restricted to configured reviewers")
     return user_id
 
 
@@ -153,3 +161,43 @@ async def session_summary(session_id: str, user_id: str = Depends(require_signed
         return await asyncio.to_thread(session_store.summary, user_id, session_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+class ReviewRequest(BaseModel):
+    decision: str
+    note: str = Field(default="", max_length=500)
+
+
+class AdjudicateRequest(BaseModel):
+    status: str
+
+
+@router.get("/review/next")
+async def next_review(reviewer: str = Depends(require_learning_reviewer)):
+    item = await asyncio.to_thread(review_store.next, reviewer)
+    return {"complete": item is None, "item": item}
+
+
+@router.post("/review/{pattern_id}")
+async def record_review(
+    pattern_id: str, body: ReviewRequest, reviewer: str = Depends(require_learning_reviewer),
+):
+    try:
+        return await asyncio.to_thread(review_store.annotate, pattern_id, reviewer, body.decision, body.note)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.get("/review/metrics")
+async def review_metrics(_reviewer: str = Depends(require_learning_reviewer)):
+    return await asyncio.to_thread(review_store.metrics)
+
+
+@router.post("/review/{pattern_id}/adjudicate")
+async def adjudicate(
+    pattern_id: str, body: AdjudicateRequest, _operator: str = Depends(require_learning_operator),
+):
+    try:
+        return await asyncio.to_thread(review_store.adjudicate, pattern_id, body.status)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc

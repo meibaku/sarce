@@ -254,6 +254,45 @@ export async function submitLearningAttempt(
   });
 }
 
+export interface LearningReviewItem {
+  id: string;
+  positionFen: string;
+  proposedLabel: "positive" | "near_miss" | "control";
+  target: Record<string, unknown>;
+  verification: Record<string, unknown>;
+  familyKey: string;
+  detectorVersion: number;
+  stockfishVersion: string;
+  analysisNodes: number;
+}
+
+export interface LearningReviewMetrics {
+  heldout: number;
+  adjudicated: number;
+  precision: number | null;
+  doubleAnnotated: number;
+  rawAgreement: number | null;
+  cohenKappa: number | null;
+  autoServeReady: boolean;
+  mandatoryHumanReviewCanEnd: boolean;
+  gates: { minimumHeldout: number; precision: number; kappaTarget: number };
+}
+
+export async function getNextLearningReview() {
+  return fetchApi<{ complete: boolean; item: LearningReviewItem | null }>("/learning/review/next");
+}
+
+export async function recordLearningReview(patternId: string, decision: "approve" | "reject" | "unclear", note: string) {
+  return fetchApi<{ recorded: true }>(`/learning/review/${patternId}`, {
+    method: "POST",
+    body: JSON.stringify({ decision, note }),
+  });
+}
+
+export async function getLearningReviewMetrics() {
+  return fetchApi<LearningReviewMetrics>("/learning/review/metrics");
+}
+
 export async function checkDrillMove(fen: string, uci: string, answer: string | null, source: string) {
   return fetchApi<import("@/types/chess").DrillCheck>(`/users/train/check`, {
     method: "POST",
