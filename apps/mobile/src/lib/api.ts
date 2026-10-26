@@ -24,15 +24,21 @@ import type {
   TrainApi,
   YouApi,
 } from "@sarce/types";
+import { getAccessToken } from "@/lib/auth";
 
 export const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8001";
 /** Where shared links open (the web app's /s/<token> page). */
 export const WEB_BASE = process.env.EXPO_PUBLIC_WEB_URL ?? "http://localhost:3001";
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = await getAccessToken();
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...init?.headers,
+    },
   });
   if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
   return res.json() as Promise<T>;
@@ -116,3 +122,34 @@ export const getTrapsSet = () => api<{ traps: TrapSet[]; building: boolean }>("/
 export const rebuildTrapsSet = () => api<{ building: boolean }>("/users/traps-set", { method: "POST" });
 export const importGames = (site: "chess_com" | "lichess", username: string) =>
   api<{ imported: number }>(site === "lichess" ? "/games/import/lichess" : "/games/import", post({ username, analyze: true }));
+
+export type LearningPhase = "baseline" | "learning" | "immediate" | "day7" | "day28";
+export type LearningStatus = {
+  enrolled: boolean;
+  enrollment: { id: string; withdrawnAt: string | null } | null;
+  sessions: { sessionId: string; phase: LearningPhase; itemCount: number; completedAt: string | null }[];
+};
+export type LearningPresentation = {
+  presentationToken: string;
+  ordinal: number;
+  positionFen: string;
+  presentedAt: string;
+};
+export const getLearningStatus = () => api<LearningStatus>("/learning/status");
+export const enrolLearning = (token: string) => api("/learning/enrol", post({
+  token, adultConfirmed: true, consentedAt: new Date().toISOString(),
+}));
+export const withdrawLearning = () => api<{ withdrawn: boolean }>("/learning/withdraw", { method: "POST" });
+export const createLearningSession = (phase: LearningPhase) =>
+  api<{ sessionId: string; phase: LearningPhase; itemCount: number }>("/learning/sessions", post({ phase }));
+export const getNextLearningPresentation = (sessionId: string) =>
+  api<{ complete: boolean; presentation: LearningPresentation | null }>(`/learning/sessions/${sessionId}/next`);
+export const submitLearningAttempt = (
+  token: string,
+  body: { clientAttemptId: string; response: { square?: string; noImmediateDanger?: boolean }; confidence: number; latencyMs: number },
+) => api<{
+  recorded: true;
+  correct: boolean;
+  remaining: number;
+  feedback: { target: { squares?: string[]; noImmediateDanger?: boolean } };
+}>(`/learning/presentations/${token}/attempt`, post({ ...body, assistance: "independent" }));
