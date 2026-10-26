@@ -2,7 +2,8 @@
 
 The Expo (React Native) app: the v1.0 design's phone screens on the same FastAPI API as `apps/web`.
 Read the root `AGENTS.md` first; its domain invariants apply here too (post-game only, no punitive copy,
-Brilliant % is the headline, Stockfish stays server-side).
+Brilliant stays a first-class optional style goal, learning evidence stays separate (ADR 0012), and Stockfish stays
+server-side).
 
 - **Expo SDK 58.** Expo changes between SDKs: check the versioned docs
   (`https://docs.expo.dev/versions/v58.0.0/`) before using an Expo or React Native API, and add packages with

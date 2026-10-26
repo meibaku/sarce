@@ -57,6 +57,10 @@ Order matters: F6 and F1 change what Brilliant and chaos mean, and everything la
 
 ## Phase 2 — Make the references and lenses trustworthy (compute and data)
 
+This analysis-validation stream continues in parallel. It is no longer the next learning milestone and does not block
+the narrow piece-safety programme in [LEARNING_EVIDENCE_PROTOCOL.md](./LEARNING_EVIDENCE_PROTOCOL.md). Reference or
+lens results cannot be presented as evidence that a player learned.
+
 | # | Item | Approach | Size | Needs | Depends on |
 | --- | --- | --- | --- | --- | --- |
 | 2.1 | **F3a: rescore references** | Same human model as your data, 100–200 games each until the bootstrap intervals are narrower than the gaps drawn, intervals stored next to each value, dots labelled "Tal (classical)" | L | engine (many hours) | 1.4, 1.6 |
@@ -120,6 +124,13 @@ Detailed plan, waves and PR order: [PHASE3_PLAN.md](./PHASE3_PLAN.md).
 
 Not before Phase 2 is done: any new trait, style twin (3.10), or percentile claims (2.4). The review is explicit
 that new measures wait for validation (F9).
+
+## Learning Evidence Phase 2 — prove one modest claim
+
+Order: ADR/protocol → reviewed piece-safety detector → private/global pattern bank → append-only attempts → rebuildable
+state → unlabelled web/mobile loop → active-control pilot → transfer observer → evidence decision ADR. The automatic
+serving gate is ≥90% held-out reviewed precision. The first primary endpoint is day-7 held-out discrimination; no
+second concept or general “intuition” model is in scope before that endpoint.
 
 ## Decisions only you can make
 

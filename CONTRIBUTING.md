@@ -95,7 +95,7 @@ Never commit `.env*`, signing keys, or the Supabase service-role key. Run `npm r
 ## What to preserve
 
 - **Brilliant** as first-class move tier
-- **Brilliant %** as headline metric (6–10% default target)
+- **Brilliant** as a first-class optional style goal; learning evidence stays separate (ADR 0012)
 - **Style vector versioning**
 - Engine as mirror, not judge
 
@@ -108,7 +108,9 @@ Never commit `.env*`, signing keys, or the Supabase service-role key. Run `npm r
 
 ## AI code review (Greptile)
 
-Sarce uses [Greptile](https://www.greptile.com/) with `.greptile/` configs that **lock product foundations** — Brilliant tier, Brilliant % headline, server-side Stockfish, no ML in Phase 1.
+Sarce uses [Greptile](https://www.greptile.com/) with `.greptile/` configs that **lock product foundations** — Brilliant
+tier, separation of style and learning evidence, server-side Stockfish, no unsupported learning claims, and no ML in
+Phase 1.
 
 - Read [docs/CODE_REVIEW.md](docs/CODE_REVIEW.md) before arguing with Greptile comments
 - Do not disable foundation rule IDs in root `.greptile/config.json`

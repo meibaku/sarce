@@ -76,7 +76,7 @@ A move is **Brilliant** when **ALL** hold:
 |-------------|--------|
 | Per-game Brilliant % + full distribution | ✅ `game_analyses` |
 | Rolling baseline (last N games) | ✅ `user_baselines` |
-| Headline Brilliant % gauge (0.2–0.6% default target band) | ✅ `BrilliantGauge` |
+| Prominent Brilliant % style-goal gauge (0.2–0.6% default target band) | ✅ `BrilliantGauge` |
 | Plain-language style summary | ✅ `StyleSummary` |
 | Full move-quality breakdown | ✅ `DistributionChart` |
 | Brilliant % over time (line chart) | ✅ `BrilliantTimeline` |
@@ -209,6 +209,12 @@ Chronological library per game:
 - Extend `game_moves` or link via foreign key
 
 ---
+
+## Learning Evidence Phase 2
+
+Governed by ADR 0012 and [LEARNING_EVIDENCE_PROTOCOL.md](./LEARNING_EVIDENCE_PROTOCOL.md): one reviewed piece-safety
+concept, held-out recognition, day-7 retention and later transfer. Learning evidence is never collapsed into the style
+fingerprint or Brilliant %.
 
 ## Phase 4+ — Future Enhancements (not locked)
 

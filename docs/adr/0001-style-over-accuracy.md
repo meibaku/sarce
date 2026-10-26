@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted; decision 2 superseded by [ADR 0012](./0012-learning-evidence-and-progress-semantics.md)
 
 ## Context
 
@@ -13,7 +13,8 @@ wants to **become a certain kind of player** (Tal-inspired: sacrificial, tactica
 ## Decision
 
 1. **Brilliant** is a first-class move tier, not a subset of Best.
-2. **Brilliant %** is the headline dashboard metric toward a 6–10% target band.
+2. **Superseded:** Brilliant % was the universal headline dashboard metric. ADR 0012 keeps it prominent for an
+   optional style goal while reporting learning evidence separately.
 3. Stockfish provides eval deltas and soundness checks; it does **not** define
    the user's goal function.
 4. UX copy frames deviations as *distance from style goal*, never as moral failure.
@@ -37,5 +38,5 @@ Fully aligned with [PHILOSOPHY.md](../PHILOSOPHY.md).
 
 ## Gates affected
 
-- `test_philosophy_contracts.py` — enforces Brilliant tier + headline metric
+- `test_philosophy_contracts.py` — enforces the Brilliant tier and ADR 0012's style/learning boundary
 - PR template — human review for punitive copy

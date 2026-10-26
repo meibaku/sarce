@@ -16,7 +16,7 @@
     "apps/api/.cache/**",
     "**/*.generated.*"
   ],
-  "instructions": "Sarce is a chess STYLE identity app (Tal-inspired, 6-10% Brilliant target) — NOT an engine accuracy coach. Read docs/PHILOSOPHY.md and .greptile/rules.md before reviewing. Never suggest removing Brilliant tier, replacing Brilliant % as headline metric, adding ML classification, moving Stockfish to client, or punitive UX. Flag security (RLS, service_role exposure) and real bugs. Push back on refactors that change product foundations without an ADR in docs/adr/.",
+  "instructions": "Sarce is a chess style-identity and evidence-of-learning app — NOT an engine accuracy coach. Read docs/PHILOSOPHY.md, ADR 0012 and .greptile/rules.md before reviewing. Never suggest removing Brilliant tier, collapsing style and learning into one score, adding ML classification, moving Stockfish to client, unsupported learning claims, or punitive UX. Flag security (RLS, service_role exposure) and real bugs. Push back on refactors that change product foundations without an ADR in docs/adr/.",
   "rules": [
     {
       "id": "foundation-no-remove-brilliant",
@@ -24,8 +24,8 @@
       "severity": "high"
     },
     {
-      "id": "foundation-headline-brilliant-pct",
-      "rule": "NEVER suggest replacing Brilliant % as the headline dashboard metric with accuracy, centipawn loss, or engine-match percentage.",
+      "id": "foundation-style-learning-separation",
+      "rule": "NEVER suggest replacing Brilliant as a first-class optional style goal with accuracy, or collapsing style identity and learning evidence into one progress score.",
       "severity": "high"
     },
     {
