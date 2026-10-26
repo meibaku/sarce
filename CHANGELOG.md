@@ -30,6 +30,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- Piece-safety detector v1 conservatively classifies positive, near-miss and control positions from completed-game
+  cached searches, records the fixed-node engine contract, and excludes decided or incomplete evidence.
 - Learning pattern bank foundation: versioned private/global `pattern_instances` with provenance, reviewer annotations,
   RLS, answer-safe serving views, and no direct client access to targets or verification.
 - Maia-2 analysis now selects the blitz checkpoint for bullet/blitz games and rapid for slower or unknown controls,
