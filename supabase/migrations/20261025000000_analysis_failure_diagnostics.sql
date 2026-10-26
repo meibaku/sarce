@@ -5,7 +5,7 @@ alter table public.games
   add column if not exists analysis_failed_at timestamptz;
 
 alter table public.games
-  add constraint games_analysis_attempts_nonnegative check (analysis_attempts >= 0);
+  add constraint games_analysis_attempts_nonnegative check (analysis_attempts >= 0) not valid;
 
 comment on column public.games.analysis_error is
   'Bounded, sanitized operator diagnostic for the most recent analysis failure.';

@@ -53,8 +53,11 @@ def test_transient_errors():
 
 
 def test_failure_diagnostics_are_bounded_and_redacted():
-    kind, message = safe_failure(RuntimeError("token=very-secret\n" + "x" * 800))
+    kind, message = safe_failure(RuntimeError(
+        'token=very-secret {"password": "quoted-secret"} api_key=another-secret\n' + "x" * 800
+    ))
     assert kind == "RuntimeError" and "very-secret" not in message
+    assert "quoted-secret" not in message and "another-secret" not in message
     assert "[redacted]" in message and len(message) == analysis.MAX_ERROR_LENGTH
 
 
@@ -90,6 +93,7 @@ class OneGame:
         self.status = "pending"
         self.attempts = 0
         self.error = None
+        self.bump_on_claim = False
         self._update = None
 
     def table(self, _name):
@@ -106,6 +110,8 @@ class OneGame:
     def execute(self):
         if self._update:
             self.status = self._update["analysis_status"]
+            if self.bump_on_claim and self.status == "processing":
+                self.attempts += 1
             self.attempts = self._update.get("analysis_attempts", self.attempts)
             self.error = self._update.get("analysis_error", self.error)
             return types.SimpleNamespace(data=[{"id": "g"}])  # the claim is conditional: it must see its row
@@ -147,6 +153,24 @@ def test_engine_timeouts_are_retried_a_few_times_then_marked_failed(monkeypatch)
     except TimeoutError:
         pass
     assert db.status == "failed" and db.attempts == analysis.MAX_ATTEMPTS + 1
+
+
+def test_failure_uses_the_attempt_count_read_after_claim(monkeypatch):
+    import chess
+
+    db = OneGame()
+    db.bump_on_claim = True  # another owner failed after our initial read but before our conditional claim
+    monkeypatch.setattr(analysis, "get_supabase", lambda: db)
+    service = AnalysisService.__new__(AnalysisService)
+    service._parse_game = lambda pgn: (chess.Board(), [chess.Move.from_uci("e2e4")])
+    service._classify = lambda *_a: (_ for _ in ()).throw(TimeoutError("engine stopped"))
+
+    try:
+        asyncio.run(service.analyze_game("g"))
+    except TimeoutError:
+        pass
+
+    assert db.attempts == 2 and db.status == "pending"
 
 
 def test_orphaned_processing_games_are_requeued_on_the_second_sweep(monkeypatch):
