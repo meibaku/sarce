@@ -32,6 +32,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ### Added
 - Append-only Learning Evidence enrolments and attempts retain pseudonymous, versioned, server-scored evidence with
   idempotent retries while blocking new responses after withdrawal.
+- Scheduler v2 is a disposable, deterministic projection of instruction attempts: retry in one day, low-confidence
+  novelty in three, independent novelty in seven, and independent delayed success in 28; assessments never adapt.
 - Piece-safety bank tooling builds candidates only from completed games and cached searches, records calibration versus
   held-out review sets, preserves independent annotations, and blocks automatic serving below 50 adjudicated held-out
   items or 90% precision; agreement and Cohen's kappa remain visible.
