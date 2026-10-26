@@ -104,6 +104,9 @@ class Settings(BaseSettings):
     # Signed-in users (Supabase ids) allowed to read the analysis monitor, which shows every user's games.
     # Local-first (nobody signed in) the machine's owner is the operator; signed in, only these ids are.
     monitor_operators: list[str] = []
+    # Signed-in users allowed to issue controlled-study invitations. Keeping this
+    # separate from monitor access avoids accidentally widening research privileges.
+    learning_operators: list[str] = []
     analysis_nodes: int = 1_500_000
     analysis_multipv: int = 4
     analysis_multipv_cap: int = 8
