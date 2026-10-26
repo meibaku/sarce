@@ -4,6 +4,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Added
+- Phase 2 Learning Evidence admission with balanced expiring invitations, atomic one-use redemption, verified
+  adult consent, participant status and withdrawal.
+
 ### Changed
 - ADR 0012 starts Learning Evidence Phase 2: Brilliant remains a first-class optional style goal, while recognition,
   seven-day retention and transfer become separate held-out evidence contracts. The first preregistered concept is
