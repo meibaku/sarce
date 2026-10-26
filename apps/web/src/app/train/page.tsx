@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/shell/app-shell";
 import { PositionSetter } from "@/components/train/position-setter";
+import { LearningEvidenceCard } from "@/components/train/learning-evidence-card";
 import { TrainView } from "@/components/train/train-view";
 import { EdgeState } from "@/components/ui/edge-state";
 import { answerDrill, getSettings, getTrain } from "@/lib/api";
@@ -24,20 +25,17 @@ export default function TrainPage() {
 
   return (
     <AppShell title="train">
-      {data && data.items.length > 0 ? (
-        <TrainView data={data} onAnswer={answerDrill} aiHelp={aiHelp} />
-      ) : data || failed ? (
-        failed ? (
-          <EdgeState kind="offline" />
-        ) : (
-          <div className="flex flex-col gap-4">
-            <EdgeState kind="too-few" detail="Drills come back when they're due. Play a game and new ones arrive from it." action="Back to Home" href="/" />
-            <PositionSetter aiHelp={aiHelp} />
-          </div>
-        )
-      ) : (
-        <div className="h-[2px] w-1/3 animate-pulse bg-accent" role="progressbar" aria-label="Loading" />
-      )}
+      <LearningEvidenceCard />
+      {data && data.items.length > 0
+        ? <TrainView data={data} onAnswer={answerDrill} aiHelp={aiHelp} />
+        : data || failed
+          ? failed
+            ? <EdgeState kind="offline" />
+            : <div className="flex flex-col gap-4">
+                <EdgeState kind="too-few" detail="Drills come back when they're due. Play a game and new ones arrive from it." action="Back to Home" href="/" />
+                <PositionSetter aiHelp={aiHelp} />
+              </div>
+          : <div className="h-[2px] w-1/3 animate-pulse bg-accent" role="progressbar" aria-label="Loading" />}
     </AppShell>
   );
 }
