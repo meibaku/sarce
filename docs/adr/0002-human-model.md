@@ -27,6 +27,17 @@ dependency, which the plan's ground rule 8 reserves for the maintainer.
    captures, checks, promotions and forward moves without an engine. It is the comparison baseline
    M4 already asks for — it is **not** a calibrated human model.
 
+## Addendum (25 Oct 2026): speed-routed authoritative calibration
+
+Phase 1 closeout makes Maia-2 authoritative for production analysis and evidence runs. Games in bullet or blitz
+pools use Maia-2's `blitz` checkpoint; rapid, daily, classical, and games without a usable time control use
+`rapid`. The checkpoint is part of `human_probs.model_version`, so outputs from the two models never share cache
+rows. `HUMAN_MODEL=maia2` fails explicitly when the optional package or weights are unavailable; `auto` remains a
+developer convenience that may fall back to the heuristic.
+
+Changing this routing changes the meaning of the hard-to-find clause. Stored style vectors therefore advance to
+version 6 and record the exact `humanModel` cache identity used for the verdict.
+
 ## Spike findings (10 Oct 2026)
 
 Run in an isolated virtual environment outside the project, on the development machine

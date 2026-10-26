@@ -17,6 +17,7 @@ import chess
 
 from app.db.supabase import get_supabase
 from app.services.position_evals import fen_key
+from app.services.rating_map import speed
 
 TABLE = "human_probs"
 ELO_LADDER = [800, 1200, 1600, 2000, 2400]
@@ -147,7 +148,12 @@ def maia2_installed() -> bool:
         return False
 
 
-def get_human_model(name: str) -> HumanModel:
+def checkpoint_for_game(game: dict) -> str:
+    """Map a stored game's pool to the Maia checkpoint that was trained for that pace."""
+    return "blitz" if speed(game.get("source"), game.get("time_control")) in ("bullet", "blitz") else "rapid"
+
+
+def get_human_model(name: str, model_type: str | None = None) -> HumanModel:
     """
     Resolve `HUMAN_MODEL`: `auto` (default), `maia2` or `heuristic`.
 
@@ -162,5 +168,10 @@ def get_human_model(name: str) -> HumanModel:
         # Imported here so the optional adapter is only touched when selected.
         from app.services.maia_model import shared_maia2_model
 
-        return shared_maia2_model()
+        return shared_maia2_model(model_type)
     raise ValueError(f"Unknown human model {name!r}; available: ['auto', 'heuristic', 'maia2']")
+
+
+def get_human_model_for_game(name: str, game: dict) -> HumanModel:
+    """Resolve the configured model with a speed-aware Maia checkpoint for one stored game."""
+    return get_human_model(name, checkpoint_for_game(game))

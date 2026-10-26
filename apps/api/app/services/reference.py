@@ -136,7 +136,8 @@ class ReferenceService:
         from app.services.stockfish import StockfishEngine
 
         corpus = self._extract_pgns(zip_path, 100_000)
-        model = get_human_model(settings.human_model)
+        # Historical reference PGNs usually have no machine-readable time control; use the slower checkpoint.
+        model = get_human_model(settings.human_model, "rapid")
         merged = {**EMPTY_DISTRIBUTION}
         results = []
 
@@ -161,7 +162,12 @@ class ReferenceService:
             raise RuntimeError("Tal benchmark: no games analysed (is Stockfish available?)")
         summary = summarize(results)
         brilliant_pct = BaselineService.brilliant_pct(merged)
-        style_vector = {**style_vector_v2(build_style_vector_v1(merged, brilliant_pct), merged, brilliant_pct), "interval": summary["interval"]}
+        style_vector = {
+            **style_vector_v2(
+                build_style_vector_v1(merged, brilliant_pct), merged, brilliant_pct, model.model_version
+            ),
+            "interval": summary["interval"],
+        }
 
         sb = get_supabase()
         player_res = (

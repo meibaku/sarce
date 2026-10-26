@@ -13,6 +13,7 @@ already have rows for that lens, so the script can be re-run after an interrupti
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -25,7 +26,7 @@ from app.services.lens_service import LensService
 PAGE = 1000
 
 
-def game_ids(only_missing: str | None) -> list[str]:
+def game_ids(only_missing: str | None, snapshot: Path | None = None) -> list[str]:
     sb = get_supabase()
     ids: list[str] = []
     while True:
@@ -43,11 +44,15 @@ def game_ids(only_missing: str | None) -> list[str]:
                 break
         done = {r["game_id"] for r in rows}
         ids = [i for i in ids if i not in done]
+    if snapshot:
+        payload = json.loads(snapshot.read_text(encoding="utf-8"))
+        allowed = set(payload["gameIds"] if isinstance(payload, dict) else payload)
+        ids = [game_id for game_id in ids if game_id in allowed]
     return ids
 
 
-def main(limit: int, only_missing: str | None) -> None:
-    ids = game_ids(only_missing)
+def main(limit: int, only_missing: str | None, snapshot: Path | None = None) -> None:
+    ids = game_ids(only_missing, snapshot)
     if limit:
         ids = ids[:limit]
     service = LensService()
@@ -67,5 +72,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Re-score analysed games with the current lenses")
     parser.add_argument("--limit", type=int, default=0, help="Games per run (0 = all)")
     parser.add_argument("--only-missing", default=None, help="Skip games that already have rows for this lens")
+    parser.add_argument("--snapshot", type=Path, help="Only game IDs in this fixed manifest")
     args = parser.parse_args()
-    main(args.limit, args.only_missing)
+    main(args.limit, args.only_missing, args.snapshot)

@@ -20,7 +20,7 @@ from app.services.chaos_validation import clock_bucket, decider_clock_ms
 from app.services.ep import cp_to_ep
 from app.services.threats import THREAT_NODES
 from app.services.rating_map import opponent_model_elo
-from app.services.human_model import get_human_model
+from app.services.human_model import get_human_model_for_game
 from app.services.position_evals import fen_key
 
 TABLE = "move_lens_scores"
@@ -254,7 +254,7 @@ class LensService:
 
         keys = keys_after_each_ply(game.data["pgn"])
         evals = self._fetch_by_keys("position_evals", keys, "nodes", settings.analysis_nodes)
-        model = get_human_model(settings.human_model)
+        model = get_human_model_for_game(settings.human_model, game.data)
         model_version = model.model_version
         probs = self._fetch_by_keys("human_probs", keys, "model_version", model_version)
         threats = self._fetch_by_keys("position_threats", keys, "nodes", THREAT_NODES)

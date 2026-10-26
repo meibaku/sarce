@@ -25,8 +25,11 @@ def test_apply_rule_demotes_only_easy_brilliants_with_data():
 
 
 def test_style_vector_v2_keeps_other_features():
-    v = rule.style_vector_v2({"version": 1, "sacrificeRate": 0.1}, {"brilliant": 1, "best": 9}, 10.0)
-    assert v["version"] == 5 and v["brilliantRule"] == "v4"
+    v = rule.style_vector_v2(
+        {"version": 1, "sacrificeRate": 0.1}, {"brilliant": 1, "best": 9}, 10.0, "maia2-0.11-rapid"
+    )
+    assert v["version"] == 6 and v["brilliantRule"] == "v4"
+    assert v["humanModel"] == "maia2-0.11-rapid"
     assert v["sacrificeRate"] == 0.1 and v["brilliantPct"] == 10.0
 
 

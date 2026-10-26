@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
+from pathlib import Path
 
 from app.db.supabase import get_supabase
 from app.services.baseline import BaselineService
@@ -25,6 +27,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=0, help="Games to read (0 = all)")
     parser.add_argument("--dry-run", action="store_true", help="List the games without changing them")
     parser.add_argument("--all", action="store_true", help="Re-judge every game, even those on the current version")
+    parser.add_argument("--snapshot", type=Path, help="Only game IDs in this fixed manifest")
     args = parser.parse_args()
 
     rows: list[dict] = []
@@ -45,8 +48,14 @@ def main() -> None:
         rows += batch
         if len(batch) < page:
             break
+    allowed = None
+    if args.snapshot:
+        payload = json.loads(args.snapshot.read_text(encoding="utf-8"))
+        allowed = set(payload["gameIds"] if isinstance(payload, dict) else payload)
     todo = []
     for row in rows:
+        if allowed is not None and row["id"] not in allowed:
+            continue
         a = row.get("game_analyses")
         vector = (a[0] if isinstance(a, list) and a else a or {}).get("style_vector") or {}
         if args.all or vector.get("version") != VERSION:

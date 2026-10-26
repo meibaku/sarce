@@ -26,9 +26,15 @@ def install_fake_maia2(monkeypatch, raw_probs):
         calls["inferences"].append((fen, elo_self, elo_oppo))
         return dict(raw_probs), 0.5
 
+    def inference_batch(data, loaded, verbose, batch_size, num_workers):
+        data = data.copy()
+        data["move_probs"] = [dict(raw_probs) for _ in range(len(data))]
+        return data, 1.0
+
     model.from_pretrained = from_pretrained
     inference.prepare = lambda: "prepared"
     inference.inference_each = inference_each
+    inference.inference_batch = inference_batch
     package = types.ModuleType("maia2")
     package.model, package.inference = model, inference
     for name, module in (("maia2", package), ("maia2.model", model), ("maia2.inference", inference)):
@@ -50,6 +56,16 @@ class TestMaia2Adapter:
             get_human_model("maia2").move_probs(chess.Board(), 1500)
         assert get_human_model("maia2") is get_human_model("maia2")
         assert calls["loads"] == 1
+
+    def test_checkpoint_instances_and_cache_versions_are_separate(self, monkeypatch):
+        monkeypatch.setattr("app.services.maia_model._shared", {})
+        blitz = get_human_model("maia2", "blitz")
+        rapid = get_human_model("maia2", "rapid")
+        assert blitz is get_human_model("maia2", "blitz")
+        assert rapid is get_human_model("maia2", "rapid")
+        assert blitz is not rapid
+        assert blitz.model_version == "maia2-0.11-blitz"
+        assert rapid.model_version == "maia2-0.11-rapid"
 
     def test_concurrent_first_use_loads_once(self, monkeypatch):
         calls = install_fake_maia2(monkeypatch, {"e2e4": 1.0})
@@ -88,6 +104,15 @@ class TestMaia2Adapter:
         model.move_probs(chess.Board(), 2000)
         assert calls["loads"] == 1
         assert [(s, o) for _fen, s, o in calls["inferences"]] == [(800, 800), (2000, 2000)]
+
+    def test_batch_path_preserves_normalized_cache_contract(self, monkeypatch):
+        pytest.importorskip("pandas")
+        install_fake_maia2(monkeypatch, {"e2e4": 0.6, "d2d4": 0.2, "e2e5": 0.2})
+        board = chess.Board()
+        results = Maia2HumanModel().move_probs_batch([(board.fen(), 1600), (board.fen(), 2000)])
+        assert len(results) == 2
+        assert all(set(probs) == {move.uci() for move in board.legal_moves} for probs in results)
+        assert all(sum(probs.values()) == pytest.approx(1.0) for probs in results)
 
     def test_no_legal_moves_never_loads_the_model(self, monkeypatch):
         calls = install_fake_maia2(monkeypatch, {})

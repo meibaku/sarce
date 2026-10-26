@@ -26,7 +26,7 @@ from app.services.human_model import (
     SupabaseProbStore,
     cached_move_probs,
     elo_ladder,
-    get_human_model,
+    get_human_model_for_game,
 )
 from app.services.lens_service import LensService
 from app.services.move_classifier import MoveClassifier
@@ -307,7 +307,7 @@ class AnalysisService:
             await asyncio.to_thread(
                 self._store_chaos_raw_data,
                 game_id, row["pgn"], board, moves, user_color, classified,
-                opponent_model_elo(row),
+                opponent_model_elo(row), row.get("source"), row.get("time_control"),
             )
         else:
             # Without the Chaos Lens pass the full rule still runs (human-model probabilities from the cache, or
@@ -375,6 +375,8 @@ class AnalysisService:
         user_color: str,
         classified: list[dict],
         opponent_rating: int | None = None,
+        source: str | None = None,
+        time_control: str | None = None,
     ) -> None:
         """
         Chaos Lens raw data: per-ply clocks, cached position evaluations and human
@@ -400,7 +402,10 @@ class AnalysisService:
                     evaluate_game_threats(board, moves, user_color, classified, engine, SupabaseThreatStore())
                 except Exception:
                     logger.exception("Threat pass failed for game %s", game_id)
-            model, prob_store = get_human_model(settings.human_model), SupabaseProbStore()
+            model = get_human_model_for_game(
+                settings.human_model, {"source": source, "time_control": time_control}
+            )
+            prob_store = SupabaseProbStore()
             elos = elo_ladder(opponent_rating)
             for _ply, position in iter_live_positions(board, moves, user_color, classified):
                 for elo in elos:
@@ -452,6 +457,7 @@ class AnalysisService:
                 self._store_chaos_raw_data,
                 game["id"], game["pgn"], board, moves,
                 game.get("user_color") or "white", moves_res.data, opponent_model_elo(game),
+                game.get("source"), game.get("time_control"),
             )
             # Games that stopped after Phase 1 also missed the idea tagger: catch it up too.
             if settings.idea_tagger_enabled:

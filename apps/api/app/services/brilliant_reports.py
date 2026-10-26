@@ -22,7 +22,7 @@ from app.services.brilliant import (
     hard_to_find,
 )
 from app.services.brilliant_find_rate import RULE, mover_rung
-from app.services.human_model import get_human_model
+from app.services.human_model import get_human_model_for_game
 from app.services.library import boards_before
 from app.services.position_evals import fen_key
 
@@ -45,7 +45,7 @@ class BrilliantReportService:
         )
         probs = (
             get_supabase().table("human_probs").select("probs").eq("fen_key", fen_key(board)).eq("elo", mover_rung(game))
-            .eq("model_version", get_human_model(settings.human_model).model_version)  # the model the verdict uses
+            .eq("model_version", get_human_model_for_game(settings.human_model, game).model_version)
             .limit(1).execute().data
             or []
         )

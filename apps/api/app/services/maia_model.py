@@ -27,7 +27,10 @@ class Maia2HumanModel(HumanModel):
 
     name = "maia2"
 
-    def __init__(self) -> None:
+    def __init__(self, model_type: str | None = None) -> None:
+        self.model_type = model_type or settings.maia2_model_type
+        if self.model_type not in ("blitz", "rapid"):
+            raise ValueError("Maia-2 checkpoint must be 'blitz' or 'rapid'")
         self._model = None
         self._prepared = None
         self._inference = None
@@ -37,7 +40,7 @@ class Maia2HumanModel(HumanModel):
     @property
     def version(self) -> str:
         # The checkpoint type changes the output, so it is part of the cache identity.
-        return f"0.11-{settings.maia2_model_type}"
+        return f"0.11-{self.model_type}"
 
     def _load(self) -> None:
         with self._load_lock:
@@ -49,7 +52,7 @@ class Maia2HumanModel(HumanModel):
                 raise RuntimeError(INSTALL_HINT) from exc
             # Downloads the checksum-pinned weights on first use (about 280 MB), then caches them.
             loaded = model.from_pretrained(
-                type=settings.maia2_model_type, device="cpu", save_root=settings.maia2_cache_dir
+                type=self.model_type, device="cpu", save_root=settings.maia2_cache_dir
             )
             self._prepared = inference.prepare()
             self._inference = inference
@@ -65,6 +68,11 @@ class Maia2HumanModel(HumanModel):
         # Both players are given the same rating: the lens asks "how would a player of this
         # strength reply", and the opponent's own rating is not known for ladder rows.
         raw, _win = self._inference.inference_each(self._model, self._prepared, board.fen(), elo, elo)
+        return self._normalize(legal, raw)
+
+    @staticmethod
+    def _normalize(legal: set[str], raw: dict) -> dict[str, float]:
+        """Keep the cache contract identical for single and batched inference."""
         probs = {uci: float(p) for uci, p in raw.items() if uci in legal}
         for uci in legal - probs.keys():
             probs[uci] = 0.0
@@ -73,20 +81,49 @@ class Maia2HumanModel(HumanModel):
             return {uci: 1.0 / len(legal) for uci in legal}
         return {uci: p / total for uci, p in probs.items()}
 
+    def move_probs_batch(
+        self, positions: list[tuple[str, int]], batch_size: int = 512
+    ) -> list[dict[str, float]]:
+        """Run the package's vectorized inference path for an operational backfill."""
+        if not positions:
+            return []
+        if self._model is None:
+            self._load()
+        try:
+            import pandas as pd
+        except ImportError as exc:  # installed by requirements-maia.txt in production
+            raise RuntimeError(INSTALL_HINT) from exc
+        boards = [chess.Board(fen) for fen, _elo in positions]
+        data = pd.DataFrame(
+            {
+                "board": [board.fen() for board in boards],
+                "move": [next(iter(board.legal_moves)).uci() for board in boards],
+                "active_elo": [elo for _fen, elo in positions],
+                "opponent_elo": [elo for _fen, elo in positions],
+            }
+        )
+        inferred, _accuracy = self._inference.inference_batch(
+            data, self._model, False, batch_size, 0
+        )
+        return [
+            self._normalize({move.uci() for move in board.legal_moves}, raw)
+            for board, raw in zip(boards, inferred["move_probs"].tolist())
+        ]
+
 
 _shared: dict[str, Maia2HumanModel] = {}
 _shared_lock = threading.Lock()
 
 
-def shared_maia2_model() -> Maia2HumanModel:
+def shared_maia2_model(model_type: str | None = None) -> Maia2HumanModel:
     """
     One instance per checkpoint type for the whole process.
 
     Loading the weights takes seconds and a few hundred MB, so a batch of games must not
     reload them for every game. Inference is read-only, so sharing the instance is safe.
     """
-    model_type = settings.maia2_model_type
+    model_type = model_type or settings.maia2_model_type
     with _shared_lock:
         if model_type not in _shared:
-            _shared[model_type] = Maia2HumanModel()
+            _shared[model_type] = Maia2HumanModel(model_type)
         return _shared[model_type]
