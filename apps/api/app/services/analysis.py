@@ -11,6 +11,7 @@ import time
 from datetime import datetime, timezone
 import io
 import logging
+import re
 
 import chess
 import chess.pgn
@@ -47,7 +48,11 @@ TRANSIENT_DB_CODES = {"57014", "40001", "40P01", "53300", "08006"}  # statement 
 
 
 MAX_ATTEMPTS = 3
-_attempts: dict[str, int] = {}  # engine failures per game in this process
+MAX_ERROR_LENGTH = 500
+_SECRET = re.compile(
+    r'''(?ix)(?P<prefix>(?:bearer|basic)\s+|["']?(?:api[_-]?key|token|password|secret)["']?\s*[=:]\s*)'''
+    r'''(?:"[^"]*"|'[^']*'|[^\s,}\]]+)'''
+)
 
 
 def is_transient(exc: BaseException) -> bool:
@@ -59,6 +64,19 @@ def is_transient(exc: BaseException) -> bool:
         return True
     code = getattr(exc, "code", None)
     return code in TRANSIENT_DB_CODES or any(c in str(exc) for c in TRANSIENT_DB_CODES)
+
+
+def safe_failure(exc: BaseException) -> tuple[str, str]:
+    """Return bounded operator diagnostics without persisting credentials or multiline payloads."""
+    error_type = type(exc).__name__[:80]
+    message = " ".join(str(exc).split())
+    message = _SECRET.sub(lambda match: f"{match.group('prefix')}[redacted]", message)
+    return error_type, message[:MAX_ERROR_LENGTH]
+
+
+def _monitor_failure(slot: int | None, game_id: str, detail: dict) -> None:
+    """Bridge structured failure detail through the monitor's positional background runner."""
+    monitor.event("game_failed", monitor.MACHINE, slot, game_id, **detail)
 
 
 def build_style_vector_v1(
@@ -154,9 +172,10 @@ class AnalysisService:
                 # Only the call that claimed the game may hand it back: a caller that failed before claiming (a
                 # database timeout reading the row) would otherwise requeue a game another worker is analysing,
                 # and it would be analysed twice.
+                detail = claim.get("failure")
                 if claim["ours"]:
-                    self._release(game_id, exc)
-                monitor.background(monitor.event, "game_failed", monitor.MACHINE, tracker.slot, game_id)
+                    detail = self._release(game_id, exc)
+                monitor.background(_monitor_failure, tracker.slot, game_id, detail or {})
                 logger.debug("monitor: game %s failed: %s", game_id, exc)
                 raise
         if result:
@@ -177,7 +196,7 @@ class AnalysisService:
         user_color = row.get("user_color") or "white"
         parsed = self._parse_game(row["pgn"])
         if not parsed:
-            sb.table("games").update({"analysis_status": "failed"}).eq("id", game_id).execute()
+            self._record_failure(game_id, row, ValueError("PGN could not be parsed"), retryable=False)
             return None
 
         board, moves = parsed
@@ -201,6 +220,12 @@ class AnalysisService:
                 return None
             if claim is not None:
                 claim["ours"] = True
+        # A different worker may have claimed and failed this row between our initial read and our successful
+        # conditional claim. Re-read the durable budget only after ownership is established so failures cannot
+        # overwrite a newer attempt count with the stale pre-claim value.
+        attempts = sb.table("games").select("analysis_attempts").eq("id", game_id).maybe_single().execute()
+        if attempts and attempts.data:
+            row["analysis_attempts"] = attempts.data.get("analysis_attempts", row.get("analysis_attempts", 0))
         tracker = monitor.current.get()
         if tracker:
             tracker.phase("searching", total=len(moves) + 1)
@@ -210,12 +235,10 @@ class AnalysisService:
             classified = await asyncio.to_thread(self._classify, board, moves, user_color)
         except Exception as exc:
             logger.exception("Analysis failed for game %s: %s", game_id, exc)
-            # An engine timeout under heavy CPU load is not the game's fault: send it back to the queue, up to
-            # MAX_ATTEMPTS times in this process, so a game that always fails cannot take a worker forever.
-            tries = _attempts[game_id] = _attempts.get(game_id, 0) + 1
-            retry = is_transient(exc) and tries < MAX_ATTEMPTS
-            sb.table("games").update({"analysis_status": "pending" if retry else "failed"}).eq("id", game_id).execute()
+            # Attempts live on the game, not in this process, so restarts cannot reset the retry budget.
+            detail = self._record_failure(game_id, row, exc)
             if claim is not None:
+                claim["failure"] = detail
                 claim["ours"] = False  # settled here: nothing left to hand back
             raise
 
@@ -261,7 +284,13 @@ class AnalysisService:
             on_conflict="game_id",
         ).execute()
 
-        sb.table("games").update({"analysis_status": "complete", "analysed_at": datetime.now(timezone.utc).isoformat()}).eq("id", game_id).execute()
+        sb.table("games").update({
+            "analysis_status": "complete",
+            "analysed_at": datetime.now(timezone.utc).isoformat(),
+            "analysis_attempts": 0,
+            "analysis_error": None,
+            "analysis_failed_at": None,
+        }).eq("id", game_id).execute()
         self._first_read(row.get("user_id"))
 
         await self.baseline.recompute_baseline(
@@ -434,13 +463,36 @@ class AnalysisService:
         return done
 
     @staticmethod
-    def _release(game_id: str, exc: BaseException) -> None:
-        """A game still 'processing' after an error: back to 'pending' if the error was transient, else 'failed'."""
-        status = "pending" if is_transient(exc) else "failed"
+    def _record_failure(
+        game_id: str, row: dict, exc: BaseException, retryable: bool | None = None
+    ) -> dict:
+        """Persist the retry budget and a safe diagnosis; return the same fields for the monitor event."""
+        attempt = int(row.get("analysis_attempts") or 0) + 1
+        retrying = (is_transient(exc) if retryable is None else retryable) and attempt < MAX_ATTEMPTS
+        error_type, message = safe_failure(exc)
+        failed_at = datetime.now(timezone.utc).isoformat()
+        get_supabase().table("games").update({
+            "analysis_status": "pending" if retrying else "failed",
+            "analysis_attempts": attempt,
+            "analysis_error": f"{error_type}: {message}" if message else error_type,
+            "analysis_failed_at": failed_at,
+        }).eq("id", game_id).execute()
+        return {"errorType": error_type, "message": message, "attempt": attempt, "retrying": retrying}
+
+    @staticmethod
+    def _release(game_id: str, exc: BaseException) -> dict:
+        """Settle an owned processing game even when failure happened outside the main engine pass."""
         try:
-            get_supabase().table("games").update({"analysis_status": status}).eq("id", game_id).eq("analysis_status", "processing").execute()
+            rows = (
+                get_supabase().table("games").select("analysis_attempts")
+                .eq("id", game_id).eq("analysis_status", "processing").limit(1).execute().data or []
+            )
+            if rows:
+                return AnalysisService._record_failure(game_id, rows[0], exc)
         except Exception:
             logger.exception("Could not release game %s", game_id)
+        error_type, message = safe_failure(exc)
+        return {"errorType": error_type, "message": message, "attempt": None, "retrying": False}
 
     @staticmethod
     def requeue_interrupted() -> int:

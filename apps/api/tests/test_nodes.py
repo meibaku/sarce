@@ -2,6 +2,7 @@
 
 import io
 import zipfile
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
@@ -40,16 +41,66 @@ def test_position_keys_cover_every_mainline_position():
     assert len(keys) == 4 and keys[0].startswith("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -")
 
 
+class RowStore:
+    def __init__(self, pending=True, *, node="desk-0", heartbeat_at=None, done_at=None):
+        self.pending, self.upserts, self.table_name, self.operation = pending, [], "", ""
+        self.lease = {
+            "game_id": "g1", "node": node, "heartbeat_at": heartbeat_at or nodes.now().isoformat(),
+            "done_at": done_at, "positions": 3,
+        }
+
+    def table(self, name):
+        self.table_name, self.operation, self.filters, self.values = name, "", [], None
+        return self
+
+    def update(self, values): self.operation, self.values = "update", values; return self
+    def select(self, *_a, **_k): self.operation = "select"; return self
+    def upsert(self, rows, **_k): self.upserts.append((self.table_name, rows)); return self
+    def eq(self, column, value): self.filters.append(("eq", column, value)); return self
+    def is_(self, column, value): self.filters.append(("eq", column, None if value == "null" else value)); return self
+    def gt(self, column, value): self.filters.append(("gt", column, value)); return self
+    def limit(self, *_a): return self
+
+    def execute(self):
+        if self.table_name == nodes.TABLE and self.operation == "update":
+            matches = all(
+                self.lease.get(column) == value if kind == "eq" else self.lease.get(column) > value
+                for kind, column, value in self.filters
+            )
+            if matches:
+                self.lease.update(self.values or {})
+            return SimpleNamespace(data=[dict(self.lease)] if matches else [])
+        if self.table_name == "games" and self.operation == "select":
+            row = {"id": "g1", "analysis_status": "pending" if self.pending else "complete"}
+            matches = all(row.get(column) == value for kind, column, value in self.filters if kind == "eq")
+            return SimpleNamespace(data=[row] if matches else [])
+        return SimpleNamespace(data=[])
+
+
 def test_put_rows_refuses_rows_at_other_node_counts():
-    sb = MagicMock()
-    sb.table.return_value.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute.return_value.data = [{"positions": 3}]
+    sb = RowStore()
     good = {"fen_key": "k1", "nodes": nodes.settings.analysis_nodes, "lines": [], "multipv": 4}
     bad = {"fen_key": "k2", "nodes": 10, "lines": []}
     with patch("app.services.nodes.get_supabase", return_value=sb):
-        stored = nodes.NodeService().put_rows("g1", "desk-0", [good, bad], [{"fen_key": "k3", "nodes": nodes.THREAT_NODES, "threat_uci": "e7e5"}])
-    assert stored == 2
-    upserted = [c.args[0] for c in sb.table.return_value.upsert.call_args_list]
-    assert upserted[0] == [good] and upserted[1][0]["fen_key"] == "k3"
+        result = nodes.NodeService().put_rows("g1", "desk-0", [good, bad], [{"fen_key": "k3", "nodes": nodes.THREAT_NODES, "threat_uci": "e7e5"}])
+    assert result == {"active": True, "stored": 2}
+    assert sb.upserts[0] == ("position_evals", [good]) and sb.upserts[1][1][0]["fen_key"] == "k3"
+
+
+def test_stale_or_finished_lease_cannot_write_shared_cache_rows():
+    from datetime import timedelta
+
+    good = {"fen_key": "k1", "nodes": nodes.settings.analysis_nodes, "lines": []}
+    stale = (nodes.now() - timedelta(seconds=nodes.LEASE_S + 1)).isoformat()
+    for sb in (
+        RowStore(node="other-node"),
+        RowStore(heartbeat_at=stale),
+        RowStore(done_at=nodes.now().isoformat()),
+        RowStore(pending=False),
+    ):
+        with patch("app.services.nodes.get_supabase", return_value=sb):
+            assert nodes.NodeService().put_rows("g1", "desk-0", [good], []) == {"active": False, "stored": 0}
+        assert sb.upserts == []
 
 
 def test_server_analysis_skips_games_a_node_is_searching():

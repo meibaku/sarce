@@ -122,21 +122,36 @@ class NodeService:
             "threats": cached_rows("position_threats", keys, THREAT_NODES),
         }
 
-    def put_rows(self, game_id: str, node: str, evals: list[dict], threats: list[dict]) -> int:
-        """Stores a batch of engine rows (also the lease's heartbeat). Rows at other node counts are refused."""
+    def put_rows(self, game_id: str, node: str, evals: list[dict], threats: list[dict]) -> dict:
+        """Renew an active lease before accepting its rows, so a replaced worker cannot poison shared caches."""
         sb = get_supabase()
+        cutoff = (now() - timedelta(seconds=LEASE_S)).isoformat()
+        renewed = (
+            sb.table(TABLE).update({"heartbeat_at": now().isoformat()})
+            .eq("game_id", game_id).eq("node", node).is_("done_at", "null")
+            .gt("heartbeat_at", cutoff).execute().data or []
+        )
+        if not renewed:
+            return {"active": False, "stored": 0}
+        pending = (
+            sb.table("games").select("id").eq("id", game_id)
+            .eq("analysis_status", "pending").limit(1).execute().data or []
+        )
+        if not pending:
+            return {"active": False, "stored": 0}
         good_evals = [r for r in evals if r.get("nodes") == settings.analysis_nodes and r.get("fen_key") and isinstance(r.get("lines"), list)]
         good_threats = [r for r in threats if r.get("nodes") == THREAT_NODES and r.get("fen_key") and r.get("threat_uci")]
         if good_evals:
             sb.table("position_evals").upsert(good_evals, on_conflict="fen_key,nodes").execute()
         if good_threats:
             sb.table("position_threats").upsert(good_threats, on_conflict="fen_key,nodes").execute()
-        lease = sb.table(TABLE).select("positions").eq("game_id", game_id).eq("node", node).limit(1).execute().data or []
-        if lease:
+        stored = len(good_evals) + len(good_threats)
+        if good_evals:
+            positions = int(renewed[0].get("positions") or 0) + len(good_evals)
             sb.table(TABLE).update(
-                {"heartbeat_at": now().isoformat(), "positions": lease[0]["positions"] + len(good_evals)}
-            ).eq("game_id", game_id).execute()
-        return len(good_evals) + len(good_threats)
+                {"positions": positions}
+            ).eq("game_id", game_id).eq("node", node).is_("done_at", "null").execute()
+        return {"active": True, "stored": stored}
 
     def done(self, game_id: str, node: str) -> bool:
         """
