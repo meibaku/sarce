@@ -6,14 +6,41 @@ import argparse
 
 from app.db.supabase import get_supabase
 
+PAGE_SIZE = 500
+
 
 def candidates(game_id: str | None) -> list[dict]:
-    query = get_supabase().table("games").select("id, played_at, analysis_attempts, analysis_error").eq(
-        "analysis_status", "failed"
-    )
-    if game_id:
-        query = query.eq("id", game_id)
-    return query.order("played_at").execute().data or []
+    """Fetch every matching failure in a stable order despite PostgREST row caps."""
+    rows: list[dict] = []
+    while True:
+        query = get_supabase().table("games").select(
+            "id, played_at, analysis_attempts, analysis_error, analysis_failed_at"
+        ).eq("analysis_status", "failed")
+        if game_id:
+            query = query.eq("id", game_id)
+        batch = (
+            query.order("played_at").order("id")
+            .range(len(rows), len(rows) + PAGE_SIZE - 1).execute().data or []
+        )
+        rows.extend(batch)
+        if len(batch) < PAGE_SIZE:
+            return rows
+
+
+def requeue(rows: list[dict]) -> int:
+    """Clear only the exact failures observed by the dry-run selection."""
+    changed = 0
+    for row in rows:
+        query = get_supabase().table("games").update({
+            "analysis_status": "pending",
+            "analysis_attempts": 0,
+            "analysis_error": None,
+            "analysis_failed_at": None,
+        }).eq("id", row["id"]).eq("analysis_status", "failed")
+        failed_at = row.get("analysis_failed_at")
+        query = query.is_("analysis_failed_at", "null") if failed_at is None else query.eq("analysis_failed_at", failed_at)
+        changed += len(query.execute().data or [])
+    return changed
 
 
 def main() -> int:
@@ -28,14 +55,8 @@ def main() -> int:
     for row in rows:
         print(f"{row['id']} attempts={row.get('analysis_attempts', 0)} error={row.get('analysis_error') or '-'}")
     if args.apply and rows:
-        ids = [row["id"] for row in rows]
-        get_supabase().table("games").update({
-            "analysis_status": "pending",
-            "analysis_attempts": 0,
-            "analysis_error": None,
-            "analysis_failed_at": None,
-        }).in_("id", ids).eq("analysis_status", "failed").execute()
-        print(f"requeued={len(ids)}")
+        changed = requeue(rows)
+        print(f"requeued={changed} skipped_changed_since_preview={len(rows) - changed}")
     else:
         print(f"dry_run={len(rows)}")
     return 0

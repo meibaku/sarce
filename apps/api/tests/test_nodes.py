@@ -42,26 +42,38 @@ def test_position_keys_cover_every_mainline_position():
 
 
 class RowStore:
-    def __init__(self, active=True, pending=True):
-        self.active, self.pending, self.upserts, self.table_name, self.operation = active, pending, [], "", ""
+    def __init__(self, pending=True, *, node="desk-0", heartbeat_at=None, done_at=None):
+        self.pending, self.upserts, self.table_name, self.operation = pending, [], "", ""
+        self.lease = {
+            "game_id": "g1", "node": node, "heartbeat_at": heartbeat_at or nodes.now().isoformat(),
+            "done_at": done_at, "positions": 3,
+        }
 
     def table(self, name):
-        self.table_name, self.operation = name, ""
+        self.table_name, self.operation, self.filters, self.values = name, "", [], None
         return self
 
-    def update(self, _values): self.operation = "update"; return self
+    def update(self, values): self.operation, self.values = "update", values; return self
     def select(self, *_a, **_k): self.operation = "select"; return self
     def upsert(self, rows, **_k): self.upserts.append((self.table_name, rows)); return self
-    def eq(self, *_a): return self
-    def is_(self, *_a): return self
-    def gt(self, *_a): return self
+    def eq(self, column, value): self.filters.append(("eq", column, value)); return self
+    def is_(self, column, value): self.filters.append(("eq", column, None if value == "null" else value)); return self
+    def gt(self, column, value): self.filters.append(("gt", column, value)); return self
     def limit(self, *_a): return self
 
     def execute(self):
         if self.table_name == nodes.TABLE and self.operation == "update":
-            return SimpleNamespace(data=[{"positions": 3}] if self.active else [])
+            matches = all(
+                self.lease.get(column) == value if kind == "eq" else self.lease.get(column) > value
+                for kind, column, value in self.filters
+            )
+            if matches:
+                self.lease.update(self.values or {})
+            return SimpleNamespace(data=[dict(self.lease)] if matches else [])
         if self.table_name == "games" and self.operation == "select":
-            return SimpleNamespace(data=[{"id": "g1"}] if self.pending else [])
+            row = {"id": "g1", "analysis_status": "pending" if self.pending else "complete"}
+            matches = all(row.get(column) == value for kind, column, value in self.filters if kind == "eq")
+            return SimpleNamespace(data=[row] if matches else [])
         return SimpleNamespace(data=[])
 
 
@@ -76,10 +88,18 @@ def test_put_rows_refuses_rows_at_other_node_counts():
 
 
 def test_stale_or_finished_lease_cannot_write_shared_cache_rows():
+    from datetime import timedelta
+
     good = {"fen_key": "k1", "nodes": nodes.settings.analysis_nodes, "lines": []}
-    for sb in (RowStore(active=False), RowStore(pending=False)):
+    stale = (nodes.now() - timedelta(seconds=nodes.LEASE_S + 1)).isoformat()
+    for sb in (
+        RowStore(node="other-node"),
+        RowStore(heartbeat_at=stale),
+        RowStore(done_at=nodes.now().isoformat()),
+        RowStore(pending=False),
+    ):
         with patch("app.services.nodes.get_supabase", return_value=sb):
-            assert nodes.NodeService().put_rows("g1", "old-node", [good], []) == {"active": False, "stored": 0}
+            assert nodes.NodeService().put_rows("g1", "desk-0", [good], []) == {"active": False, "stored": 0}
         assert sb.upserts == []
 
 
