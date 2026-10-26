@@ -14,18 +14,19 @@ import { useLoad } from "@/lib/use-load";
 
 function Stepper({ value, onChange, min, max, increment = 1 }: { value: number; onChange: (v: number) => void; min: number; max: number; increment?: number }) {
   const nextValue = (delta: number) => Number((value + delta).toFixed(10));
-  const btn = (label: string, next: number) => (
-    <Pressable
+  const btn = (label: string, next: number) => {
+    const disabled = next < Number(min.toFixed(10)) || next > Number(max.toFixed(10));
+    return <Pressable
       accessibilityRole="button"
       accessibilityLabel={label === "−" ? "Lower" : "Higher"}
-      disabled={next < min || next > max}
+      disabled={disabled}
       onPress={() => onChange(next)}
       hitSlop={4} // 36px drawn, 44px to the touch
-      style={{ width: 36, height: 36, borderRadius: 6, borderWidth: 1.5, borderColor: color.line2, alignItems: "center", justifyContent: "center", opacity: next < min || next > max ? 0.4 : 1 }}
+      style={{ width: 36, height: 36, borderRadius: 6, borderWidth: 1.5, borderColor: color.line2, alignItems: "center", justifyContent: "center", opacity: disabled ? 0.4 : 1 }}
     >
       <T size={16}>{label}</T>
-    </Pressable>
-  );
+    </Pressable>;
+  };
   return (
     <View style={s.row}>
       {btn("−", nextValue(-increment))}
