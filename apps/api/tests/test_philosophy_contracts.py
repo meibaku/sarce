@@ -38,12 +38,12 @@ class TestClassificationContracts:
 
 
 class TestTargetBandContracts:
-    """Default Tal-style target: 6–10% Brilliant."""
+    """Default Tal-style target: 0.2–0.6% Brilliant."""
 
     def test_default_target_band(self):
         empty = BaselineService._empty_baseline()
-        assert empty["targetBrilliantMin"] == 6
-        assert empty["targetBrilliantMax"] == 10
+        assert empty["targetBrilliantMin"] == 0.2
+        assert empty["targetBrilliantMax"] == 0.6
 
     def test_brilliant_pct_is_headline_metric(self):
         dist = {k: 0 for k in BaselineService.compute_distribution([])}
@@ -97,7 +97,7 @@ class TestPhilosophyDocAnchors:
         return (REPO_ROOT / "docs" / "PHILOSOPHY.md").read_text(encoding="utf-8")
 
     def test_mentions_brilliant_target(self, philosophy: str):
-        assert "6" in philosophy and "10" in philosophy
+        assert "0.2" in philosophy and "0.6" in philosophy
         assert "Brilliant" in philosophy
 
     def test_mentions_style_over_accuracy(self, philosophy: str):

@@ -13,6 +13,7 @@ from datetime import date, datetime, timedelta, timezone
 from app.db.supabase import get_supabase
 from app.services.library import LibraryService
 from app.services.summary import move_label
+from app.services.style_goals import TAL_GOAL_MAX, TAL_GOAL_MIN
 
 DEFAULTS = {
     "questionBudget": 1,
@@ -88,8 +89,8 @@ class SettingsStore:
             **INTERNAL,
             **(row.get("settings") or {}),
             "quietUntil": quiet,
-            "goalLo": goal.get("target_brilliant_min", 6),
-            "goalHi": goal.get("target_brilliant_max", 10),
+            "goalLo": goal.get("target_brilliant_min", TAL_GOAL_MIN),
+            "goalHi": goal.get("target_brilliant_max", TAL_GOAL_MAX),
         }
 
     def update(self, owner_id: str, changes: dict) -> dict:

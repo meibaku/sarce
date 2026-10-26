@@ -170,7 +170,9 @@ def summarize(results: list[dict]) -> dict:
     }
 
 
-def player_report(owner_id: str, games_read: int = 2000) -> dict:
+def player_report(
+    owner_id: str, games_read: int = 10_000, game_ids: set[str] | None = None
+) -> dict:
     """
     The same summary for your analysed games, from stored data: Brilliant % with its game-level interval, and the
     first clause that stopped each of your real sacrifices. No engine; human-model probabilities come from the cache.
@@ -195,6 +197,8 @@ def player_report(owner_id: str, games_read: int = 2000) -> dict:
         games += batch
         if len(batch) < 1000:
             break
+    if game_ids is not None:
+        games = [game for game in games if game["id"] in game_ids]
     store = SupabaseProbStore()
     results = []
     for start in range(0, len(games), 100):

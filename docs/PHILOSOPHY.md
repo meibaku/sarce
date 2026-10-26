@@ -13,7 +13,7 @@ explicit ADR (`docs/adr/`) before merging.
 A **personal chess companion** that tracks progress toward a playing **identity**
 you are actively building — not a tool that grades you against perfect accuracy.
 
-For the founder: a **Tal-inspired** style with a target of **6–10% Brilliant**
+For the founder: a **Tal-inspired** style with an evidence-backed target of **0.2–0.6% Brilliant**
 (sacrificial, tactical, attacking) moves, tracked game by game.
 
 ## What we are not
@@ -47,7 +47,7 @@ It does **not** define the user's goal function. The user's style target does.
 ### 3. Headline metric = Brilliant %
 
 The primary progress signal is **Brilliant %** toward the user's target band
-(default 6–10%). Full move-quality distribution provides context, never replaces
+(default 0.2–0.6%; [ADR 0011](./adr/0011-evidence-backed-brilliant-goals.md)). Full move-quality distribution provides context, never replaces
 the headline.
 
 ### 4. Progress over time, game by game

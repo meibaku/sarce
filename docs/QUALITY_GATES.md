@@ -50,7 +50,7 @@ npm run ci
 `tests/test_philosophy_contracts.py` asserts:
 
 - `MoveQuality` includes `brilliant` (style is first-class)
-- Default target band is 6–10% Brilliant
+- Default target band is 0.2–0.6% Brilliant; fractional values remain intact
 - Baseline API returns `brilliantPct` as a top-level field
 - `style_vector` schema has `version` field
 - No Phase-1 ML dependencies (`sklearn`, `torch`, etc.)
