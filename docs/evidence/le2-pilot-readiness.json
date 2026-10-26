@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "evaluatedAt": "2026-10-26T22:43:30+03:00",
+  "decision": "blocked",
+  "readyForInvitedPilot": false,
+  "blockers": [
+    "greptileFiveOfFive",
+    "stagingDeployed",
+    "reviewedPrecision",
+    "reviewerAgreement",
+    "approvedBank"
+  ],
+  "evidence": {
+    "localCi": "implemented slices pass their documented local gates",
+    "phase1MergedToStaging": true,
+    "phase1Evidence": "PRs 189, 190, 191 and 192 merged to staging on 2026-10-26",
+    "greptileScore": null,
+    "stagingUrl": null,
+    "reviewMetrics": null,
+    "approvedBank": null
+  },
+  "note": "Fail-closed initial artifact. Do not recruit or claim pilot readiness until every blocker has current evidence."
+}

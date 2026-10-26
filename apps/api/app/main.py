@@ -2,8 +2,9 @@ import asyncio
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.deps import authenticate
@@ -58,6 +59,14 @@ async def orphan_loop(every_s: float = 120) -> None:
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """Run the analysis job worker alongside the API when the queue is enabled."""
+    if settings.request_only_runtime:
+        # Vercel Functions are invocation-bounded. Long-lived loops and local engines
+        # belong on a paired Sarce Node or another persistent process, never here.
+        try:
+            yield
+        finally:
+            play.bot_service.close()
+        return
     if settings.job_queue_enabled or settings.auto_sync_enabled:
         # This process analyses games: anything a previous run left half-done goes back in the queue.
         try:
@@ -109,6 +118,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+REQUEST_ONLY_PREFIXES = ("/monitor", "/play", "/games/import")
+REQUEST_ONLY_POSTS = {
+    "/games/analyze", "/reference/tal/process", "/users/sync",
+    "/users/chaos-map", "/users/traps-set", "/users/train/check",
+    "/scouting/reports",
+}
+
+
+@app.middleware("http")
+async def enforce_request_only_runtime(request: Request, call_next):
+    """Refuse routes that start engines, loops or after-response work on serverless staging."""
+    path = request.url.path
+    blocked = path.startswith(REQUEST_ONLY_PREFIXES) or (
+        request.method == "POST" and path in REQUEST_ONLY_POSTS
+    )
+    if settings.request_only_runtime and blocked:
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "This staging API is request-only; run analysis on a paired Sarce Node"},
+        )
+    return await call_next(request)
 
 # Every data router verifies the caller; /health stays open.
 AUTH = [Depends(authenticate)]
