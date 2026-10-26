@@ -107,6 +107,8 @@ class Settings(BaseSettings):
     # Signed-in users allowed to issue controlled-study invitations. Keeping this
     # separate from monitor access avoids accidentally widening research privileges.
     learning_operators: list[str] = []
+    # Independent chess-competent item-bank reviewers; aggregate metrics reveal no vote identity.
+    learning_reviewers: list[str] = []
     analysis_nodes: int = 1_500_000
     analysis_multipv: int = 4
     analysis_multipv_cap: int = 8

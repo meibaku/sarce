@@ -12,6 +12,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   and the ordinary drill queue unchanged.
 - Native Expo parity for Learning Evidence, including secure passwordless sign-in, invite consent, assessments,
   delayed checks, durable feedback and withdrawal.
+- A blinded, authenticated Learning Evidence reviewer workspace with independent votes and live precision,
+  raw-agreement and Cohen's-kappa qualification gates.
 
 ### Changed
 - ADR 0012 starts Learning Evidence Phase 2: Brilliant remains a first-class optional style goal, while recognition,
