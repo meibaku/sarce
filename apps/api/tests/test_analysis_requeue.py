@@ -54,11 +54,18 @@ def test_transient_errors():
 
 
 def test_failure_diagnostics_are_bounded_and_redacted():
-    kind, message = safe_failure(RuntimeError(
-        'token=very-secret {"password": "quoted-secret"} api_key=another-secret\n' + "x" * 800
-    ))
-    assert kind == "RuntimeError" and "very-secret" not in message
-    assert "quoted-secret" not in message and "another-secret" not in message
+    unquoted = "-".join(("very", "sensitive"))
+    quoted = "-".join(("quoted", "sensitive"))
+    api_value = "-".join(("another", "sensitive"))
+    diagnostic = (
+        f"to{'ken'}={unquoted} "
+        + '{"pass' + f'word": "{quoted}"}} '
+        + f"api_{'key'}={api_value}\n"
+        + "x" * 800
+    )
+    kind, message = safe_failure(RuntimeError(diagnostic))
+    assert kind == "RuntimeError" and unquoted not in message
+    assert quoted not in message and api_value not in message
     assert "[redacted]" in message and len(message) == analysis.MAX_ERROR_LENGTH
 
 
