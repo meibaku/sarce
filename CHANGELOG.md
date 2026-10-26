@@ -8,6 +8,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 - Phase 2 Learning Evidence admission with balanced expiring invitations, atomic one-use redemption, verified
   adult consent, participant status and withdrawal.
 - Fixed-count Learning Evidence sessions with label-balanced, family-isolated manifests and durable server scoring.
+- A separate consent, assessment and delayed-check Learning Evidence experience inside Train; it leaves style identity
+  and the ordinary drill queue unchanged.
 
 ### Changed
 - ADR 0012 starts Learning Evidence Phase 2: Brilliant remains a first-class optional style goal, while recognition,

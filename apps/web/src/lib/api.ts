@@ -190,6 +190,70 @@ export async function answerDrill(drillKey: string, confidence: import("@/types/
   });
 }
 
+export type LearningPhase = "baseline" | "learning" | "immediate" | "day7" | "day28";
+
+export interface LearningStatus {
+  enrolled: boolean;
+  enrollment: { id: string; withdrawnAt: string | null } | null;
+  sessions: { sessionId: string; phase: LearningPhase; itemCount: number; completedAt: string | null }[];
+}
+
+export interface LearningPresentation {
+  presentationToken: string;
+  ordinal: number;
+  positionFen: string;
+  presentedAt: string;
+}
+
+export async function getLearningStatus() {
+  return fetchApi<LearningStatus>("/learning/status");
+}
+
+export async function enrolLearning(token: string, adultConfirmed: boolean) {
+  return fetchApi<Record<string, unknown>>("/learning/enrol", {
+    method: "POST",
+    body: JSON.stringify({ token, adultConfirmed, consentedAt: new Date().toISOString() }),
+  });
+}
+
+export async function withdrawLearning() {
+  return fetchApi<{ withdrawn: boolean }>("/learning/withdraw", { method: "POST" });
+}
+
+export async function createLearningSession(phase: LearningPhase) {
+  return fetchApi<{ sessionId: string; phase: LearningPhase; itemCount: number }>("/learning/sessions", {
+    method: "POST",
+    body: JSON.stringify({ phase }),
+  });
+}
+
+export async function getNextLearningPresentation(sessionId: string) {
+  return fetchApi<{ complete: boolean; presentation: LearningPresentation | null }>(
+    `/learning/sessions/${sessionId}/next`,
+  );
+}
+
+export async function submitLearningAttempt(
+  presentationToken: string,
+  body: {
+    clientAttemptId: string;
+    response: { square?: string; noImmediateDanger?: boolean };
+    confidence: number;
+    latencyMs: number;
+  },
+) {
+  return fetchApi<{
+    recorded: true;
+    correct: boolean;
+    attemptId: string;
+    remaining: number;
+    feedback: { target: { squares?: string[]; noImmediateDanger?: boolean }; verification: Record<string, unknown> };
+  }>(`/learning/presentations/${presentationToken}/attempt`, {
+    method: "POST",
+    body: JSON.stringify({ ...body, assistance: "independent" }),
+  });
+}
+
 export async function checkDrillMove(fen: string, uci: string, answer: string | null, source: string) {
   return fetchApi<import("@/types/chess").DrillCheck>(`/users/train/check`, {
     method: "POST",
