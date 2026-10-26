@@ -1,10 +1,9 @@
 {
   "schemaVersion": 1,
-  "evaluatedAt": "2026-10-26T22:37:37+03:00",
+  "evaluatedAt": "2026-10-26T22:43:30+03:00",
   "decision": "blocked",
   "readyForInvitedPilot": false,
   "blockers": [
-    "phase1MergedToStaging",
     "greptileFiveOfFive",
     "stagingDeployed",
     "reviewedPrecision",
@@ -13,7 +12,8 @@
   ],
   "evidence": {
     "localCi": "implemented slices pass their documented local gates",
-    "phase1MergedToStaging": false,
+    "phase1MergedToStaging": true,
+    "phase1Evidence": "PRs 189, 190, 191 and 192 merged to staging on 2026-10-26",
     "greptileScore": null,
     "stagingUrl": null,
     "reviewMetrics": null,
