@@ -1,6 +1,10 @@
 """Tests for baseline aggregation helpers."""
 
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
+
 from app.services.baseline import BaselineService, EMPTY_DISTRIBUTION
+from app.services.style_goals import TAL_GOAL_MAX, TAL_GOAL_MIN
 
 
 class TestBaselineHelpers:
@@ -45,3 +49,22 @@ class TestBaselineHelpers:
         )
 
         assert vec["tacticalComplexity"] == 0.5
+
+    def test_recompute_preserves_a_custom_stored_goal(self):
+        service = BaselineService()
+        computed = {
+            "brilliantPct": 0.3,
+            "distribution": {**EMPTY_DISTRIBUTION, "brilliant": 1},
+            "gamesAnalyzed": 1,
+            "targetBrilliantMin": TAL_GOAL_MIN,
+            "targetBrilliantMax": TAL_GOAL_MAX,
+        }
+        service._baseline_from_games = AsyncMock(return_value=computed)
+        supabase = MagicMock()
+
+        with patch("app.services.baseline.get_supabase", return_value=supabase):
+            asyncio.run(service.recompute_baseline(user_id="owner"))
+
+        row = supabase.table.return_value.upsert.call_args.args[0]
+        assert "target_brilliant_min" not in row
+        assert "target_brilliant_max" not in row
