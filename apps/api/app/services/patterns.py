@@ -15,7 +15,7 @@ CONCEPT = "piece_safety.hanging_piece"
 VISIBILITIES = {"private", "global"}
 SOURCES = {"own_game", "curated", "generated"}
 LABELS = {"positive", "near_miss", "control"}
-PARTITIONS = {"instruction", "immediate", "day7", "day28", "transfer"}
+PARTITIONS = {"baseline", "instruction", "immediate", "day7", "day28", "transfer"}
 PUBLIC_FIELDS = {
     "id", "concept_key", "position_fen", "family_key", "source_type", "source_game_id", "source_ply", "label",
     "difficulty_context", "bank_partition", "detector_version",
