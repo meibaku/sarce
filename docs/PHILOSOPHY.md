@@ -1,6 +1,6 @@
 # Sarce Philosophy
 
-> **North star:** Did this game feel like *you* — not did you play like the engine?
+> **North star:** Are you becoming more able to see the game you want to play?
 
 This document is the product constitution. CI gates, architecture tests, and PR
 review check against it. If a change conflicts with this doc, the change needs an
@@ -10,8 +10,9 @@ explicit ADR (`docs/adr/`) before merging.
 
 ## What we are
 
-A **personal chess companion** that tracks progress toward a playing **identity**
-you are actively building — not a tool that grades you against perfect accuracy.
+A **personal chess companion** that keeps a living record of two things: how you
+choose to play, and what you have demonstrated you are learning to see. It is not
+a tool that grades you against perfect accuracy.
 
 For the founder: a **Tal-inspired** style with an evidence-backed target of **0.2–0.6% Brilliant**
 (sacrificial, tactical, attacking) moves, tracked game by game.
@@ -44,11 +45,13 @@ from Best/Excellent.
 Stockfish informs *how far* a move deviated and *whether a sacrifice stayed sound*.
 It does **not** define the user's goal function. The user's style target does.
 
-### 3. Headline metric = Brilliant %
+### 3. Style and learning are separate
 
-The primary progress signal is **Brilliant %** toward the user's target band
-(default 0.2–0.6%; [ADR 0011](./adr/0011-evidence-backed-brilliant-goals.md)). Full move-quality distribution provides context, never replaces
-the headline.
+There is no universal progress score. A player's chosen style goal may remain
+prominent — including **Brilliant %** toward the default 0.2–0.6% Tal band
+([ADR 0011](./adr/0011-evidence-backed-brilliant-goals.md)) — while learning
+progress is reported separately from demonstrated evidence. Style, skill, rating
+and learning are never collapsed into one number ([ADR 0012](./adr/0012-learning-evidence-and-progress-semantics.md)).
 
 ### 4. Progress over time, game by game
 
@@ -69,6 +72,13 @@ what "style" means.
 
 UX copy, notifications, and summaries should feel encouraging and curious:
 *"right in your Tal-style target range"* — not punitive.
+
+### 8. Evidence before learning claims
+
+A repeated drill, confidence rating or Maia probability does not prove learning.
+“Recognised,” “retained” and “transferred” have the held-out meanings in ADR 0012.
+Evidence counts and uncertainty stay visible; sparse evidence produces a humble
+“not enough yet,” not a mastery badge.
 
 ---
 

@@ -1,6 +1,6 @@
 # Sarce monorepo — agent instructions
 
-Chess **style identity** app (Tal-inspired, 6–10% Brilliant target) — not an engine accuracy coach.
+Chess **style identity and evidence-of-learning** app — not an engine accuracy coach.
 Package manager: **npm** (workspaces) for `apps/web`, standalone npm for `apps/mobile`; **pip** for `apps/api`.
 
 ## Read first
@@ -28,7 +28,10 @@ Package manager: **npm** (workspaces) for `apps/web`, standalone npm for `apps/m
 
 Changing any of these needs an ADR in `docs/adr/` first:
 
-- **Brilliant** stays a first-class move tier, and **Brilliant %** stays the headline metric.
+- **Brilliant** stays a first-class move tier. Brilliant % may remain prominent for a chosen style goal, but is not a
+  universal progress score; learning evidence stays separate (ADR 0012).
+- “Recognised”, “retained” and “transferred” use held-out definitions from ADR 0012; confidence or repetition alone
+  never establishes learning.
 - Engine is a mirror, not a judge — no punitive user-facing copy (`philosophy-check` guards this).
 - Stockfish runs **server-side only** (`apps/api`), or on a paired Sarce Node running the server's own code through
   the token-protected node gateway (ADR 0010, `docs/NODES.md`); routers never import `chess` / `chess.engine`.

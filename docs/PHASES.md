@@ -63,6 +63,27 @@ sets the default Tal band to 0.2–0.6% and “More solid” to 0.0–0.2%. Full
 
 ---
 
+## Learning Evidence Phase 2 — Piece Safety 🟨 In progress
+
+This research programme is distinct from the completed historical Product Phase 2 above. It asks whether Sarce can
+show recognition, seven-day retention and later transfer for one deliberately narrow concept. The preregistered
+contract is [LEARNING_EVIDENCE_PROTOCOL.md](./LEARNING_EVIDENCE_PROTOCOL.md); ADR 0012 separates learning evidence
+from playing identity.
+
+| Stage | Deliverable | Status |
+| --- | --- | --- |
+| LE2.1 | Learning ADR + preregistered protocol | ✅ |
+| LE2.2 | Reviewed piece-safety detector and item bank | 🔲 |
+| LE2.3 | Append-only attempts and rebuildable learning state | 🔲 |
+| LE2.4 | Unlabelled web/mobile loop and Scheduler v2 | 🔲 |
+| LE2.5 | Qualitative pilot | 🔲 |
+| LE2.6 | Controlled day-7 pilot and transfer observer | 🔲 |
+| LE2.7 | Evidence review ADR: go, revise or stop | 🔲 |
+
+No second learning concept starts before LE2.6 reaches its day-7 endpoint and LE2.7 records the evidence decision.
+
+---
+
 ## Phase 4+ — Future 🔲 Backlog
 
 See [PRODUCT_SPEC.md § Phase 4+](./PRODUCT_SPEC.md#phase-4--future-enhancements-not-locked) for full list.

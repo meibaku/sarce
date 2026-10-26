@@ -2,7 +2,7 @@
   "files": [
     {
       "path": "docs/PHILOSOPHY.md",
-      "description": "Product constitution — non-negotiable. Style over accuracy. Brilliant % headline. Engine as mirror not judge."
+      "description": "Product constitution — non-negotiable. Style and learning evidence are separate. Brilliant stays first-class. Engine as mirror not judge."
     },
     {
       "path": "docs/PRODUCT_SPEC.md",
@@ -10,7 +10,11 @@
     },
     {
       "path": "docs/adr/0001-style-over-accuracy.md",
-      "description": "Accepted ADR — Brilliant tier and headline metric are locked unless new ADR."
+      "description": "Accepted ADR as amended by ADR 0012 — Brilliant stays first-class; universal-headline wording is superseded."
+    },
+    {
+      "path": "docs/adr/0012-learning-evidence-and-progress-semantics.md",
+      "description": "Learning evidence and progress semantics — held-out definitions for recognised, retained and transferred; amends ADR 0001."
     },
     {
       "path": "docs/CODE_REVIEW.md",

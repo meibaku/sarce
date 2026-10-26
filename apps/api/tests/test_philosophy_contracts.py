@@ -1,7 +1,7 @@
 """
 Philosophy contract tests — enforce product invariants from docs/PHILOSOPHY.md.
 
-These tests encode the north star: style is a goal, Brilliant % is headline.
+These tests encode the north star: style remains a legitimate goal while learning claims require evidence.
 """
 
 from __future__ import annotations
@@ -68,7 +68,7 @@ class TestStyleVectorContracts:
 
 
 class TestHomeContracts:
-    """UI must surface Brilliant as the headline, not hide it (Home replaced the old dashboard, ADR 0005)."""
+    """Home keeps the chosen Tal-style goal visible without turning it into universal progress."""
 
     def test_style_gauge_component_exists(self):
         assert (WEB_SRC / "components" / "ui" / "style-gauge.tsx").is_file()
@@ -77,6 +77,10 @@ class TestHomeContracts:
         home = (WEB_SRC / "components" / "home" / "home-view.tsx").read_text(encoding="utf-8")
         assert "StyleGauge" in home
         assert "Brilliant" in home
+
+    def test_home_does_not_call_brilliant_universal_progress(self):
+        home = (WEB_SRC / "components" / "home" / "home-view.tsx").read_text(encoding="utf-8").lower()
+        assert "universal progress" not in home
 
     def test_home_gap_line_uses_encouraging_framing(self):
         from app.services.home import gap_line
@@ -106,3 +110,16 @@ class TestPhilosophyDocAnchors:
 
     def test_mentions_tal(self, philosophy: str):
         assert "Tal" in philosophy
+
+    def test_separates_style_from_learning(self, philosophy: str):
+        assert "no universal progress score" in philosophy.lower()
+        assert "recognised" in philosophy.lower()
+        assert "retained" in philosophy.lower()
+        assert "transferred" in philosophy.lower()
+
+    def test_learning_protocol_is_preregistered(self):
+        protocol = (REPO_ROOT / "docs" / "LEARNING_EVIDENCE_PROTOCOL.md").read_text(encoding="utf-8").lower()
+        assert "primary endpoint" in protocol
+        assert "day-7" in protocol
+        assert "90%" in protocol
+        assert "second learning" in protocol and "concept is added" in protocol

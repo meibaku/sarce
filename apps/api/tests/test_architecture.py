@@ -123,7 +123,7 @@ class TestGreptileConfig:
     def test_greptile_config_references_philosophy(self):
         config = (REPO_ROOT / ".greptile" / "config.json").read_text(encoding="utf-8")
         assert "foundation-no-remove-brilliant" in config
-        assert "foundation-headline-brilliant-pct" in config
+        assert "foundation-style-learning-separation" in config
         assert "PHILOSOPHY" in config
 
     def test_greptile_files_json_includes_philosophy(self):

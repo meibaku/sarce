@@ -19,7 +19,8 @@ style reference as an unreachable numerical target.
 - The “More solid” goal is **0.0–0.2% Brilliant**.
 - Goal values remain percentage points and clients preserve 0.1-point precision.
 - Only rows still exactly equal to the legacy 6–10 defaults are migrated. Customized goals are never overwritten.
-- Brilliant remains a first-class tier and Brilliant % remains the headline style metric.
+- Brilliant remains a first-class tier and Brilliant % remains a prominent optional style metric; ADR 0012 separately
+  governs learning evidence and removes any universal progress score.
 
 ## Consequences
 

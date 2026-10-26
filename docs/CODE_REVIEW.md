@@ -23,7 +23,8 @@ Greptile is configured via `.greptile/` at repo root plus scoped configs in `app
 | Foundation | Why locked |
 |------------|------------|
 | **Brilliant** as first-class move tier | Core style identity signal |
-| **Brilliant %** as headline metric | ADR [0001](./adr/0001-style-over-accuracy.md) |
+| **Brilliant %** as a prominent optional style goal | ADR [0012](./adr/0012-learning-evidence-and-progress-semantics.md) |
+| Learning claims require held-out evidence | ADR [0012](./adr/0012-learning-evidence-and-progress-semantics.md) |
 | Rule-based classification (Phase 1) | No ML without ADR |
 | Stockfish server-side only | Security + consistency |
 | Engine as mirror, not judge | Philosophy |
@@ -72,7 +73,8 @@ Greptile and reviewers should **not** treat these as required fixes:
 | "Brilliant heuristics are wrong" | Tunable via `.env`; needs failing test or golden regression |
 | "Add Redis/Celery for analysis" | Phase 1 uses `BackgroundTasks`; local-first |
 | "Analyze opponent moves too" | User moves only is intentional |
-| "Replace Brilliant % with accuracy" | Violates ADR 0001 |
+| "Replace Brilliant % with accuracy" | Violates ADR 0001/0012 |
+| Treat confidence or a repeated drill as transfer | Violates ADR 0012 |
 | "Merge Brilliant into Best" | Violates philosophy |
 
 ---

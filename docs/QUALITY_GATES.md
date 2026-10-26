@@ -106,7 +106,9 @@ Configured in `.greptile/` — see [CODE_REVIEW.md](./CODE_REVIEW.md).
 | `apps/api/.greptile/config.json` | Routers thin, eval persistence |
 | `apps/web/.greptile/config.json` | Brilliant gauge, no client secrets |
 
-**Foundation rules (high severity):** no removing Brilliant tier, no replacing Brilliant % headline, no ML Phase 1, Stockfish server-only, no punitive UX, ADR required for philosophy changes.
+**Foundation rules (high severity):** no removing the Brilliant tier; no collapsing style and learning into one score;
+no unsupported recognition/retention/transfer claims; no ML Phase 1; Stockfish server-only; no punitive UX; ADR required
+for philosophy changes.
 
 Greptile complements CI — it does **not** replace `test_philosophy_contracts.py` or `test_architecture.py`.
 
@@ -119,7 +121,8 @@ Greptile complements CI — it does **not** replace `test_philosophy_contracts.p
 Reviewers confirm:
 
 - [ ] Does not frame style play as failure
-- [ ] Brilliant % remains headline metric (if UI touched)
+- [ ] Brilliant stays first-class and any Brilliant % prominence is framed as an optional style goal
+- [ ] Learning claims use ADR 0012's held-out definitions and show evidence counts
 - [ ] Style vector version bumped if schema changed
 - [ ] ADR added if contradicting PHILOSOPHY.md
 - [ ] Greptile foundation comments dismissed or addressed (see CODE_REVIEW.md)
@@ -210,7 +213,8 @@ npm run build:web       # production build check
 Create `docs/adr/NNNN-title.md` when:
 
 - Changing what Brilliant means
-- Replacing Brilliant % as headline metric
+- Changing Brilliant's first-class status or its optional style-goal semantics
+- Changing the meaning of recognised, retained or transferred
 - Adding ML-based classification
 - Introducing competitive/social ranking
 - Removing or merging style tiers

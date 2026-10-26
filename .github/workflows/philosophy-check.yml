@@ -18,10 +18,16 @@ jobs:
             apps/web/src/components/ apps/web/src/app/ 2>/dev/null || \
             (echo "Punitive copy detected — see docs/PHILOSOPHY.md" && exit 1)
 
-      - name: Brilliant gauge must remain on Home (ADR 0005)
+      - name: Brilliant stays first-class while learning evidence stays separate
         run: |
           grep -q "StyleGauge" apps/web/src/components/home/home-view.tsx
           grep -q "Brilliant" apps/web/src/components/home/home-view.tsx
+          grep -qi "no universal progress score" docs/PHILOSOPHY.md
+          grep -qi "recognised" docs/PHILOSOPHY.md
+          grep -qi "retained" docs/PHILOSOPHY.md
+          grep -qi "transferred" docs/PHILOSOPHY.md
+          test -f docs/adr/0012-learning-evidence-and-progress-semantics.md
+          test -f docs/LEARNING_EVIDENCE_PROTOCOL.md
 
       - name: Philosophy doc anchors present
         run: |

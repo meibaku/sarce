@@ -7,12 +7,14 @@
 These require an ADR in `docs/adr/` before any code change:
 
 1. **Brilliant is a first-class move tier** — never merge into Best, remove, or deprecate
-2. **Brilliant % is the headline dashboard metric** — never replace with accuracy, centipawn loss, or "engine match %"
-3. **Engine is mirror, not judge** — Stockfish informs eval; user's style goal defines success
-4. **Style over accuracy** — see `docs/adr/0001-style-over-accuracy.md`
-5. **Phase 1 is rule-based only** — no ML/sklearn/torch for classification without ADR
-6. **Stockfish runs server-side only** — never move analysis to Next.js client or mobile
-7. **Personal, not competitive** — no public leaderboards, shame metrics, or punitive copy
+2. **Brilliant is a first-class optional style goal** — never replace it with accuracy or an engine-match percentage
+3. **Style and learning stay separate** — never collapse style, rating and learning evidence into one progress score
+4. **Learning claims require held-out evidence** — confidence, repetition and Maia alone do not establish learning
+5. **Engine is mirror, not judge** — Stockfish informs eval; user's style goal defines success
+6. **Style over accuracy** — see ADR 0001 as amended by ADR 0012
+7. **Phase 1 is rule-based only** — no ML/sklearn/torch for classification without ADR
+8. **Stockfish runs server-side only** — never move analysis to Next.js client or mobile
+9. **Personal, not competitive** — no public leaderboards, shame metrics, or punitive copy
 
 ## Comments to AVOID posting (false positives)
 
