@@ -101,8 +101,8 @@ class BaselineService:
             "brilliantPct": brilliant_pct,
             "distribution": merged,
             "gamesAnalyzed": len(analyses),
-            "targetBrilliantMin": 6,
-            "targetBrilliantMax": 10,
+            "targetBrilliantMin": TAL_GOAL_MIN,
+            "targetBrilliantMax": TAL_GOAL_MAX,
         }
 
     async def recompute_baseline(
@@ -123,8 +123,6 @@ class BaselineService:
                     "distribution": computed["distribution"],
                     "brilliant_pct": computed["brilliantPct"],
                     "games_analyzed": computed["gamesAnalyzed"],
-                    "target_brilliant_min": TAL_GOAL_MIN,
-                    "target_brilliant_max": TAL_GOAL_MAX,
                 },
                 on_conflict="user_id",
             ).execute()
