@@ -20,12 +20,12 @@ const SAMPLE: HomeData = {
   },
   brilliant: {
     window: "last 64",
-    value: 4.1,
-    spread: 1.2,
-    trend: "↑ 0.6 this month",
-    goalLo: 6,
-    goalHi: 10,
-    gapLine: "1.9 points below your 6–10% band, and closing.",
+    value: 0.1,
+    spread: 0.1,
+    trend: "↑ 0.1 this month",
+    goalLo: 0.2,
+    goalHi: 0.6,
+    gapLine: "0.1 points below your 0.2–0.6% band, and closing.",
     streak: "6 games",
     soundRatio: "3.0 : 1",
     trapsSurvived: "62%",
@@ -40,7 +40,7 @@ const SAMPLE: HomeData = {
 export default async function PreviewHome({ searchParams }: { searchParams: Promise<{ quiet?: string; next?: string }> }) {
   const { quiet, next } = await searchParams;
   // ?next=1: the personal next band (plan 1.3) on the gauge; the default stays the handoff frame.
-  const data = next ? { ...SAMPLE, brilliant: { ...SAMPLE.brilliant, next: { lo: 5.3, hi: 6 } } } : SAMPLE;
+  const data = next ? { ...SAMPLE, brilliant: { ...SAMPLE.brilliant, next: { lo: 0.1, hi: 0.2 } } } : SAMPLE;
   return (
     <AppShell title="home" account="kestrel_9 · Chess.com + Lichess · synced 2 min ago">
       <HomeView data={quiet ? { ...data, quietUntil: "Oct 23" } : data} />

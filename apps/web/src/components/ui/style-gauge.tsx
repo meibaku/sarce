@@ -1,13 +1,9 @@
 /**
- * Brilliant gauge (docs/DESIGN.md): a 10px track on a 0–15% scale, the user's goal band in
+ * Brilliant gauge (docs/DESIGN.md): a 10px track on a scale fitted to the user's band and values, the goal band in
  * accent tint, a 2px ink marker at the current value, an optional ±range hatch and an optional
  * grey marker for the rolling average, and an optional dashed outline for the personal next band (the step just
  * above your likely range). Every gauge in the app follows the user's goal.
  */
-const SCALE = 15;
-
-const pct = (x: number) => `${(Math.max(0, Math.min(SCALE, x)) / SCALE) * 100}%`;
-
 export interface StyleGaugeProps {
   /** Current value; null hides the marker when there are too few games. */
   value: number | null;
@@ -26,6 +22,9 @@ export interface StyleGaugeProps {
 
 export function StyleGauge({ value, goalLo, goalHi, spread, average, next, label = "Brilliant %", compact = false }: StyleGaugeProps) {
   const nextLabel = next ? `, next band ${next.lo}–${next.hi}%` : "";
+  const scale = Math.min(15, Math.max(1, goalHi * 1.5, value ?? 0, (value ?? 0) + (spread ?? 0), average ?? 0, next?.hi ?? 0));
+  const scaleLabel = Number(scale.toFixed(1));
+  const pct = (x: number) => `${(Math.max(0, Math.min(scale, x)) / scale) * 100}%`;
   return (
     <div className="flex flex-col gap-3" role="img" aria-label={`${label}: ${value == null ? "not enough games yet" : `${value.toFixed(1)}%`}, goal ${goalLo}–${goalHi}%${nextLabel}`}>
       <div className={`relative box-content border-[1.5px] border-ink ${compact ? "h-2 rounded-[5px]" : "h-[10px] rounded-[6px]"}`}>
@@ -44,7 +43,7 @@ export function StyleGauge({ value, goalLo, goalHi, spread, average, next, label
             className="absolute top-px bottom-px"
             style={{
               left: pct(value - spread),
-              width: pct(Math.min(value + spread, SCALE) - Math.max(value - spread, 0)),
+              width: pct(Math.min(value + spread, scale) - Math.max(value - spread, 0)),
               background: "repeating-linear-gradient(90deg, var(--line-3) 0 2px, transparent 2px 4px)",
             }}
           />
@@ -70,7 +69,7 @@ export function StyleGauge({ value, goalLo, goalHi, spread, average, next, label
         <span className="absolute -translate-x-1/2" style={{ left: pct(goalHi) }}>
           {goalHi}
         </span>
-        <span className="absolute right-0">15%</span>
+        <span className="absolute right-0">{scaleLabel}%</span>
       </div>
     </div>
   );

@@ -4,6 +4,12 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 
 ## [Unreleased]
 
+### Changed
+- Analysis Foundation A1 is complete on the frozen 3,208-game snapshot. The production rule-v4 Tal benchmark
+  measured 20 Brilliants in 7,013 moves (0.29%, game-bootstrap 95% interval 0.17–0.41%), so ADR 0011 replaces the
+  legacy 6–10% default with a 0.2–0.6% Tal band and a 0.0–0.2% “More solid” band. Web and mobile goal controls now
+  retain 0.1 percentage-point precision; the exact-default-only migration preserves customized goals.
+
 ### Fixed
 - Analysis retries now survive API restarts and retain a bounded, sanitized operator diagnosis. Stale Sarce Node
   workers are refused before cache writes and unwind when the server reports that their lease is no longer active.

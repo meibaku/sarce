@@ -52,7 +52,7 @@ export default function SharedPage() {
           <Card className="gap-3 !p-[18px]">
             <SectionLabel>Brilliant this game · {data.brilliant.count ?? 0} of {data.brilliant.of ?? 0}</SectionLabel>
             <span className="font-mono text-[28px] text-accent-text">{(data.brilliant.pct ?? 0).toFixed(1)}%</span>
-            <StyleGauge value={data.brilliant.pct ?? 0} goalLo={data.brilliant.goalLo ?? 6} goalHi={data.brilliant.goalHi ?? 10} />
+            <StyleGauge value={data.brilliant.pct ?? 0} goalLo={data.brilliant.goalLo ?? 0.2} goalHi={data.brilliant.goalHi ?? 0.6} />
           </Card>
           <Card className="gap-2 !p-[18px]">
             <SectionLabel>The moments</SectionLabel>

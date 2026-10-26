@@ -16,7 +16,7 @@ const SAMPLE: SummaryApi = {
   moves: 34,
   headline: "Two real problems set. One sacrifice held.",
   outcome: { kicker: "Brilliant !!", accent: true, text: "19. Rxe5 held. It goes on your timeline." },
-  brilliant: { pct: 5.9, count: 1, of: 17, rolling: 4.1, goalLo: 6, goalHi: 10 },
+  brilliant: { pct: 0.3, count: 1, of: 320, rolling: 0.2, goalLo: 0.2, goalHi: 0.6 },
   moments: [
     { ply: 36, san: "Rxe5", glyph: "!!", line: "The exchange sacrifice held", clock: "0:31" },
     { ply: 45, san: "Qh4 → Qe2", glyph: "✓", line: "Trap faced, safe reply found", clock: "0:22" },

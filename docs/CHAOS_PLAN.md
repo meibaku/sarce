@@ -9,7 +9,7 @@
 |---|---|---|
 | M0 Housekeeping | Merged | Major-version Dependabot PRs, one at a time |
 | M1 WDL + EP | Merged, off by default; verified on Stockfish 18 | Apply the migration to your own database |
-| M2 Human model | Merged; default `auto` uses Maia-2 where installed, the heuristic elsewhere | Install `requirements-maia.txt` where you want calibrated numbers |
+| M2 Human model | Merged; production requires Maia-2 and routes bullet/blitz to blitz, slower/unknown games to rapid | Keep `auto` for optional local development only |
 | M3 Lenses | Merged | Thresholds are provisional until M4 |
 | M4 Validation | **GO** on the full 50,516-position run across twelve months (Maia-2); clock multipliers applied | Tune the verdict thresholds |
 | M5 Review UI | Merged; rebuilt as the v1.0 Review screen (web and mobile); `/lab` retired (ADR 0005) | Tal in chaos terms: scoring script done, the rerun after the name-matching fix restores `data/reference_axes.json` |
@@ -18,6 +18,10 @@
 | M8 Sharing + scouting | Multi-user: sign-in (verified against a live Supabase Auth, `scripts/auth_smoke.py`), per-user sync and analysis, shared read-only links (`/s/<token>`, snapshots with no third-party names, revocable); opponent prep (`/prep`); Lichess import | Done |
 
 **What has actually been run** (10 Oct 2026, Stockfish 18, a throwaway Supabase Postgres + PostgREST stack):
+
+> **26 Oct closeout:** the later Analysis Foundation A1 completed a fixed 3,208-game production snapshot with
+> complete Chaos data, routed Maia-2 probabilities and style-vector v6 provenance. The evidence artifact is
+> `docs/evidence/phase1-closeout.json`; this older M4 validation note remains historical context.
 
 - Node-limited `analyse`: identical lines on repeat, WDL present, about 4 s per position at 1.5M nodes.
 - Phase 1 golden checks pass (after fixing a fixture that used an illegal move).

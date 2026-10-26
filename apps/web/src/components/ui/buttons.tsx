@@ -80,6 +80,7 @@ export function Stepper({
   onChange,
   min,
   max,
+  increment = 1,
   suffix = "",
 }: {
   label: string;
@@ -87,20 +88,22 @@ export function Stepper({
   onChange: (next: number) => void;
   min: number;
   max: number;
+  increment?: number;
   suffix?: string;
 }) {
   const step = "tap h-9 w-9 rounded-[6px] border-[1.5px] border-line-2 bg-surface font-mono text-[16px] font-medium hover:bg-panel active:bg-press";
+  const nextValue = (delta: number) => Number(Math.min(max, Math.max(min, value + delta)).toFixed(10));
   return (
     <div className="flex items-center gap-2">
       <span className="w-9 text-[13px] text-muted">{label}</span>
-      <button type="button" className={step} aria-label={`Lower ${label}`} onClick={() => onChange(Math.max(min, value - 1))}>
+      <button type="button" className={step} aria-label={`Lower ${label}`} onClick={() => onChange(nextValue(-increment))}>
         −
       </button>
       <span className="min-w-11 text-center font-mono text-[20px] text-accent-text" aria-live="polite">
         {value}
         {suffix}
       </span>
-      <button type="button" className={step} aria-label={`Raise ${label}`} onClick={() => onChange(Math.min(max, value + 1))}>
+      <button type="button" className={step} aria-label={`Raise ${label}`} onClick={() => onChange(nextValue(increment))}>
         +
       </button>
     </div>
