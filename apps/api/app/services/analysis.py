@@ -49,7 +49,10 @@ TRANSIENT_DB_CODES = {"57014", "40001", "40P01", "53300", "08006"}  # statement 
 
 MAX_ATTEMPTS = 3
 MAX_ERROR_LENGTH = 500
-_SECRET = re.compile(r"(?i)(bearer\s+|(?:api[_-]?key|token|password|secret)\s*[=:]\s*)\S+")
+_SECRET = re.compile(
+    r'''(?ix)(?P<prefix>bearer\s+|["']?(?:api[_-]?key|token|password|secret)["']?\s*[=:]\s*)'''
+    r'''(?:"[^"]*"|'[^']*'|[^\s,}\]]+)'''
+)
 
 
 def is_transient(exc: BaseException) -> bool:
@@ -67,7 +70,7 @@ def safe_failure(exc: BaseException) -> tuple[str, str]:
     """Return bounded operator diagnostics without persisting credentials or multiline payloads."""
     error_type = type(exc).__name__[:80]
     message = " ".join(str(exc).split())
-    message = _SECRET.sub(lambda match: f"{match.group(1)}[redacted]", message)
+    message = _SECRET.sub(lambda match: f"{match.group('prefix')}[redacted]", message)
     return error_type, message[:MAX_ERROR_LENGTH]
 
 
@@ -217,6 +220,12 @@ class AnalysisService:
                 return None
             if claim is not None:
                 claim["ours"] = True
+        # A different worker may have claimed and failed this row between our initial read and our successful
+        # conditional claim. Re-read the durable budget only after ownership is established so failures cannot
+        # overwrite a newer attempt count with the stale pre-claim value.
+        attempts = sb.table("games").select("analysis_attempts").eq("id", game_id).maybe_single().execute()
+        if attempts and attempts.data:
+            row["analysis_attempts"] = attempts.data.get("analysis_attempts", row.get("analysis_attempts", 0))
         tracker = monitor.current.get()
         if tracker:
             tracker.phase("searching", total=len(moves) + 1)

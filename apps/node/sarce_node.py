@@ -242,12 +242,17 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
             # longer than the lease while the worker is busy.
             stop = threading.Event()
 
-            def beat(gid: str = game_id) -> None:
-                while not stop.wait(HEARTBEAT_S):
+            def beat(
+                gid: str = game_id,
+                game_stop: threading.Event = stop,
+                game_lease_lost: threading.Event = lease_lost,
+            ) -> None:
+                """Heartbeat only the game and cancellation events captured for this worker iteration."""
+                while not game_stop.wait(HEARTBEAT_S):
                     try:
                         result = gw.call("/nodes/heartbeat", {"gameId": gid}, timeout=20)
                         if not result.get("active", False):
-                            lease_lost.set()
+                            game_lease_lost.set()
                             return
                     except Exception:
                         pass
