@@ -81,6 +81,9 @@ class Settings(BaseSettings):
     # Multi-user: when true every request needs a Supabase access token. When false
     # (local-first default) a token is still honoured if one is sent.
     auth_required: bool = False
+    # Serverless staging serves bounded database/API requests only. It must never start
+    # Stockfish, monitors, queue workers, sync loops or after-response background jobs.
+    request_only_runtime: bool = False
     # Durable per-user analysis queue (needs the analysis_jobs migration). Off: BackgroundTasks.
     job_queue_enabled: bool = False
     job_poll_seconds: float = 2.0

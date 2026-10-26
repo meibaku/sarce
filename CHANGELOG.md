@@ -16,6 +16,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   raw-agreement and Cohen's-kappa qualification gates.
 - Learning attempts now snapshot cohort and analysis eligibility; the fixed day-7 report fails closed against
   qualitative, sandbox, ineligible and incomplete records before its 10,000-resample within-arm player bootstrap.
+- Request-only Vercel API safeguards, a dedicated Supabase/Vercel staging runbook and a fail-closed pilot-readiness
+  artifact prevent recruitment before review, bank, deployment and smoke evidence exist.
 
 ### Changed
 - ADR 0012 starts Learning Evidence Phase 2: Brilliant remains a first-class optional style goal, while recognition,
