@@ -147,14 +147,18 @@ class PatternStore:
         return get_supabase().table(TABLE).update(payload).eq("id", pattern_id).eq("review_status", "candidate").execute().data[0]
 
     def set_status(self, pattern_id: str, status: str) -> dict:
-        """Reviewer-only transition; approval requires at least one affirmative and no rejection."""
+        """Reviewer-only adjudication after two independent votes; disagreements remain in the audit trail."""
         status = _choice(status, {"approved", "rejected", "retired"}, "status")
         rows = get_supabase().table(TABLE).select("*").eq("id", pattern_id).limit(1).execute().data or []
         if not rows:
             raise ValueError("pattern not found")
         annotations = rows[0].get("review_annotations") or []
         decisions = {item.get("decision") for item in annotations}
-        if status == "approved" and ("approve" not in decisions or "reject" in decisions):
-            raise ValueError("approval requires an affirmative annotation and no rejection")
+        if status in {"approved", "rejected"} and len(annotations) < 2:
+            raise ValueError("adjudication requires two independent annotations")
+        if status == "approved" and "approve" not in decisions:
+            raise ValueError("approval requires an affirmative annotation")
+        if status == "rejected" and "reject" not in decisions:
+            raise ValueError("rejection requires a rejecting annotation")
         payload = {"review_status": status, "updated_at": datetime.now(timezone.utc).isoformat()}
         return get_supabase().table(TABLE).update(payload).eq("id", pattern_id).execute().data[0]

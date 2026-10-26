@@ -30,6 +30,9 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   back to a guessed colour
 
 ### Added
+- Piece-safety bank tooling builds candidates only from completed games and cached searches, records calibration versus
+  held-out review sets, preserves independent annotations, and blocks automatic serving below 50 adjudicated held-out
+  items or 90% precision; agreement and Cohen's kappa remain visible.
 - Piece-safety detector v1 conservatively classifies positive, near-miss and control positions from completed-game
   cached searches, records the fixed-node engine contract, and excludes decided or incomplete evidence.
 - Learning pattern bank foundation: versioned private/global `pattern_instances` with provenance, reviewer annotations,
