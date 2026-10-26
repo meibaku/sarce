@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.routers import learning
+from app.routers.learning import participant_enrollment
 from app.services.learning_admission import prepare_invite_batch, token_digest
 
 NOW = datetime(2026, 10, 26, tzinfo=timezone.utc)
@@ -61,3 +62,14 @@ def test_migration_keeps_admission_server_only_and_atomic():
     assert "revoke all on function public.create_learning_invite_batch" in sql
     assert "for update" in sql
     assert "token_hash text not null unique" in sql
+
+
+def test_participant_enrollment_conceals_assignment_and_analysis_identity():
+    public = participant_enrollment({
+        "id": "enrollment", "protocol_version": 1, "cohort": "controlled",
+        "consented_at": NOW.isoformat(), "enrolled_at": NOW.isoformat(), "withdrawn_at": None,
+        "arm": "experimental", "participant_key": "secret-analysis-key",
+    })
+    assert public["id"] == "enrollment"
+    assert "arm" not in public
+    assert "participant_key" not in public

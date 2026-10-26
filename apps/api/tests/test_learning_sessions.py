@@ -52,3 +52,5 @@ def test_migration_hides_answers_and_claims_next_item_under_lock():
     returned = sql.split("return jsonb_build_object(", 1)[1].split(");", 1)[0]
     assert "target" not in returned
     assert "verification" not in returned
+    assert "conceptkey" not in returned
+    assert "familykey" not in returned

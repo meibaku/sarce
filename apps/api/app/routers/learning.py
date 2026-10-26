@@ -18,6 +18,18 @@ admission_store = LearningAdmissionStore()
 session_store = LearningSessionStore()
 
 
+def participant_enrollment(enrollment: dict) -> dict:
+    """Participant-safe state deliberately omits the concealed study arm and pseudonymous key."""
+    return {
+        "id": enrollment["id"],
+        "protocolVersion": enrollment["protocol_version"],
+        "cohort": enrollment["cohort"],
+        "consentedAt": enrollment["consented_at"],
+        "enrolledAt": enrollment["enrolled_at"],
+        "withdrawnAt": enrollment.get("withdrawn_at"),
+    }
+
+
 def require_signed_in_user() -> str:
     """Research consent always binds to a verified Supabase identity, even in local-first mode."""
     user_id = current_user_id()
@@ -63,20 +75,25 @@ async def enrol(body: EnrollRequest, user_id: str = Depends(require_signed_in_us
     if body.consentedAt > datetime.now(timezone.utc):
         raise HTTPException(status_code=422, detail="Consent time cannot be in the future")
     try:
-        return await asyncio.to_thread(
+        enrollment = await asyncio.to_thread(
             admission_store.enroll, token=body.token, user_id=user_id,
             adult_confirmed=body.adultConfirmed, consented_at=body.consentedAt,
         )
     except Exception as exc:
         # Do not reveal whether a token exists, expired, or was previously redeemed.
         raise HTTPException(status_code=409, detail="Invitation is invalid, expired, or already used") from exc
+    return participant_enrollment(enrollment)
 
 
 @router.get("/status")
 async def status(user_id: str = Depends(require_signed_in_user)):
     enrollment = await asyncio.to_thread(admission_store.status, user_id)
     sessions = await asyncio.to_thread(session_store.progress, enrollment["id"]) if enrollment else []
-    return {"enrolled": enrollment is not None, "enrollment": enrollment, "sessions": sessions}
+    return {
+        "enrolled": enrollment is not None,
+        "enrollment": participant_enrollment(enrollment) if enrollment else None,
+        "sessions": sessions,
+    }
 
 
 @router.post("/withdraw")
@@ -84,7 +101,10 @@ async def withdraw(user_id: str = Depends(require_signed_in_user)):
     enrollment = await asyncio.to_thread(admission_store.withdraw, user_id, datetime.now(timezone.utc))
     if not enrollment:
         raise HTTPException(status_code=404, detail="Learning enrollment not found")
-    return {"withdrawn": enrollment.get("withdrawn_at") is not None, "enrollment": enrollment}
+    return {
+        "withdrawn": enrollment.get("withdrawn_at") is not None,
+        "enrollment": participant_enrollment(enrollment),
+    }
 
 
 class SessionRequest(BaseModel):

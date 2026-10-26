@@ -87,10 +87,6 @@ begin
     'presentationToken', presentation.presentation_token,
     'ordinal', presentation.ordinal,
     'positionFen', pattern.position_fen,
-    'conceptKey', pattern.concept_key,
-    'familyKey', pattern.family_key,
-    'sourceType', pattern.source_type,
-    'difficultyContext', pattern.difficulty_context,
     'presentedAt', presentation.presented_at
   );
 end;
