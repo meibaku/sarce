@@ -1,4 +1,4 @@
-"""Brilliant under rule v3 for references and you (app/services/brilliant_benchmark.py, review F6)."""
+"""Brilliant under the production rule for references and you (review F6)."""
 
 import chess
 

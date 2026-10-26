@@ -7,6 +7,7 @@ Recomputed after each game analysis. See docs/PHASES.md for phase status.
 from __future__ import annotations
 
 from app.db.supabase import get_supabase
+from app.services.style_goals import TAL_GOAL_MAX, TAL_GOAL_MIN
 
 PAGE = 1000  # PostgREST's default row cap per request
 CHUNK = 100  # game ids per `in_` lookup, to keep URLs short
@@ -122,8 +123,8 @@ class BaselineService:
                     "distribution": computed["distribution"],
                     "brilliant_pct": computed["brilliantPct"],
                     "games_analyzed": computed["gamesAnalyzed"],
-                    "target_brilliant_min": 6,
-                    "target_brilliant_max": 10,
+                    "target_brilliant_min": TAL_GOAL_MIN,
+                    "target_brilliant_max": TAL_GOAL_MAX,
                 },
                 on_conflict="user_id",
             ).execute()
@@ -188,8 +189,8 @@ class BaselineService:
             "brilliantPct": float(row.get("brilliant_pct", 0)),
             "distribution": row.get("distribution", EMPTY_DISTRIBUTION),
             "gamesAnalyzed": row.get("games_analyzed", 0),
-            "targetBrilliantMin": row.get("target_brilliant_min", 6),
-            "targetBrilliantMax": row.get("target_brilliant_max", 10),
+            "targetBrilliantMin": row.get("target_brilliant_min", TAL_GOAL_MIN),
+            "targetBrilliantMax": row.get("target_brilliant_max", TAL_GOAL_MAX),
         }
 
     @staticmethod
@@ -198,6 +199,6 @@ class BaselineService:
             "brilliantPct": 0,
             "distribution": {**EMPTY_DISTRIBUTION},
             "gamesAnalyzed": 0,
-            "targetBrilliantMin": 6,
-            "targetBrilliantMax": 10,
+            "targetBrilliantMin": TAL_GOAL_MIN,
+            "targetBrilliantMax": TAL_GOAL_MAX,
         }

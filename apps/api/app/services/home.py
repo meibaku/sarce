@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from app.db.supabase import get_supabase
 from app.services.uncertainty import ROLLING_GAMES, ROLLING_POINTS, ROLLING_STEP, wilson
 from app.services.distraction import flagged_plies
+from app.services.style_goals import TAL_GOAL_MAX, TAL_GOAL_MIN
 
 WINDOW = 64
 MIN_GAMES = 5
@@ -182,15 +183,15 @@ def rolling_brilliant(games_newest_first: list[dict]) -> list[dict]:
 def next_band(hi: float | None, goal_lo: float) -> tuple[float, float] | None:
     """
     A personal next step on the way to the goal band (plan 1.3): from just above the top of your likely range (its
-    95% upper bound, rounded up to 0.1) to half as much again, at least half a point wide, capped at the goal.
-    None when there's no range yet or you are within half a point of the goal band.
+    95% upper bound, rounded up to 0.1) to half as much again, at least 0.1 point wide, capped at the goal.
+    None when there's no range yet or that rounded boundary has reached the goal band.
     """
     if hi is None:
         return None
     lo = max(0.1, math.ceil(round(hi * 10, 6)) / 10)
-    if goal_lo - lo < 0.5:  # less than half a point short: the next step is the goal band itself
+    if lo >= goal_lo:
         return None
-    return lo, min(goal_lo, round(lo + max(0.5, lo / 2), 1))  # round first: the cap must hold for fractional goals
+    return lo, min(goal_lo, round(lo + max(0.1, lo / 2), 1))  # round first: the cap must hold for fractional goals
 
 
 def gap_line(pct: float | None, lo: float, hi: float) -> str:
@@ -363,7 +364,7 @@ class HomeService:
             return None  # the focus card is optional; Home must still load
 
     def _goal(self, user_id: str | None) -> dict:
-        lo, hi = 6, 10
+        lo, hi = TAL_GOAL_MIN, TAL_GOAL_MAX
         if user_id:
             res = get_supabase().table("profiles").select("style_goal").eq("id", user_id).limit(1).execute()
             goal = (res.data[0].get("style_goal") if res.data else None) or {}
