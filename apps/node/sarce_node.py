@@ -271,6 +271,8 @@ def worker(index: int, env: dict[str, str], settings_env: dict[str, str]) -> Non
                 flush()
             finally:
                 stop.set()
+            if lease_lost.is_set():
+                raise LeaseLost(game_id)
             # Positions searched or looked up: the same measure the server's own analysis reports.
             gw.call_retrying("/nodes/done", {"gameId": game_id, "positions": progress["positions"]})
             last_seconds = round(time.monotonic() - started)

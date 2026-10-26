@@ -50,7 +50,7 @@ TRANSIENT_DB_CODES = {"57014", "40001", "40P01", "53300", "08006"}  # statement 
 MAX_ATTEMPTS = 3
 MAX_ERROR_LENGTH = 500
 _SECRET = re.compile(
-    r'''(?ix)(?P<prefix>bearer\s+|["']?(?:api[_-]?key|token|password|secret)["']?\s*[=:]\s*)'''
+    r'''(?ix)(?P<prefix>(?:bearer|basic)\s+|["']?(?:api[_-]?key|token|password|secret)["']?\s*[=:]\s*)'''
     r'''(?:"[^"]*"|'[^']*'|[^\s,}\]]+)'''
 )
 
