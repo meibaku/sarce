@@ -9,6 +9,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+import chess
 import chess.pgn
 
 from app.config import settings
@@ -119,8 +120,6 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.prewarm:
-        import chess
-
         for checkpoint in ("blitz", "rapid"):
             model = get_human_model_for_game(
                 "maia2", {"source": "chess_com", "time_control": "60" if checkpoint == "blitz" else "600"}
