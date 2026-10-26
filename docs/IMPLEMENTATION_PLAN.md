@@ -130,7 +130,7 @@ that new measures wait for validation (F9).
 Order: ADR/protocol → reviewed piece-safety detector → private/global pattern bank → append-only attempts → rebuildable
 state → unlabelled web/mobile loop → active-control pilot → transfer observer → evidence decision ADR. The automatic
 serving gate is ≥90% held-out reviewed precision. The first primary endpoint is day-7 held-out discrimination; no
-second concept or general “intuition” model is in scope before that endpoint.
+second concept or general “intuition” model is in scope before that endpoint and the LE2.7 evidence decision ADR.
 
 ## Decisions only you can make
 

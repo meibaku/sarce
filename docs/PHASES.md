@@ -80,7 +80,7 @@ from playing identity.
 | LE2.6 | Controlled day-7 pilot and transfer observer | 🔲 |
 | LE2.7 | Evidence review ADR: go, revise or stop | 🔲 |
 
-No second learning concept starts before LE2.6 reaches its day-7 endpoint.
+No second learning concept starts before LE2.6 reaches its day-7 endpoint and LE2.7 records the evidence decision.
 
 ---
 

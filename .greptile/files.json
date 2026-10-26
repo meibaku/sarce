@@ -13,6 +13,10 @@
       "description": "Accepted ADR as amended by ADR 0012 — Brilliant stays first-class; universal-headline wording is superseded."
     },
     {
+      "path": "docs/adr/0012-learning-evidence-and-progress-semantics.md",
+      "description": "Learning evidence and progress semantics — held-out definitions for recognised, retained and transferred; amends ADR 0001."
+    },
+    {
       "path": "docs/CODE_REVIEW.md",
       "description": "Human and AI reviewer guide — what to flag vs push back on."
     },

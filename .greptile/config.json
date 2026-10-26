@@ -29,6 +29,11 @@
       "severity": "high"
     },
     {
+      "id": "foundation-learning-claims-require-evidence",
+      "rule": "Flag recognition, retention, or transfer claims unless the corresponding held-out evidence gate in docs/LEARNING_EVIDENCE_PROTOCOL.md has been met and recorded.",
+      "severity": "high"
+    },
+    {
       "id": "foundation-no-ml-phase1",
       "rule": "Do not suggest ML/sklearn/torch/tensorflow for move classification unless an ADR exists in docs/adr/. Phase 1 is rule-based Stockfish only.",
       "severity": "high"

@@ -104,6 +104,8 @@ personal transfer statement below 15 verified pre and 15 verified post opportuni
 - **Revise representation:** day-7 recognition clears +5 but near-miss/day-28 structural transfer does not.
 - **Stop or radically rethink:** with at least 60 completers, the day-7 estimate is non-positive and its 95% upper
   bound is below +5.
+- **Continue evidence / inconclusive:** when no gate above applies, record why the result is inconclusive, keep the
+  second concept blocked, and preregister any extension or revised pilot before collecting more outcomes.
 
 No UI or marketing copy may claim improved intuition, mastery or transfer before the corresponding gate is met. The
 evidence review ends in an ADR that says go, revise or stop.
