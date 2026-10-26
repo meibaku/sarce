@@ -1,0 +1,27 @@
+[
+  {
+    "name": "queen_is_hanging",
+    "fen": "4r1k1/8/8/8/8/8/4Q3/6K1 b - - 0 1",
+    "playerEpBefore": 0.50,
+    "lines": [{"move_uci": "e8e2", "ep": 0.80}],
+    "label": "positive",
+    "relation": "material_winning_capture",
+    "square": "e2"
+  },
+  {
+    "name": "bishop_capture_has_recapture",
+    "fen": "4r1k1/8/8/8/8/8/4B3/4R1K1 b - - 0 1",
+    "playerEpBefore": 0.50,
+    "lines": [{"move_uci": "e8e2", "ep": 0.51}],
+    "label": "near_miss",
+    "relation": "recapture"
+  },
+  {
+    "name": "quiet_position_is_control",
+    "fen": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+    "playerEpBefore": 0.50,
+    "lines": [{"move_uci": "g1f3", "ep": 0.52}],
+    "label": "control",
+    "relation": "no_immediate_capture"
+  }
+]
