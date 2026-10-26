@@ -66,6 +66,13 @@ def prepare_attempt(
         "detector_version": pattern["detector_version"],
         "phase": phase,
         "arm": enrollment["arm"],
+        "cohort": enrollment["cohort"],
+        # Qualitative/sandbox evidence remains useful for UX review but can never enter the
+        # preregistered controlled estimand. The snapshot prevents later enrollment edits
+        # from rewriting an already-recorded analysis cohort.
+        "analysis_eligible": (
+            enrollment["cohort"] == "controlled" and enrollment.get("analysis_eligible", True) is True
+        ),
         "concept_key": pattern["concept_key"],
         "family_key": pattern["family_key"],
         "item_label": pattern["label"],
