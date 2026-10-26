@@ -168,7 +168,7 @@ export function LearningEvidenceView() {
     );
   }
 
-  if (status.enrollment?.withdrawn_at) {
+  if (status.enrollment?.withdrawnAt) {
     return <Card lead><h1 className="text-[20px] font-medium">Participation withdrawn</h1><p className="mt-2 text-[13px] text-ink-2">No new study sections will be offered.</p></Card>;
   }
 

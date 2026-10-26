@@ -194,7 +194,7 @@ export type LearningPhase = "baseline" | "learning" | "immediate" | "day7" | "da
 
 export interface LearningStatus {
   enrolled: boolean;
-  enrollment: { id: string; withdrawn_at: string | null } | null;
+  enrollment: { id: string; withdrawnAt: string | null } | null;
   sessions: { sessionId: string; phase: LearningPhase; itemCount: number; completedAt: string | null }[];
 }
 
@@ -202,10 +202,6 @@ export interface LearningPresentation {
   presentationToken: string;
   ordinal: number;
   positionFen: string;
-  conceptKey: string;
-  familyKey: string;
-  sourceType: string;
-  difficultyContext: Record<string, unknown>;
   presentedAt: string;
 }
 
