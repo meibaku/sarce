@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from fastapi import HTTPException
+
 from app.config import settings
 
 
@@ -61,3 +63,16 @@ class PilotPolicy:
             "protocolVersion": settings.pilot_protocol_version if self.enabled else None,
             "privacyVersion": settings.pilot_privacy_version if self.enabled else None,
         }
+
+    def require(self, capability: str) -> None:
+        """Reject unavailable pilot features even when a client knows an old route."""
+        if not self.allows(capability):
+            raise HTTPException(status_code=404, detail="This feature is not part of the admitted style pilot")
+
+    def filter_home(self, payload: dict) -> dict:
+        if not self.enabled:
+            return payload
+        latest = payload.get("latest")
+        if latest:
+            latest = {**latest, "chaos": [], "highlight": None}
+        return {**payload, "latest": latest, "focus": None, "stats": None}
