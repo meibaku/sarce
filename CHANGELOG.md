@@ -31,6 +31,10 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   retain 0.1 percentage-point precision; the exact-default-only migration preserves customized goals.
 
 ### Fixed
+- Web and mobile reuse one client attempt identifier while retrying the same Learning Evidence response, so a lost
+  acknowledgement cannot turn a safe retry into a conflicting second submission.
+- Independent item-bank votes now append under a database row lock, preventing simultaneous reviewers from silently
+  overwriting one another's evidence.
 - Analysis retries now survive API restarts and retain a bounded, sanitized operator diagnosis. Stale Sarce Node
   workers are refused before cache writes and unwind when the server reports that their lease is no longer active.
 - A game could be analysed twice: the queue, failing to read a game (a database timeout under load), put it back
