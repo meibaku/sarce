@@ -10,9 +10,9 @@ MIGRATION = Path(__file__).resolve().parents[3] / "supabase" / "migrations" / "2
 
 
 def test_invitation_hash_is_stable_and_not_plaintext():
-    token = "this-is-a-long-one-use-invitation"
-    digest = token_hash(token)
-    assert len(digest) == 64 and digest != token and digest == token_hash(token)
+    invitation_code = "this-is-a-long-one-use-invitation"
+    digest = token_hash(invitation_code)
+    assert len(digest) == 64 and digest != invitation_code and digest == token_hash(invitation_code)
 
 
 def test_pilot_tables_are_rls_protected_and_owned_rows_cascade():

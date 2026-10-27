@@ -13,6 +13,7 @@ from app.services.job_queue import JobQueue, queue_analysis
 from app.services.lens_service import LensService
 from app.services.lichess import LichessClient, normalize_lichess_username, parse_lichess_game
 from app.services.pgn_parser import mainline_positions
+from app.services.pilot_policy import PilotPolicy
 from app.services.review import INTENTS, ReviewService
 from app.services.summary import FELT, SummaryService
 from app.services.tagger import TaggerService
@@ -343,6 +344,7 @@ async def get_game_lenses(
     refresh: bool = Query(False, description="Re-score from stored raw data (no engine run)"),
 ):
     """Per-move lens results (soundness, chaos, survival) for a game."""
+    PilotPolicy.current().require("chaos")
     require_game_access(game_id)
     try:
         if refresh and lens_service.score_game(game_id) is None:
@@ -364,6 +366,7 @@ async def get_game_ideas(
     refresh: bool = Query(False, description="Re-tag from the PGN and stored evals (no engine run)"),
 ):
     """Motif tags per ply and the user's idea windows for a game."""
+    PilotPolicy.current().require("chaos")
     require_game_access(game_id)
     try:
         if refresh and tagger_service.tag_game(game_id) is None:
@@ -430,7 +433,7 @@ async def get_game_review(game_id: str):
     data = review_service.review(game_id)
     if data is None:
         raise HTTPException(status_code=404, detail="Game not found")
-    return data
+    return PilotPolicy.current().filter_review(data)
 
 
 @router.get("/{game_id}/moves/{ply}/why")
@@ -446,7 +449,7 @@ async def why_this_move(game_id: str, ply: int):
     data = await asyncio.to_thread(ExplainService(bot_service).why, game_id, ply)  # live lines use the engine
     if data is None:
         raise HTTPException(status_code=404, detail="Not one of your analysed moves.")
-    return data
+    return PilotPolicy.current().filter_explanation(data)
 
 
 @router.put("/{game_id}/moves/{ply}/intent")
