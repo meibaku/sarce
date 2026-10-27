@@ -38,6 +38,7 @@ export default function LearningEvidence() {
   const [noDanger, setNoDanger] = useState(false);
   const [confidence, setConfidence] = useState<number | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [clientAttemptId, setClientAttemptId] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState(0);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -91,6 +92,7 @@ export default function LearningEvidence() {
     const next = await getNextLearningPresentation(id);
     setItem(next.presentation);
     setSquare(null); setNoDanger(false); setConfidence(null); setReceipt(null); setStartedAt(Date.now());
+    setClientAttemptId(next.presentation ? Crypto.randomUUID() : null);
     if (next.complete) {
       setSessionId(null);
       setMessage("This section is recorded. Return when the next study window opens.");
@@ -115,11 +117,11 @@ export default function LearningEvidence() {
   }
 
   async function answer() {
-    if (!item || confidence === null || (!square && !noDanger)) return;
+    if (!item || !clientAttemptId || confidence === null || (!square && !noDanger)) return;
     setBusy(true); setMessage(null);
     try {
       setReceipt(await submitLearningAttempt(item.presentationToken, {
-        clientAttemptId: Crypto.randomUUID(),
+        clientAttemptId,
         response: noDanger ? { noImmediateDanger: true } : { square: square! },
         confidence,
         latencyMs: Math.min(Date.now() - startedAt, 3_600_000),

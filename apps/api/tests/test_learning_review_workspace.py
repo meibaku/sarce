@@ -1,6 +1,10 @@
 """Reviewer payloads stay blinded while qualification metrics remain visible."""
 
+from pathlib import Path
+
 from app.services.learning_review import reviewer_view
+
+MIGRATION = Path(__file__).parents[3] / "supabase" / "migrations" / "20261027000000_atomic_pattern_reviews.sql"
 
 
 def test_reviewer_view_never_exposes_other_votes_or_adjudication():
@@ -24,3 +28,10 @@ def test_reviewer_view_includes_versioned_evidence_for_an_informed_vote():
     })
     assert view["detectorVersion"] == 3
     assert view["analysisNodes"] == 1_500_000
+
+
+def test_review_append_is_locked_and_rejects_duplicate_reviewers():
+    sql = MIGRATION.read_text(encoding="utf-8").lower()
+    assert "for update" in sql
+    assert "reviewer already annotated this pattern" in sql
+    assert "revoke all on function public.append_pattern_review_annotation" in sql

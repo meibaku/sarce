@@ -35,6 +35,7 @@ export function LearningEvidenceView() {
   const [noDanger, setNoDanger] = useState(false);
   const [confidence, setConfidence] = useState<number | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [clientAttemptId, setClientAttemptId] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState(0);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -59,6 +60,7 @@ export function LearningEvidenceView() {
     setNoDanger(false);
     setConfidence(null);
     setReceipt(null);
+    setClientAttemptId(next.presentation ? crypto.randomUUID() : null);
     setStartedAt(Date.now());
     if (next.complete) {
       setSessionId(null);
@@ -107,12 +109,12 @@ export function LearningEvidenceView() {
   }
 
   async function answer() {
-    if (!item || !sessionId || confidence === null || (!square && !noDanger)) return;
+    if (!item || !sessionId || !clientAttemptId || confidence === null || (!square && !noDanger)) return;
     setBusy(true);
     setMessage(null);
     try {
       const saved = await submitLearningAttempt(item.presentationToken, {
-        clientAttemptId: crypto.randomUUID(),
+        clientAttemptId,
         response: noDanger ? { noImmediateDanger: true } : { square: square! },
         confidence,
         latencyMs: Math.min(Date.now() - startedAt, 3_600_000),

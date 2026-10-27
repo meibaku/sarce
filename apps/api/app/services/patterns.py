@@ -125,26 +125,16 @@ class PatternStore:
         return query.execute().data or []
 
     def annotate(self, pattern_id: str, reviewer: str, decision: str, note: str = "") -> dict:
-        """Append one independent review; the same reviewer cannot overwrite or vote twice."""
+        """Atomically append one independent review; concurrent reviewers cannot overwrite each other."""
         decision = _choice(decision, {"approve", "reject", "unclear"}, "decision")
-        rows = get_supabase().table(TABLE).select("*").eq("id", pattern_id).limit(1).execute().data or []
-        if not rows:
-            raise ValueError("pattern not found")
-        row = rows[0]
-        annotations = list(row.get("review_annotations") or [])
         reviewer = reviewer.strip()[:80]
         if not reviewer:
             raise ValueError("reviewer is required")
-        if any(item.get("reviewer") == reviewer for item in annotations):
-            raise ValueError("reviewer already annotated this pattern")
-        annotations.append({
-            "reviewer": reviewer,
-            "decision": decision,
-            "note": note.strip()[:500],
-            "at": datetime.now(timezone.utc).isoformat(),
-        })
-        payload = {"review_annotations": annotations, "annotation_count": len(annotations), "updated_at": datetime.now(timezone.utc).isoformat()}
-        return get_supabase().table(TABLE).update(payload).eq("id", pattern_id).eq("review_status", "candidate").execute().data[0]
+        data = get_supabase().rpc("append_pattern_review_annotation", {
+            "p_pattern_id": pattern_id, "p_reviewer": reviewer,
+            "p_decision": decision, "p_note": note.strip()[:500],
+        }).execute().data
+        return data[0] if isinstance(data, list) else data
 
     def set_status(self, pattern_id: str, status: str) -> dict:
         """Reviewer-only adjudication after two independent votes; disagreements remain in the audit trail."""

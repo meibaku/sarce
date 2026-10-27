@@ -1,11 +1,10 @@
 {
   "schemaVersion": 1,
-  "evaluatedAt": "2026-10-27T05:26:28+03:00",
+  "evaluatedAt": "2026-10-27T05:43:06+03:00",
   "decision": "blocked",
   "readyForInvitedPilot": false,
   "blockers": [
     "codeRabbitReviewPassed",
-    "codexReviewPassed",
     "stagingDeployed",
     "reviewedPrecision",
     "reviewerAgreement",
@@ -16,7 +15,7 @@
     "phase1MergedToStaging": true,
     "phase1Evidence": "PRs 189, 190, 191 and 192 merged to staging on 2026-10-26",
     "codeRabbitReview": null,
-    "codexReview": null,
+    "codexReview": "integrated stack reviewed through PR 208 at 0f0102b74597bababcc7987d9327f88959d50fcf; two actionable findings resolved with no remaining Codex findings",
     "stagingUrl": null,
     "reviewMetrics": null,
     "approvedBank": null
