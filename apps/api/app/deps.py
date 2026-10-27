@@ -85,3 +85,11 @@ def require_pilot_admission() -> None:
 
     if not PilotService().admitted(user):
         raise HTTPException(status_code=403, detail="Pilot invitation and consent required")
+
+
+def require_capability(capability: str):
+    """Build a FastAPI dependency for a named pilot capability."""
+    def check() -> None:
+        PilotPolicy.current().require(capability)
+
+    return check

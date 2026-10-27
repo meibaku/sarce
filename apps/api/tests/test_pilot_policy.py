@@ -1,4 +1,5 @@
 from app.services.pilot_policy import CORE_STYLE_CAPABILITIES, EXPERIMENTAL_CAPABILITIES, PilotPolicy
+from fastapi import HTTPException
 
 
 def test_style_pilot_allows_only_core_style_surface():
@@ -14,3 +15,16 @@ def test_non_pilot_install_keeps_existing_product_surface():
 
     assert all(policy.allows(name) for name in CORE_STYLE_CAPABILITIES | EXPERIMENTAL_CAPABILITIES)
     assert policy.public()["inviteOnly"] is False
+
+
+def test_experimental_route_policy_fails_closed_and_home_is_filtered():
+    policy = PilotPolicy("style_v1")
+    try:
+        policy.require("chaos")
+    except HTTPException as exc:
+        assert exc.status_code == 404
+    else:
+        raise AssertionError("experimental capability was admitted")
+
+    filtered = policy.filter_home({"latest": {"chaos": [0.7], "highlight": 2}, "focus": {"trait": "Chaos"}, "stats": {"real": 1}})
+    assert filtered == {"latest": {"chaos": [], "highlight": None}, "focus": None, "stats": None}
