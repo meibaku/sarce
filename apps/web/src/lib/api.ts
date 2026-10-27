@@ -65,6 +65,46 @@ export async function deleteScoutingReport(id: string) {
 
 export { LOCAL_USER_ID };
 
+export interface PilotStatus {
+  mode: string;
+  inviteOnly: boolean;
+  capabilities: string[];
+  experimentalHidden: boolean;
+  protocolVersion: string | null;
+  privacyVersion: string | null;
+  invitationRedeemed: boolean;
+  admitted: boolean;
+  completedReads: number;
+  consent: { consented_at: string; withdrawn_at: string | null } | null;
+}
+
+export const getPilotStatus = () => fetchApi<PilotStatus>("/pilot/status");
+export const redeemPilotInvitation = (token: string) => fetchApi<{ redeemed: boolean }>("/pilot/invitations/redeem", {
+  method: "POST", body: JSON.stringify({ token }),
+});
+export const consentToPilot = (protocolVersion: string, privacyVersion: string) => fetchApi<PilotStatus>("/pilot/consent", {
+  method: "POST", body: JSON.stringify({ adultConfirmed: true, protocolVersion, privacyVersion }),
+});
+export const withdrawFromPilot = () => fetchApi<{ withdrawn: boolean }>("/pilot/withdraw", { method: "POST" });
+export const savePilotFeedback = (gameId: string, resonance: "yes" | "partly" | "no", comment?: string) =>
+  fetchApi(`/pilot/games/${gameId}/feedback`, { method: "PUT", body: JSON.stringify({ resonance, comment: comment || null }) });
+export const savePilotExitSurvey = (body: { continueUsing: "yes" | "maybe" | "no"; mostValuable: string; leastTrusted: string; willingnessToPay: "yes" | "maybe" | "no" }) =>
+  fetchApi("/pilot/exit-survey", { method: "PUT", body: JSON.stringify(body) });
+
+export async function downloadAccountExport() {
+  const token = await getAccessToken();
+  const response = await fetch(`${API_BASE}/privacy/me/export`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
+  if (!response.ok) throw new Error(`Export failed (${response.status})`);
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "sarce-account-export.json";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+export const deleteAccount = () => fetchApi<{ id: string; receipt: string; status: string }>("/privacy/me?confirm=DELETE", { method: "DELETE" });
+
 /** `since`: your last visit (ISO); Home then also returns `session`, the games analysed after it. */
 export async function getHome(username?: string, since?: string) {
   const params = new URLSearchParams();

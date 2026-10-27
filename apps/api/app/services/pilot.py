@@ -77,10 +77,12 @@ class PilotService:
             "protocol_version, privacy_version, consented_at, withdrawn_at"
         ).eq("user_id", user_id).limit(1).execute().data or []
         feedback = self.sb.table("pilot_read_feedback").select("id", count="exact").eq("user_id", user_id).execute()
+        invite = self.sb.table("pilot_invitations").select("id").eq("redeemed_by", user_id).limit(1).execute().data or []
         row = consent[0] if consent else None
         return {
             **PilotPolicy.current().public(),
             "admitted": bool(row and not row.get("withdrawn_at")),
+            "invitationRedeemed": bool(invite),
             "consent": row,
             "completedReads": feedback.count or 0,
         }
