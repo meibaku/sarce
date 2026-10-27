@@ -56,5 +56,8 @@ After the reviewed stack reaches `staging`:
 5. Record a test response, then verify feedback appears only after the append-only attempt exists.
 6. Withdraw the test account and confirm no new session can be created.
 
-Record the staging URLs, migration state, CI run, Greptile result, bank qualification and smoke evidence in
+Record the staging URLs, migration state, CI run, CodeRabbit review, Codex review, bank qualification and smoke evidence in
 `docs/evidence/le2-pilot-readiness.json`. Only change its decision to `ready` when every gate is supported.
+
+For this stack, both automated reviewers must inspect the live head and have no unresolved actionable findings.
+This dual gate replaces the exhausted Greptile quota without weakening CI, philosophy or architecture contracts.
