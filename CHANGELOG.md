@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add reproducible persistent API packaging, fail-closed pilot readiness checks, and a Singapore deployment/restore runbook.
+
 - Define the fail-closed, invite-only adult style-pilot surface and its admission contract.
 - Add hashed one-use invitations, versioned adult consent, withdrawal, pilot feedback and exit evidence with RLS.
 - Add complete account JSON export and fail-closed erasure with durable, opaque deletion receipts.
