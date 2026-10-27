@@ -19,6 +19,7 @@
     "ci:security": "npm run scan:secrets && npm audit --audit-level=critical",
     "ci": "npm run scan:secrets && npm run test:api && npm run lint:web && npm run build:web",
     "pr:create": "node scripts/gh-pr-staging.mjs",
-    "pr:promote": "node scripts/gh-pr-promote.mjs"
+    "pr:promote": "node scripts/gh-pr-promote.mjs",
+    "pilot:admit": "node scripts/release/validate-pilot-readiness.mjs docs/evidence/style-pilot-readiness.json"
   }
 }

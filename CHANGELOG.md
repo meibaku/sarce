@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an exact-artifact, fail-closed admission manifest and operating runbook for the two-week Style Pilot.
+
 - Add reproducible persistent API packaging, fail-closed pilot readiness checks, and a Singapore deployment/restore runbook.
 
 - Define the fail-closed, invite-only adult style-pilot surface and its admission contract.
