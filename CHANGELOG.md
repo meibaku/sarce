@@ -20,6 +20,8 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
   artifact prevent recruitment before review, bank, deployment and smoke evidence exist.
 
 ### Changed
+- Learning Evidence pilot admission accepts the available dual CodeRabbit and Codex review gate when Greptile quota
+  is exhausted; both reviewers must inspect the live head with no unresolved actionable findings.
 - ADR 0012 starts Learning Evidence Phase 2: Brilliant remains a first-class optional style goal, while recognition,
   seven-day retention and transfer become separate held-out evidence contracts. The first preregistered concept is
   piece safety; no efficacy claim or second concept precedes its controlled-pilot decision.

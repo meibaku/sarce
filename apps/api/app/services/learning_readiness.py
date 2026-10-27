@@ -6,7 +6,8 @@ REQUIRED_BANK = {"baseline": 18, "instruction": 4, "immediate": 9, "day7": 18, "
 
 
 def readiness_report(
-    *, review: dict, bank: dict[str, int], phase1_merged: bool, greptile_score: int,
+    *, review: dict, bank: dict[str, int], phase1_merged: bool,
+    coderabbit_review_passed: bool, codex_review_passed: bool,
     local_ci_passed: bool, staging_url: str | None,
 ) -> dict:
     """Return explicit blockers; absence of evidence is never interpreted as ready."""
@@ -17,7 +18,8 @@ def readiness_report(
     }
     gates = {
         "phase1MergedToStaging": phase1_merged,
-        "greptileFiveOfFive": greptile_score == 5,
+        "codeRabbitReviewPassed": coderabbit_review_passed,
+        "codexReviewPassed": codex_review_passed,
         "localCiPassed": local_ci_passed,
         "stagingDeployed": bool(staging_url),
         "reviewedPrecision": review.get("autoServeReady") is True,

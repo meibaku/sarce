@@ -1,10 +1,11 @@
 {
   "schemaVersion": 1,
-  "evaluatedAt": "2026-10-26T22:43:30+03:00",
+  "evaluatedAt": "2026-10-27T05:26:28+03:00",
   "decision": "blocked",
   "readyForInvitedPilot": false,
   "blockers": [
-    "greptileFiveOfFive",
+    "codeRabbitReviewPassed",
+    "codexReviewPassed",
     "stagingDeployed",
     "reviewedPrecision",
     "reviewerAgreement",
@@ -14,7 +15,8 @@
     "localCi": "implemented slices pass their documented local gates",
     "phase1MergedToStaging": true,
     "phase1Evidence": "PRs 189, 190, 191 and 192 merged to staging on 2026-10-26",
-    "greptileScore": null,
+    "codeRabbitReview": null,
+    "codexReview": null,
     "stagingUrl": null,
     "reviewMetrics": null,
     "approvedBank": null
