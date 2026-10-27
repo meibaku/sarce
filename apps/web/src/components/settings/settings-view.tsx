@@ -244,6 +244,8 @@ export function SettingsView({
           </section>
 
           <div className="flex flex-wrap gap-[18px]">
+            <TextLink href="/privacy">Privacy, export and deletion</TextLink>
+            <TextLink href="/pilot">Pilot status</TextLink>
             <TextLink href="/onboarding">Replay onboarding</TextLink>
             <TextLink href="/states">Preview edge states</TextLink>
             <AuthStatus />

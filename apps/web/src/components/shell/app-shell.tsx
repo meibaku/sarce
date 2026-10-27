@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AccountLine } from "@/components/shell/account-line";
 import { LaunchIntro } from "@/components/shell/launch-intro";
 import { Mascot } from "@/components/ui/mascot";
 import { Toaster } from "@/components/ui/toast";
 import { Icon, SarceMark, type IconName } from "@/components/ui/icons";
+import { getPilotStatus } from "@/lib/api";
 
 /*
  * App frame from the v1.0 handoff. Desktop (md and up): a 56px white header with the mark,
@@ -79,6 +80,15 @@ export function AppShell({
   children: ReactNode;
 }) {
   const pathname = usePathname() ?? "/";
+  const router = useRouter();
+  const [pilot, setPilot] = useState(false);
+  useEffect(() => {
+    getPilotStatus().then((s) => {
+      setPilot(s.mode === "style_v1");
+      if (s.mode === "style_v1" && !s.admitted && !pathname.startsWith("/privacy")) router.replace("/pilot");
+    }).catch(() => undefined);
+  }, [pathname, router]);
+  const nav = pilot ? NAV.filter((item) => item.id === "home" || item.id === "review") : NAV;
   const current = activeNav(pathname);
   const onSettings = pathname.startsWith("/settings");
 
@@ -92,7 +102,7 @@ export function AppShell({
           <span className="text-[19px] font-medium tracking-[-0.02em]">sarce</span>
         </Link>
         <nav className="flex gap-1" aria-label="Main">
-          {NAV.map((item) => {
+          {nav.map((item) => {
             const on = current === item.id;
             return (
               <Link
@@ -135,10 +145,11 @@ export function AppShell({
       </main>
 
       <nav
-        className="grid flex-none grid-cols-5 border-t border-line bg-surface px-[6px] pt-[6px] pb-[22px] md:hidden"
+        className="grid flex-none border-t border-line bg-surface px-[6px] pt-[6px] pb-[22px] md:hidden"
+        style={{ gridTemplateColumns: `repeat(${nav.length}, minmax(0, 1fr))` }}
         aria-label="Main"
       >
-        {NAV.map((item) => {
+        {nav.map((item) => {
           const on = current === item.id;
           return (
             <Link

@@ -38,15 +38,19 @@ const RESULT = { win: "won", loss: "lost", draw: "drew" } as const;
 export function SummaryView({
   data,
   onFelt,
+  onPilotFeedback,
   askQuestion = true,
 }: {
   data: SummaryApi;
   onFelt: (answer: FeltAnswer) => Promise<void> | void;
+  onPilotFeedback?: (answer: FeltAnswer, comment: string) => Promise<void> | void;
   /** False when the player chose "None" for questions after a game (Settings). */
   askQuestion?: boolean;
 }) {
   const [felt, setFelt] = useState<FeltAnswer | null>(data.felt);
   const [editing, setEditing] = useState(data.felt == null);
+  const [comment, setComment] = useState("");
+  const [feedbackSaved, setFeedbackSaved] = useState(false);
   const review = `/games/${data.gameId}/review`;
   const meta = [
     data.timeControl,
@@ -194,6 +198,13 @@ export function SummaryView({
                 </div>
               </div>
               <span className="text-[13px] leading-[1.5] text-ink-2">{FEEL_TEXT[felt]}</span>
+              {onPilotFeedback && (
+                <div className="flex flex-col gap-2 border-t border-hair pt-3">
+                  <label htmlFor="pilot-comment" className="text-[12px] font-medium">What sounded right or wrong? <span className="font-normal text-muted">Optional · don&apos;t include sensitive information</span></label>
+                  <textarea id="pilot-comment" value={comment} maxLength={500} onChange={(e) => setComment(e.target.value)} className="min-h-20 rounded-[6px] border-[1.5px] border-line-2 p-3 text-[13px]" />
+                  <button type="button" onClick={() => Promise.resolve(onPilotFeedback(felt, comment)).then(() => setFeedbackSaved(true))} className="h-9 self-start rounded-[6px] border-[1.5px] border-ink px-3 text-[12px] font-medium">{feedbackSaved ? "Feedback saved" : "Save pilot feedback"}</button>
+                </div>
+              )}
               <TextButton className="self-start !text-[12px] underline" onClick={() => setEditing(true)}>
                 Change
               </TextButton>

@@ -6,6 +6,7 @@
 - Add hashed one-use invitations, versioned adult consent, withdrawal, pilot feedback and exit evidence with RLS.
 - Add complete account JSON export and fail-closed erasure with durable, opaque deletion receipts.
 - Enforce the narrow pilot surface in the API so old clients cannot reach hidden experimental features.
+- Add the web invitation, adult-consent, pilot-feedback, privacy, export, withdrawal and deletion journey.
 
 All notable changes to Sarce are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
