@@ -19,6 +19,7 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Changed
+- Pilot Style Read now consumes a dedicated Brilliant-only contract, uses factual game narrative and marks feedback saved only while the visible values match the canonical response.
 - Style Pilot admission, Home, Games, Progress and Account now match the notebook handoff more closely with truthful waiting states, richer finished-game context and a labelled Brilliant band.
 - Style Pilot notebook typography now uses the vendored IBM Plex families, with prototype-aligned geometry, concise navigation and stable Account loading.
 
