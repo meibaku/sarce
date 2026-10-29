@@ -84,7 +84,7 @@ export interface PilotStatus {
   withdrawnAt: string | null;
   backupRetentionDays: number | null;
   admissionOpen: boolean;
-  consent: { consented_at: string; withdrawn_at: string | null } | null;
+  consent: { consented_at: string; withdrawn_at: string | null; protocol_version: string; privacy_version: string } | null;
 }
 
 export const getPilotStatus = () => fetchApi<PilotStatus>("/pilot/status");
@@ -117,6 +117,7 @@ export async function downloadAccountExport() {
 }
 
 export const deleteAccount = () => fetchApi<{ id: string; receipt: string; status: string }>("/privacy/me?confirm=DELETE", { method: "DELETE" });
+export const getDeletionStatus = (id: string, receipt: string) => fetchApi<{ id: string; status: string; updated_at: string }>(`/public/privacy/deletions/${encodeURIComponent(id)}?receipt=${encodeURIComponent(receipt)}`);
 
 /** `since`: your last visit (ISO); Home then also returns `session`, the games analysed after it. */
 export async function getHome(username?: string, since?: string) {
