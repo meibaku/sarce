@@ -36,3 +36,8 @@ def test_core_review_strips_unvalidated_lens_content():
     assert review["moments"] == [1]
     assert review["ideas"] == review["closingOut"] == review["fightingBack"] == review["theirIdeas"] == []
     assert policy.filter_explanation({"brilliant": [1], "chaos": {"pFail": 0.5}}) == {"brilliant": [1], "chaos": None}
+
+
+def test_pilot_explanation_explicitly_uses_nullable_chaos():
+    filtered = PilotPolicy("style_v1").filter_explanation({"brilliant": [1], "chaos": {"verdict": "real_chaos"}})
+    assert filtered["chaos"] is None

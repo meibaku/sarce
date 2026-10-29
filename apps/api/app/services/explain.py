@@ -225,6 +225,15 @@ class ExplainService:
             "evalBefore": row.get("eval_before"),
             "evalAfter": row.get("eval_after"),
             "best": row.get("best_san"),
+            "privateNote": next(
+                (
+                    note.get("note") or ""
+                    for note in sb.table("move_annotations").select("note").eq(
+                        "game_id", game_id
+                    ).eq("ply", ply).limit(1).execute().data or []
+                ),
+                "",
+            ),
             "chaos": {
                 "verdict": source.get("verdict"),
                 "faced": source is survival,

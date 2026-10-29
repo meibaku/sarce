@@ -62,6 +62,7 @@ export function WhyPanel({ gameId, ply, orientation, onClose }: { gameId: string
   if (!data) return <div className="h-[2px] w-1/3 animate-pulse bg-accent" role="progressbar" aria-label="Working out why" />;
 
   const current = data.lines[line];
+  const chaos = data.chaos;
   const fen = step === 0 || !current ? data.fenBefore : current.steps[step - 1].fen;
   const passed = data.brilliant.filter((c) => c.passed).length;
 
@@ -121,24 +122,24 @@ export function WhyPanel({ gameId, ply, orientation, onClose }: { gameId: string
         )}
       </div>
 
-      {(data.chaos.pFail || data.chaos.safeReplies.length > 0) && (
+      {chaos && (chaos.pFail || chaos.safeReplies.length > 0) && (
         <div className="flex flex-col gap-2">
-          <span className="text-[13px] font-medium">{data.chaos.faced ? "The problem you faced" : "The problem you set"}</span>
-          {data.chaos.pFail && (
+          <span className="text-[13px] font-medium">{chaos.faced ? "The problem you faced" : "The problem you set"}</span>
+          {chaos.pFail && (
             <div className="flex items-end gap-3" aria-label="How often players miss the safe reply, by rating">
-              {data.chaos.pFail.map((p, i) => (
-                <div key={data.chaos.rungs[i]} className="flex flex-col items-center gap-1">
+              {chaos.pFail.map((p, i) => (
+                <div key={chaos.rungs[i]} className="flex flex-col items-center gap-1">
                   <span className="font-mono text-[10px] text-ink-2">{Math.round(p * 100)}%</span>
                   <div className="w-7 rounded-[2px] bg-accent" style={{ height: `${Math.max(3, p * 48)}px` }} />
-                  <span className="font-mono text-[10px] text-muted">{data.chaos.rungs[i]}</span>
+                  <span className="font-mono text-[10px] text-muted">{chaos.rungs[i]}</span>
                 </div>
               ))}
               <span className="max-w-[220px] text-[12px] leading-[1.45] text-muted">share of players at each rating who miss every safe reply</span>
             </div>
           )}
-          {data.chaos.safeReplies.length > 0 && (
+          {chaos.safeReplies.length > 0 && (
             <span className="text-[12px] text-ink-2">
-              Safe replies: <span className="font-mono">{data.chaos.safeReplies.join(", ")}</span>
+              Safe replies: <span className="font-mono">{chaos.safeReplies.join(", ")}</span>
             </span>
           )}
         </div>
