@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PilotShell } from "@/components/pilot/pilot-shell";
+import { PilotPageSkeleton } from "@/components/pilot/pilot-status";
 import { PilotButton, PilotCard, PilotMessage } from "@/components/pilot/pilot-ui";
 import { usePilotStatus } from "@/components/pilot/pilot-status";
 import { deleteAccount, downloadAccountExport, getDeletionStatus, withdrawFromPilot } from "@/lib/api";
@@ -11,7 +12,7 @@ type Receipt = { id: string; receipt: string; status: string };
 const RECEIPT_KEY = "sarce-deletion-receipt";
 
 export default function AccountPage() {
-  const { status, refresh } = usePilotStatus();
+  const { status, loading, error, refresh } = usePilotStatus();
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [typed, setTyped] = useState("");
@@ -50,6 +51,8 @@ export default function AccountPage() {
     return <main data-pilot-shell className="grid min-h-dvh place-items-center bg-page px-5 text-ink"><div className="max-w-lg space-y-5 text-center"><h1 className="pilot-serif text-[32px]">Your account has been deleted</h1><p className="leading-6 text-ink-2">The durable deletion job is complete. Keep the opaque receipt below if you need the operator to verify it after sign-in data is gone.</p><PilotCard className="p-4 font-mono text-[11px] break-all">Job {receipt.id}<br />Receipt {receipt.receipt}</PilotCard><Link href="/login" className="inline-flex min-h-11 items-center text-accent-text underline">Return to sign in</Link></div></main>;
   }
 
+  if (loading) return <PilotPageSkeleton />;
+  if (!status && error) return <main data-pilot-shell className="grid min-h-dvh place-items-center bg-page px-5 text-ink" role="alert"><div className="max-w-md space-y-4 text-center"><h1 className="pilot-serif text-[30px]">Sarce could not open your account</h1><p className="leading-6 text-ink-2">Your data has not changed. Check your connection and retry. Reference {error}.</p><PilotButton onClick={() => void refresh()}>Retry</PilotButton></div></main>;
   if (!status) return <main data-pilot-shell className="grid min-h-dvh place-items-center bg-page px-5"><Link href="/login" className="text-accent-text underline">Sign in to open account controls</Link></main>;
   return (
     <PilotShell><main className="mx-auto max-w-[880px] space-y-6 px-5 py-8">

@@ -123,6 +123,11 @@
 /* The pilot is a separate, light-only notebook surface. These values are
    scoped so the normal product and its theme settings remain unchanged. */
 [data-pilot-shell] {
+  /* Tailwind's theme aliases are compile-time only. Re-declare them here so
+     the pilot's locally vendored Plex families resolve at runtime. */
+  --font-sans: var(--font-plex-sans), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-serif: var(--font-plex-serif), Georgia, serif;
   --ink: #1e1b17;
   --ink-2: #4d4841;
   --muted: #6d665d;
@@ -146,10 +151,11 @@
   color-scheme: light;
   background: var(--page);
   color: var(--ink);
+  font-family: var(--font-plex-sans), system-ui, sans-serif;
 }
 
 .pilot-serif {
-  font-family: var(--font-serif);
+  font-family: var(--font-plex-serif), Georgia, serif;
   font-weight: 400;
   letter-spacing: -0.01em;
 }
