@@ -101,6 +101,21 @@ export const savePilotFeedback = (gameId: string, resonance: "yes" | "partly" | 
   fetchApi<PilotFeedback>(`/pilot/games/${gameId}/feedback`, { method: "PUT", body: JSON.stringify({ resonance, comment: comment || null }) });
 export interface PilotFeedback { id: string; gameId: string; resonance: "yes" | "partly" | "no"; comment: string | null; savedAt: string }
 export const getPilotFeedback = (gameId: string) => fetchApi<PilotFeedback | null>(`/pilot/games/${gameId}/feedback`);
+export interface PilotRead {
+  gameId: string;
+  playedAt: string | null;
+  opponent: string | null;
+  result: "win" | "loss" | "draw" | null;
+  userColor: "white" | "black" | null;
+  timeControl: string | null;
+  moves: number;
+  headline: string;
+  summary: string;
+  brilliant: { pct: number; count: number; of: number };
+  moments: { ply: number; san: string | null; label: string; line: string; criteria: { rule: string; detail: string }[] }[];
+  feedback: PilotFeedback | null;
+}
+export const getPilotRead = (gameId: string) => fetchApi<PilotRead>(`/pilot/games/${gameId}/read`);
 export const savePilotExitSurvey = (body: { continueUsing: "yes" | "maybe" | "no"; mostValuable: string; leastTrusted: string; willingnessToPay: "yes" | "maybe" | "no" }) =>
   fetchApi("/pilot/exit-survey", { method: "PUT", body: JSON.stringify(body) });
 
