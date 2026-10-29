@@ -72,6 +72,7 @@ def fake_db(monkeypatch, move_row):
         "move_lens_scores": [],
         "human_probs": [{"probs": {"c4f7": 0.05}}],
         "brilliant_reports": [],
+        "move_annotations": [],
     }
     monkeypatch.setattr(explain, "get_supabase", lambda: SimpleNamespace(table=lambda t: FakeTable(tables[t])))
 
@@ -90,6 +91,7 @@ def test_why_with_engine_lines(monkeypatch):
     assert out["label"] == "4. Bxf7+" and out["isBrilliant"] and out["badge"].startswith("Brilliant")
     assert out["lines"][0]["title"] == "What you played" and out["lines"][0]["steps"][0]["san"] == "Bxf7+"
     assert {c["rule"] for c in out["brilliant"]} >= {"A real sacrifice", "Hard to find"}
+    assert out["privateNote"] == ""
 
 
 def test_why_falls_back_to_stored_candidates_without_an_engine(monkeypatch):
