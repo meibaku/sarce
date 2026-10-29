@@ -4,7 +4,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.config import settings
-from app.deps import current_user_id, require_game_access, resolve_user_id, scoped_user_id
+from app.deps import current_user_id, require_game_access, require_pilot_collection_active, resolve_user_id, scoped_user_id
 from app.services.importer import FIRST_READ_GAMES, FirstReadImporter
 from app.services.analysis import AnalysisService
 from app.services.chess_com import ChessComClient, normalize_chess_com_username
@@ -62,6 +62,7 @@ async def import_games(body: ImportRequest, background_tasks: BackgroundTasks):
     The newest FIRST_READ_GAMES are stored and queued before the request answers; older months are fetched and
     queued in the background (plan 3.1, services/importer.py).
     """
+    require_pilot_collection_active()
     user_id = resolve_user_id(body.user_id)
     username = normalize_chess_com_username(body.username)
     try:
@@ -102,6 +103,7 @@ async def import_games(body: ImportRequest, background_tasks: BackgroundTasks):
 @router.post("/import/lichess", response_model=ImportResponse)
 async def import_lichess_games(body: ImportRequest, background_tasks: BackgroundTasks):
     """Fetch a user's recent **finished** Lichess games, store them, optionally analyze."""
+    require_pilot_collection_active()
     user_id = resolve_user_id(body.user_id)
     username = normalize_lichess_username(body.username)
     wanted = body.max_games or 200
@@ -381,6 +383,7 @@ async def get_game_ideas(
 @router.post("/analyze")
 async def analyze_pending(body: AnalyzeRequest, background_tasks: BackgroundTasks):
     """Trigger analysis for pending games (manual or after import)."""
+    require_pilot_collection_active()
     user_id = current_user_id() or (resolve_user_id(body.user_id) if body.user_id else None)
     username = normalize_chess_com_username(body.username) if body.username else None
 
@@ -455,6 +458,7 @@ async def why_this_move(game_id: str, ply: int):
 @router.put("/{game_id}/moves/{ply}/intent")
 async def save_move_intent(game_id: str, ply: int, body: IntentRequest):
     """Saves the player's intent note for a moment (one per move; editing replaces it)."""
+    require_pilot_collection_active()
     require_game_access(game_id)
     if body.type is not None and body.type not in INTENTS:
         raise HTTPException(status_code=422, detail=f"type must be one of {list(INTENTS)}")
