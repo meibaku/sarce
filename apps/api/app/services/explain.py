@@ -191,6 +191,8 @@ class ExplainService:
             board, move, row.get("eval_before"), row.get("eval_after"), find_prob, find_rung,
             best_eval=best_eval_from_row(row), alternatives=alternatives_from_row(row),
         )
+        played_ep = pawns_ep(row.get("eval_after"))
+        best_ep = pawns_ep(best_eval_from_row(row))
 
         # A problem you faced (survival) speaks about you; one you set (chaos) about your opponent.
         source = survival if survival.get("verdict") in ("survived", "missed") else chaos
@@ -225,6 +227,12 @@ class ExplainService:
             "evalBefore": row.get("eval_before"),
             "evalAfter": row.get("eval_after"),
             "best": row.get("best_san"),
+            # Pilot Evidence plots the same expected-points boundary the classifier used.
+            "playedUci": row.get("uci"),
+            "playedEp": None if played_ep is None else round(played_ep, 3),
+            "bestEp": None if best_ep is None else round(best_ep, 3),
+            "minimumEp": None if best_ep is None else round(max(0.0, best_ep - SOUND_EP_LOSS), 3),
+            "bestMove": row.get("best_san"),
             "privateNote": next(
                 (
                     note.get("note") or ""
