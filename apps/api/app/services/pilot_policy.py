@@ -62,6 +62,7 @@ class PilotPolicy:
             "experimentalHidden": self.enabled,
             "protocolVersion": settings.pilot_protocol_version if self.enabled else None,
             "privacyVersion": settings.pilot_privacy_version if self.enabled else None,
+            "admissionOpen": settings.pilot_admission_open if self.enabled else False,
         }
 
     def require(self, capability: str) -> None:

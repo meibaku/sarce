@@ -135,3 +135,19 @@ def test_feedback_lookup_rejects_a_game_owned_by_another_participant():
         assert str(exc) == "Game not found"
     else:
         raise AssertionError("cross-tenant feedback was exposed")
+
+
+def test_admission_fails_closed_until_legal_and_release_approval(monkeypatch):
+    monkeypatch.setattr("app.services.pilot.settings.pilot_admission_open", False)
+    service = PilotService(ScriptedClient([]))
+    for action in (
+        lambda: service.create_invitation("operator"),
+        lambda: service.redeem("user", "long-enough-invitation-code"),
+        lambda: service.consent("user", True, "style-v1", "pilot-privacy-v1"),
+    ):
+        try:
+            action()
+        except ValueError as exc:
+            assert str(exc) == "Pilot admission is not open"
+        else:
+            raise AssertionError("admission bypassed the approval gate")
