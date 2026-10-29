@@ -65,12 +65,12 @@ export function usePilotStatus() {
 export function PilotPageSkeleton() {
   return (
     <main data-pilot-shell className="min-h-dvh bg-page px-5 py-20 text-ink" aria-busy="true" aria-label="Loading pilot">
-      <div className="mx-auto max-w-[1080px] space-y-5">
+      <div className="mx-auto max-w-[1120px] space-y-5">
         <div className="pilot-skeleton h-4 w-48 rounded" />
         <div className="pilot-skeleton h-10 w-72 max-w-full rounded" />
         <div className="grid gap-5 md:grid-cols-2">
-          <div className="pilot-skeleton h-56 rounded-[10px]" />
-          <div className="pilot-skeleton h-56 rounded-[10px]" />
+          <div className="pilot-skeleton h-56 rounded-[8px]" />
+          <div className="pilot-skeleton h-56 rounded-[8px]" />
         </div>
       </div>
     </main>
@@ -89,7 +89,7 @@ export function PilotModePage({ normal, pilot }: { normal: ReactNode; pilot: Rea
       <div className="max-w-md space-y-4 text-center">
         <h1 className="pilot-serif text-[30px]">Sarce could not open this page</h1>
         <p className="leading-6 text-ink-2">Your data has not changed. Check your connection and retry. Reference {error}.</p>
-        <button type="button" onClick={() => void refresh()} className="min-h-11 rounded-[7px] bg-ink px-5 font-medium text-surface">Retry</button>
+        <button type="button" onClick={() => void refresh()} className="min-h-11 rounded-[6px] bg-ink px-5 font-medium text-surface">Retry</button>
       </div>
     </main>
   );
