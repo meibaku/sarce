@@ -1,17 +1,18 @@
 # Style pilot — admission contract
 
-Status: implementation contract. Recruitment stays closed until the evidence file says `ready`.
+Status: implementation complete; admission blocked. Recruitment stays closed until the evidence file says `admitted`.
 
 ## Purpose and scope
 
 The first hosted pilot asks one narrow question: **does Sarce's post-game Brilliant read feel like the player it
 describes?** It is an invite-only, web-only study for 5–10 adults over two weeks. Each participant plays where they
-already play, imports only completed games, and answers at least ten style reads or is reported as incomplete.
+already play, imports only completed games, and answers up to ten distinct style reads or reaches the 14-day deadline.
 
-The admitted surface is Brilliant percentage and its interval, the personal next band, move classification, recent
-moments, Summary, Review, saved positions and journal. In `PILOT_MODE=style_v1`, unvalidated lenses and their derived
-experiences are unavailable: chaos/fingerprint axes, focus, quests, traps, opponent preparation and reference-player
-comparisons. They are not merely hidden in navigation; the API rejects them too.
+The admitted participant surface is Home, Games, Progress and Account: a queue of finished games, a short style read,
+Review-only Brilliant evidence, one resonance answer with an optional comment, privacy controls and factual progress.
+In `PILOT_MODE=style_v1`, unvalidated lenses and their derived experiences are unavailable: chaos/fingerprint axes,
+focus, quests, traps, opponent preparation and reference-player comparisons. They are not merely hidden in navigation;
+the API rejects them too.
 
 Learning Evidence Phase 2 is a separate experiment. Its PR stack, assignments, item bank and efficacy endpoints do
 not enter this release.
@@ -21,7 +22,7 @@ not enter this release.
 - One-use invitation, verified Supabase sign-in and explicit consent are required.
 - Participants confirm they are at least 18. No junior, school or coach cohort is admitted.
 - Consent binds the protocol and privacy-notice versions shown at enrolment.
-- Withdrawal stops imports, analysis, feedback and new sessions immediately.
+- Withdrawal stops imports, analysis, notes and feedback immediately; existing reads remain available read-only.
 - Export and deletion remain available after withdrawal.
 
 No recruitment starts until the owner records the Tanzania PDPC/cross-border basis for the selected Singapore

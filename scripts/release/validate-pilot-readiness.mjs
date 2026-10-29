@@ -21,9 +21,10 @@ if (evidence.successThresholds?.minimumContinueFraction !== 0.5) failures.push("
 for (const [gate, value] of Object.entries(evidence.gates ?? {})) {
   if (value !== true) failures.push(`gate ${gate} is not proven`);
 }
-for (const field of ["deploymentUrl", "apiImageDigest", "databaseRegion", "backupId", "restoreProject", "verifiedAt", "verifiedBy"]) {
+for (const field of ["deploymentUrl", "apiImageDigest", "databaseRegion", "backupId", "restoreProject", "backupRetentionDays", "restoreDeletionCheckResult", "protocolApprovalId", "privacyApprovalId", "crossBorderBasisId", "verifiedAt", "verifiedBy"]) {
   if (!evidence.evidence?.[field]) failures.push(`evidence.${field} is missing`);
 }
+if (evidence.evidence?.backupRetentionDays && !Number.isInteger(evidence.evidence.backupRetentionDays)) failures.push("evidence.backupRetentionDays must be an integer");
 
 if (failures.length) {
   console.error("STYLE PILOT ADMISSION: BLOCKED");
