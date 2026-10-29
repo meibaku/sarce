@@ -116,6 +116,7 @@ ADMITTED = [Depends(authenticate), Depends(require_pilot_admission)]
 
 app.include_router(health.router)
 app.include_router(pilot.router, prefix="/pilot", tags=["pilot"], dependencies=AUTH)
+app.include_router(pilot.public_router, prefix="/public/pilot", tags=["pilot"])
 app.include_router(privacy.router, prefix="/privacy", tags=["privacy"], dependencies=AUTH)
 app.include_router(privacy.public_router, prefix="/public/privacy", tags=["privacy"])
 app.include_router(games.router, prefix="/games", tags=["games"], dependencies=ADMITTED)
