@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/shell/app-shell";
+import { PilotGames } from "@/components/pilot/pilot-games";
+import { PilotModePage } from "@/components/pilot/pilot-status";
 import { ChoiceButton } from "@/components/ui/buttons";
 import { Card, SectionLabel } from "@/components/ui/card";
 import { EdgeState } from "@/components/ui/edge-state";
@@ -30,7 +32,7 @@ function detail(g: GameListItem, chaos: boolean) {
   return g.brilliantPct != null ? `Brilliant ${g.brilliantPct.toFixed(1)}%` : "analysed";
 }
 
-export default function GamesPage() {
+function NormalGamesPage() {
   const [chaos, setChaos] = useState(false);
   const [games, setGames] = useState<GameListItem[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -84,4 +86,8 @@ export default function GamesPage() {
       )}
     </AppShell>
   );
+}
+
+export default function GamesPage() {
+  return <PilotModePage pilot={<PilotGames />} normal={<NormalGamesPage />} />;
 }

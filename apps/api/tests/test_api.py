@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.routers.games import safe_external_game_url
 
 client = TestClient(app)
 
@@ -183,3 +184,10 @@ class TestGamesRoutes:
         assert ("games", "chess_com_username", "tal") in fake.calls
         assert ("game_moves", "game_id", "game-1") in fake.calls
         assert ("game_moves", "games.chess_com_username", "tal") in fake.calls
+
+
+def test_external_recovery_url_is_public_provider_only():
+    assert safe_external_game_url("lichess", "https://lichess.org/abcd1234?token=private") == "https://lichess.org/abcd1234"
+    assert safe_external_game_url("chess_com", "https://www.chess.com/game/live/123") == "https://www.chess.com/game/live/123"
+    assert safe_external_game_url("lichess", "https://user:secret@lichess.org/abcd1234") is None
+    assert safe_external_game_url("chess_com", "https://example.com/game/123") is None

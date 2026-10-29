@@ -6,8 +6,10 @@ from pydantic import BaseModel, Field
 from app.config import settings
 from app.deps import current_user_id
 from app.services.pilot import PilotService
+from app.services.pilot_policy import PilotPolicy
 
 router = APIRouter()
+public_router = APIRouter()
 
 
 def user_id() -> str:
@@ -55,6 +57,15 @@ def invalid(call):
         return call()
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@public_router.get("")
+async def public_mode():
+    """Let the web choose its shell without requiring a participant session."""
+    return {
+        **PilotPolicy.current().public(),
+        "backupRetentionDays": settings.pilot_backup_retention_days,
+    }
 
 
 @router.post("/invitations")
