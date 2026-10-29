@@ -11,6 +11,52 @@ from app.db.supabase import get_supabase
 from app.services.pilot_policy import PilotPolicy
 
 
+PILOT_READ_TARGET = 10
+PILOT_WINDOW_DAYS = 14
+
+
+def _parse_time(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+def lifecycle(consent: dict | None, feedback: list[dict], now: datetime) -> dict:
+    """Derive the participant state from durable consent and the first ten reads."""
+    first_ten = sorted(feedback, key=lambda row: (row.get("created_at") or "", row.get("id") or ""))[
+        :PILOT_READ_TARGET
+    ]
+    answers = {"yes": 0, "partly": 0, "no": 0}
+    for row in first_ten:
+        answer = row.get("resonance")
+        if answer in answers:
+            answers[answer] += 1
+
+    started = _parse_time(consent.get("consented_at")) if consent else None
+    withdrawn = _parse_time(consent.get("withdrawn_at")) if consent else None
+    ends = started + timedelta(days=PILOT_WINDOW_DAYS) if started else None
+    if not consent:
+        state = "invited"
+    elif withdrawn:
+        state = "withdrawn"
+    elif len(first_ten) >= PILOT_READ_TARGET:
+        state = "complete"
+    elif ends and now >= ends:
+        state = "expired"
+    else:
+        state = "active"
+    return {
+        "state": state,
+        "startsAt": started.isoformat() if started else None,
+        "endsAt": ends.isoformat() if ends else None,
+        "targetReads": PILOT_READ_TARGET,
+        "completedReads": len(first_ten),
+        "answers": answers,
+        "withdrawnAt": withdrawn.isoformat() if withdrawn else None,
+        "collectionActive": state == "active",
+    }
+
+
 def token_hash(token: str) -> str:
     """Hash bearer invitations so a database read cannot reveal an unused token."""
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
@@ -67,24 +113,30 @@ class PilotService:
         return self.status(user_id)
 
     def admitted(self, user_id: str) -> bool:
-        rows = self.sb.table("pilot_consents").select("user_id").eq("user_id", user_id).is_(
-            "withdrawn_at", "null"
-        ).limit(1).execute().data or []
+        # Terminal participants keep read-only access to their existing games.
+        rows = self.sb.table("pilot_consents").select("user_id").eq("user_id", user_id).limit(1).execute().data or []
         return bool(rows)
+
+    def collection_active(self, user_id: str) -> bool:
+        return self.status(user_id)["collectionActive"]
 
     def status(self, user_id: str) -> dict:
         consent = self.sb.table("pilot_consents").select(
             "protocol_version, privacy_version, consented_at, withdrawn_at"
         ).eq("user_id", user_id).limit(1).execute().data or []
-        feedback = self.sb.table("pilot_read_feedback").select("id", count="exact").eq("user_id", user_id).execute()
+        feedback = self.sb.table("pilot_read_feedback").select(
+            "id, resonance, created_at"
+        ).eq("user_id", user_id).order("created_at").execute().data or []
         invite = self.sb.table("pilot_invitations").select("id").eq("redeemed_by", user_id).limit(1).execute().data or []
         row = consent[0] if consent else None
+        derived = lifecycle(row, feedback, datetime.now(timezone.utc))
         return {
             **PilotPolicy.current().public(),
-            "admitted": bool(row and not row.get("withdrawn_at")),
+            "admitted": bool(row),
             "invitationRedeemed": bool(invite),
             "consent": row,
-            "completedReads": feedback.count or 0,
+            **derived,
+            "backupRetentionDays": settings.pilot_backup_retention_days,
         }
 
     def withdraw(self, user_id: str) -> dict:
@@ -100,9 +152,48 @@ class PilotService:
         game = self.sb.table("games").select("id").eq("id", game_id).eq("user_id", user_id).limit(1).execute().data or []
         if not game:
             raise ValueError("Game not found")
-        row = {"user_id": user_id, "game_id": game_id, "resonance": resonance, "comment": comment or None,
-               "updated_at": datetime.now(timezone.utc).isoformat()}
-        return self.sb.table("pilot_read_feedback").upsert(row, on_conflict="user_id,game_id").execute().data[0]
+        status = self.status(user_id)
+        existing = self.sb.table("pilot_read_feedback").select(
+            "id, game_id, resonance, comment, created_at, updated_at"
+        ).eq("user_id", user_id).eq("game_id", game_id).limit(1).execute().data or []
+        deadline = _parse_time(status["endsAt"])
+        now = datetime.now(timezone.utc)
+        if status["state"] == "withdrawn" or not deadline or now >= deadline:
+            raise ValueError("Pilot collection is no longer active")
+        if not existing and status["completedReads"] >= PILOT_READ_TARGET:
+            raise ValueError("The pilot accepts at most 10 distinct style reads")
+        row = {
+            "user_id": user_id,
+            "game_id": game_id,
+            "resonance": resonance,
+            "comment": comment or None,
+            "updated_at": now.isoformat(),
+        }
+        saved = self.sb.table("pilot_read_feedback").upsert(
+            row, on_conflict="user_id,game_id"
+        ).execute().data[0]
+        return self._public_feedback(saved)
+
+    def get_feedback(self, user_id: str, game_id: str) -> dict | None:
+        game = self.sb.table("games").select("id").eq("id", game_id).eq(
+            "user_id", user_id
+        ).limit(1).execute().data or []
+        if not game:
+            raise ValueError("Game not found")
+        rows = self.sb.table("pilot_read_feedback").select(
+            "id, game_id, resonance, comment, updated_at"
+        ).eq("user_id", user_id).eq("game_id", game_id).limit(1).execute().data or []
+        return self._public_feedback(rows[0]) if rows else None
+
+    @staticmethod
+    def _public_feedback(row: dict) -> dict:
+        return {
+            "id": row["id"],
+            "gameId": row["game_id"],
+            "resonance": row["resonance"],
+            "comment": row.get("comment"),
+            "savedAt": row["updated_at"],
+        }
 
     def exit_survey(self, user_id: str, data: dict) -> dict:
         row = {"user_id": user_id, **data}
