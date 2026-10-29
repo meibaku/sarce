@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import secrets
 from datetime import datetime, timezone
+from collections.abc import Callable
 
 from app.db.supabase import get_supabase
 
@@ -26,6 +27,34 @@ OWNED_TABLES = (
 
 def receipt_hash(receipt: str) -> str:
     return hashlib.sha256(receipt.encode("utf-8")).hexdigest()
+
+
+def reapply_deletions(
+    tombstones: list[dict],
+    exists: Callable[[str], bool],
+    delete: Callable[[str], None],
+    record: Callable[[dict, str], None],
+) -> dict:
+    """Reapply every completed tombstone and prove no restored profile remains."""
+    completed = [row for row in tombstones if row.get("completedAt")]
+    reapplied = 0
+    checked_at = datetime.now(timezone.utc).isoformat()
+    for row in completed:
+        for field in ("jobId", "userId", "receiptHash"):
+            if not row.get(field):
+                raise ValueError(f"Tombstone is missing {field}")
+        if exists(row["userId"]):
+            delete(row["userId"])
+            reapplied += 1
+        record(row, checked_at)
+    remaining = sum(1 for row in completed if exists(row["userId"]))
+    return {
+        "status": "passed" if remaining == 0 else "failed",
+        "checkedAt": checked_at,
+        "tombstones": len(completed),
+        "reapplied": reapplied,
+        "remaining": remaining,
+    }
 
 
 class PrivacyService:
@@ -75,16 +104,48 @@ class PrivacyService:
 
     def start_deletion(self, user_id: str) -> dict:
         receipt = secrets.token_urlsafe(32)
+        digest = receipt_hash(receipt)
         job = self.sb.table("account_deletion_jobs").insert(
-            {"user_id": user_id, "receipt_hash": receipt_hash(receipt)}
+            {"user_id": user_id, "receipt_hash": digest}
         ).execute().data[0]
+        self.sb.table("account_deletion_tombstones").insert({
+            "job_id": job["id"], "user_id": user_id, "receipt_hash": digest
+        }).execute()
         try:
             steps = self._delete(user_id)
+            completed = datetime.now(timezone.utc).isoformat()
+            self.sb.table("account_deletion_tombstones").update({"completed_at": completed}).eq(
+                "job_id", job["id"]
+            ).execute()
             self._job(job["id"], "complete", steps, None)
         except Exception as exc:
             self._job(job["id"], "failed", [], str(exc)[:500])
             raise RuntimeError(f"Account deletion is incomplete; retry job {job['id']}") from exc
         return {"id": job["id"], "receipt": receipt, "status": "complete"}
+
+    def tombstones(self) -> list[dict]:
+        rows = self.sb.table("account_deletion_tombstones").select(
+            "job_id, user_id, receipt_hash, completed_at"
+        ).not_.is_("completed_at", "null").order("requested_at").execute().data or []
+        return [{"jobId": row["job_id"], "userId": row["user_id"], "receiptHash": row["receipt_hash"], "completedAt": row["completed_at"]} for row in rows]
+
+    def restore_check(self, tombstones: list[dict]) -> dict:
+        def exists(user_id: str) -> bool:
+            return bool(self.sb.table("profiles").select("id").eq("id", user_id).limit(1).execute().data or [])
+
+        def record(row: dict, checked_at: str) -> None:
+            self.sb.table("account_deletion_tombstones").upsert({
+                "job_id": row["jobId"], "user_id": row["userId"],
+                "receipt_hash": row["receiptHash"], "completed_at": row["completedAt"],
+                "last_restore_check_at": checked_at,
+            }, on_conflict="job_id").execute()
+            self.sb.table("account_deletion_jobs").upsert({
+                "id": row["jobId"], "user_id": row["userId"], "receipt_hash": row["receiptHash"],
+                "status": "complete", "completed_steps": ["restore-tombstone-reapplied"],
+                "updated_at": checked_at,
+            }, on_conflict="id").execute()
+
+        return reapply_deletions(tombstones, exists, self._delete, record)
 
     def _delete(self, user_id: str) -> list[str]:
         profiles = self.sb.table("profiles").select("chess_com_username, settings").eq("id", user_id).limit(1).execute().data or []
