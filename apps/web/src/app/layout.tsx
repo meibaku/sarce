@@ -1,18 +1,25 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import localFont from "next/font/local";
+import { PilotStatusProvider } from "@/components/pilot/pilot-status";
 import { THEME_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
-const plexSans = IBM_Plex_Sans({
+const plexSans = localFont({
+  src: "../../public/fonts/IBMPlexSans-400.woff2",
   variable: "--font-plex-sans",
-  weight: ["400", "500", "600"],
-  subsets: ["latin"],
+  display: "swap",
 });
 
-const plexMono = IBM_Plex_Mono({
+const plexMono = localFont({
+  src: "../../public/fonts/IBMPlexMono-400.woff2",
   variable: "--font-plex-mono",
-  weight: ["400", "500"],
-  subsets: ["latin"],
+  display: "swap",
+});
+
+const plexSerif = localFont({
+  src: "../../public/fonts/IBMPlexSerif-Regular.ttf",
+  variable: "--font-plex-serif",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -36,8 +43,8 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
-      <body className={`${plexSans.variable} ${plexMono.variable} min-h-screen`}>
-        {children}
+      <body className={`${plexSans.variable} ${plexMono.variable} ${plexSerif.variable} min-h-screen`}>
+        <PilotStatusProvider>{children}</PilotStatusProvider>
       </body>
     </html>
   );

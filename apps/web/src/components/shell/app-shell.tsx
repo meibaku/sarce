@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AccountLine } from "@/components/shell/account-line";
 import { LaunchIntro } from "@/components/shell/launch-intro";
 import { Mascot } from "@/components/ui/mascot";
 import { Toaster } from "@/components/ui/toast";
 import { Icon, SarceMark, type IconName } from "@/components/ui/icons";
-import { getPilotStatus } from "@/lib/api";
 
 /*
  * App frame from the v1.0 handoff. Desktop (md and up): a 56px white header with the mark,
@@ -80,15 +79,7 @@ export function AppShell({
   children: ReactNode;
 }) {
   const pathname = usePathname() ?? "/";
-  const router = useRouter();
-  const [pilot, setPilot] = useState(false);
-  useEffect(() => {
-    getPilotStatus().then((s) => {
-      setPilot(s.mode === "style_v1");
-      if (s.mode === "style_v1" && !s.admitted && !pathname.startsWith("/privacy")) router.replace("/pilot");
-    }).catch(() => undefined);
-  }, [pathname, router]);
-  const nav = pilot ? NAV.filter((item) => item.id === "home" || item.id === "review") : NAV;
+  const nav = NAV;
   const current = activeNav(pathname);
   const onSettings = pathname.startsWith("/settings");
 

@@ -115,8 +115,53 @@
 
   --font-sans: var(--font-plex-sans), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-serif: var(--font-plex-serif), Georgia, serif;
 
   --ease-sarce: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* The pilot is a separate, light-only notebook surface. These values are
+   scoped so the normal product and its theme settings remain unchanged. */
+[data-pilot-shell] {
+  --ink: #1e1b17;
+  --ink-2: #4d4841;
+  --muted: #6d665d;
+  --faint: #81796e;
+  --line: #e2d9ca;
+  --line-2: #d5c8b5;
+  --line-3: #b8aa96;
+  --hair: #eee7dc;
+  --page: #f6f2ea;
+  --panel: #f1ece3;
+  --surface: #fffcf6;
+  --accent: #2c5684;
+  --accent-hover: #23476f;
+  --accent-active: #1c3a5b;
+  --accent-text: #2c5684;
+  --accent-tint: #edf3f8;
+  --accent-mid: #7c9bb8;
+  --sound: #416d55;
+  --board-dark: #d9cdb8;
+  --press: #e9e1d5;
+  color-scheme: light;
+  background: var(--page);
+  color: var(--ink);
+}
+
+.pilot-serif {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.pilot-skeleton {
+  background: linear-gradient(90deg, #eee7dc 25%, #f8f4ed 45%, #eee7dc 65%);
+  background-size: 240% 100%;
+  animation: pilot-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes pilot-shimmer {
+  to { background-position: -240% 0; }
 }
 
 body {
