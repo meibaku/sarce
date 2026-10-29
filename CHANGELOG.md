@@ -19,6 +19,7 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Changed
+- Style Pilot admission, Home, Games, Progress and Account now match the notebook handoff more closely with truthful waiting states, richer finished-game context and a labelled Brilliant band.
 - Style Pilot notebook typography now uses the vendored IBM Plex families, with prototype-aligned geometry, concise navigation and stable Account loading.
 
 ### Changed

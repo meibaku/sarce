@@ -60,16 +60,16 @@ export default function PilotPage() {
 
   return (
     <main data-pilot-shell className="min-h-dvh bg-page px-5 py-10 text-ink md:py-12">
-      <div className="mx-auto max-w-[640px] space-y-7">
+      <div className="mx-auto max-w-[680px] space-y-7">
         <div className="flex items-center gap-3"><SarceMark height={24} /><span className="text-[18px] font-medium">sarce</span><span className="rounded-full border border-line-2 px-2 py-1 font-mono text-[11px]">Style pilot · by invitation</span></div>
         <div className="space-y-3">
           <h1 className="pilot-serif text-[34px] leading-[1.18]">Does Sarce read your games the way you would describe them?</h1>
           <p className="max-w-[620px] text-[15px] leading-7 text-ink-2">For two weeks, Sarce reads your finished games and writes a short note on the style it sees, built around Brilliant moves. After each note you tell us whether it sounded like you. That is the whole pilot.</p>
         </div>
-        <div className="grid overflow-hidden rounded-[9px] border border-line bg-surface sm:grid-cols-3">
-          {[["How long", "Two weeks, or your first 10 style reads"], ["What you do", "Answer Yes, Partly or No after each read"], ["What is read", "Finished games only, never live ones"]].map(([label, text]) => <div key={label} className="border-b border-line p-4 last:border-0 sm:border-r sm:border-b-0"><p className="font-mono text-[11px] text-muted">{label}</p><p className="mt-1 text-[13px] leading-5">{text}</p></div>)}
+        <div className="grid overflow-hidden rounded-[8px] border border-line bg-line sm:grid-cols-2">
+          {[["How long", "Two weeks, or your first 10 style reads"], ["What you do", "Answer Yes, Partly or No after each read"], ["What is read", "Finished games only, never live ones"], ["Leaving", "Any time. Export and deletion stay open."]].map(([label, text]) => <div key={label} className="border-b border-line bg-surface p-4 even:sm:border-l sm:[&:nth-child(n+3)]:border-b-0"><p className="font-mono text-[11px] text-muted">{label}</p><p className="mt-1 text-[13px] leading-5">{text}</p></div>)}
         </div>
-        <PilotCard className="p-5">
+        <PilotCard className="border-[1.5px] border-ink p-5">
           <form className="space-y-5" onSubmit={submit}>
             <div><label htmlFor="invitation" className="mb-2 block text-[13px] font-medium">Invitation code</label><input id="invitation" value={code} onChange={(event) => setCode(event.target.value)} disabled={status.invitationRedeemed} placeholder={status.invitationRedeemed ? "Invitation redeemed" : "SARCE-…"} autoComplete="one-time-code" className="min-h-11 w-full max-w-xs rounded-[6px] border border-line-2 bg-surface px-3 font-mono disabled:bg-panel" /></div>
             <label className="flex min-h-11 items-start gap-3 text-[13px]"><input type="checkbox" checked={adult} onChange={(event) => setAdult(event.target.checked)} className="mt-1 h-5 w-5" /><span>I am 18 or older.</span></label>

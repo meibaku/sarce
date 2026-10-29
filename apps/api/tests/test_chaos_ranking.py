@@ -37,8 +37,8 @@ class _Query:
 
 def test_route_orders_most_chaotic_first():
     rows = [
-        {"id": "a", "played_at": "2026-10-01", "analysis_status": "complete", "game_analyses": None},
-        {"id": "b", "played_at": "2026-10-02", "analysis_status": "complete", "game_analyses": None},
+        {"id": "a", "played_at": "2026-10-01", "user_color": "white", "analysis_status": "complete", "game_analyses": None},
+        {"id": "b", "played_at": "2026-10-02", "user_color": "black", "analysis_status": "complete", "game_analyses": None},
     ]
     ranked = [{"gameId": "a", "chaosPeak": 0.5, "realChaos": 2, "cheapChaos": 0, "calculatedRisk": 1}, {"gameId": "b", "chaosPeak": 0.2, "realChaos": 0, "cheapChaos": 1, "calculatedRisk": 0}]
     with patch("app.routers.games.lens_service.most_chaotic_games", return_value=ranked), patch(
@@ -48,6 +48,7 @@ def test_route_orders_most_chaotic_first():
     assert res.status_code == 200
     games = res.json()["games"]
     assert [g["id"] for g in games] == ["a", "b"] and games[0]["chaosPeak"] == 0.5 and games[0]["realChaos"] == 2
+    assert [g["userColor"] for g in games] == ["white", "black"]
 
 
 def test_route_with_no_chaos_games_is_empty():
