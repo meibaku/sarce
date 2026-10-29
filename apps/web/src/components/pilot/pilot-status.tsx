@@ -79,11 +79,20 @@ export function PilotPageSkeleton() {
 
 export function PilotModePage({ normal, pilot }: { normal: ReactNode; pilot: ReactNode }) {
   const router = useRouter();
-  const { status, loading } = usePilotStatus();
+  const { status, loading, error, refresh } = usePilotStatus();
   useEffect(() => {
-    if (!loading && !status) router.replace("/login");
+    if (!loading && !status && !error) router.replace("/login");
     else if (!loading && status?.mode === "style_v1" && !status.admitted) router.replace("/pilot");
-  }, [loading, router, status]);
+  }, [error, loading, router, status]);
+  if (!loading && !status && error) return (
+    <main data-pilot-shell className="grid min-h-dvh place-items-center bg-page px-5 text-ink" role="alert">
+      <div className="max-w-md space-y-4 text-center">
+        <h1 className="pilot-serif text-[30px]">Sarce could not open this page</h1>
+        <p className="leading-6 text-ink-2">Your data has not changed. Check your connection and retry. Reference {error}.</p>
+        <button type="button" onClick={() => void refresh()} className="min-h-11 rounded-[7px] bg-ink px-5 font-medium text-surface">Retry</button>
+      </div>
+    </main>
+  );
   if (loading || !status || (status.mode === "style_v1" && !status.admitted)) return <PilotPageSkeleton />;
   return status.mode === "style_v1" ? pilot : normal;
 }
