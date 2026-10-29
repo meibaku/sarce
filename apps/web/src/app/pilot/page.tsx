@@ -1,43 +1,86 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, type FormEvent } from "react";
+import { PilotButton, PilotCard, PilotMessage } from "@/components/pilot/pilot-ui";
+import { PilotPageSkeleton, usePilotStatus } from "@/components/pilot/pilot-status";
 import { SarceMark } from "@/components/ui/icons";
-import { consentToPilot, getPilotStatus, redeemPilotInvitation, type PilotStatus } from "@/lib/api";
+import { consentToPilot, redeemPilotInvitation } from "@/lib/api";
 
 export default function PilotPage() {
-  const [status, setStatus] = useState<PilotStatus | null>(null);
-  const [token, setToken] = useState("");
+  const router = useRouter();
+  const { status, loading, error, refresh } = usePilotStatus();
+  const [code, setCode] = useState("");
   const [adult, setAdult] = useState(false);
+  const [notice, setNotice] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const load = () => getPilotStatus().then(setStatus).catch(() => setMessage("Sign in with the invited email address first."));
+
   useEffect(() => {
-    void load();
-  }, []);
+    if (!loading && status?.admitted) router.replace("/");
+  }, [loading, router, status?.admitted]);
+
+  if (loading) return <PilotPageSkeleton />;
+  if (!status) {
+    return (
+      <main data-pilot-shell className="grid min-h-dvh place-items-center bg-page px-5 text-ink">
+        <div className="max-w-md space-y-4 text-center">
+          <h1 className="pilot-serif text-[30px]">Sign in to open your invitation</h1>
+          <p className="text-ink-2">Use the email address that received the pilot invitation.</p>
+          {error && <PilotMessage role="alert">Status reference {error}</PilotMessage>}
+          <Link href="/login" className="inline-flex min-h-11 items-center rounded-[7px] bg-ink px-5 font-medium text-surface">Sign in</Link>
+        </div>
+      </main>
+    );
+  }
+
+  const versionsReady = Boolean(status.protocolVersion && status.privacyVersion && status.backupRetentionDays);
+  const canJoin = status.admissionOpen && versionsReady && adult && notice && (status.invitationRedeemed || code.trim().length >= 24);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!canJoin || !status?.protocolVersion || !status.privacyVersion) return;
+    setSubmitting(true);
+    setMessage(null);
+    try {
+      if (!status.invitationRedeemed) await redeemPilotInvitation(code.trim());
+      await consentToPilot(status.protocolVersion, status.privacyVersion);
+      await refresh();
+      router.replace("/");
+    } catch (cause) {
+      const detail = cause instanceof Error ? cause.message : "unknown";
+      if (detail.toLowerCase().includes("expired")) setMessage("This invitation has expired. Ask the pilot operator for a new one.");
+      else if (status.invitationRedeemed) setMessage("Your invitation is safe, but consent was not saved. Review the boxes and try again.");
+      else setMessage("That invitation is invalid, expired, or already used.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-4 px-6 py-12 text-ink">
-      <SarceMark height={30} />
-      <div><p className="font-mono text-[11px] text-accent-text">invite-only · adults · two weeks</p><h1 className="text-[24px] font-medium">Sarce style pilot</h1></div>
-      <p className="text-[14px] leading-[1.6] text-ink-2">This pilot asks whether Sarce&apos;s post-game Brilliant read sounds like you. Experimental lenses are unavailable. You can withdraw, export or delete your data at any time.</p>
-      {message && <p className="rounded-[6px] bg-panel p-3 text-[13px]">{message}</p>}
-      {!status ? <Link href="/login" className="text-[13px] font-medium text-accent-text">Sign in →</Link> : status.admitted ? (
-        <div className="space-y-3"><p className="text-[14px]">You&apos;re admitted. {status.completedReads} style reads completed.</p><Link href="/" className="inline-flex h-11 items-center rounded-[6px] bg-accent px-5 text-[14px] font-medium text-white">Open Sarce</Link></div>
-      ) : !status.invitationRedeemed ? (
-        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); setMessage(null); redeemPilotInvitation(token.trim()).then(load).catch(() => setMessage("That invitation is invalid, expired or already used.")); }}>
-          <label className="block text-[13px] font-medium" htmlFor="invite">Invitation code</label>
-          <input id="invite" value={token} onChange={(e) => setToken(e.target.value)} required className="h-11 w-full rounded-[6px] border-[1.5px] border-line-2 px-3" />
-          <button className="h-11 rounded-[6px] bg-accent px-5 text-[14px] font-medium text-white">Redeem invitation</button>
-        </form>
-      ) : (
-        <div className="space-y-4 rounded-[8px] border border-line bg-surface p-[18px]">
-          <h2 className="text-[17px] font-medium">Consent</h2>
-          <p className="text-[13px] leading-[1.55] text-ink-2">Sarce stores your account, imported finished games, analyses and pilot answers in Singapore. Participation is voluntary. Results are reported as a small pilot signal, not proof of improvement.</p>
-          <label className="flex items-start gap-3 text-[13px]"><input type="checkbox" className="mt-1" checked={adult} onChange={(e) => setAdult(e.target.checked)} /><span>I am at least 18, have read the <Link className="text-accent-text underline" href="/privacy">pilot privacy notice</Link>, and consent to protocol {status.protocolVersion} and privacy notice {status.privacyVersion}.</span></label>
-          <button disabled={!adult} onClick={() => status.protocolVersion && status.privacyVersion && consentToPilot(status.protocolVersion, status.privacyVersion).then(setStatus).catch(() => setMessage("Consent could not be saved."))} className="h-11 rounded-[6px] bg-accent px-5 text-[14px] font-medium text-white disabled:opacity-40">Join the pilot</button>
+    <main data-pilot-shell className="min-h-dvh bg-page px-5 py-10 text-ink md:py-12">
+      <div className="mx-auto max-w-[640px] space-y-7">
+        <div className="flex items-center gap-3"><SarceMark height={24} /><span className="text-[18px] font-medium">sarce</span><span className="rounded-full border border-line-2 px-2 py-1 font-mono text-[11px]">Style pilot · by invitation</span></div>
+        <div className="space-y-3">
+          <h1 className="pilot-serif text-[34px] leading-[1.18]">Does Sarce read your games the way you would describe them?</h1>
+          <p className="max-w-[620px] text-[15px] leading-7 text-ink-2">For two weeks, Sarce reads your finished games and writes a short note on the style it sees, built around Brilliant moves. After each note you tell us whether it sounded like you. That is the whole pilot.</p>
         </div>
-      )}
-      <Link href="/privacy" className="text-[13px] text-accent-text">Privacy, export and deletion</Link>
+        <div className="grid overflow-hidden rounded-[9px] border border-line bg-surface sm:grid-cols-3">
+          {[["How long", "Two weeks, or your first 10 style reads"], ["What you do", "Answer Yes, Partly or No after each read"], ["What is read", "Finished games only, never live ones"]].map(([label, text]) => <div key={label} className="border-b border-line p-4 last:border-0 sm:border-r sm:border-b-0"><p className="font-mono text-[11px] text-muted">{label}</p><p className="mt-1 text-[13px] leading-5">{text}</p></div>)}
+        </div>
+        <PilotCard className="p-5">
+          <form className="space-y-5" onSubmit={submit}>
+            <div><label htmlFor="invitation" className="mb-2 block text-[13px] font-medium">Invitation code</label><input id="invitation" value={code} onChange={(event) => setCode(event.target.value)} disabled={status.invitationRedeemed} placeholder={status.invitationRedeemed ? "Invitation redeemed" : "SARCE-…"} autoComplete="one-time-code" className="min-h-11 w-full max-w-xs rounded-[6px] border border-line-2 bg-surface px-3 font-mono disabled:bg-panel" /></div>
+            <label className="flex min-h-11 items-start gap-3 text-[13px]"><input type="checkbox" checked={adult} onChange={(event) => setAdult(event.target.checked)} className="mt-1 h-5 w-5" /><span>I am 18 or older.</span></label>
+            <label className="flex min-h-11 items-start gap-3 text-[13px]"><input type="checkbox" checked={notice} onChange={(event) => setNotice(event.target.checked)} className="mt-1 h-5 w-5" /><span>I have read the <Link href="/privacy" className="text-accent-text underline">pilot privacy summary</Link> and agree to take part under the named protocol.</span></label>
+            {!status.admissionOpen && <PilotMessage role="alert">Admission is not open. The signed protocol, privacy notice, retention period, cross-border basis, and release evidence are still pending.</PilotMessage>}
+            {message && <PilotMessage role="alert">{message}</PilotMessage>}
+            <div className="flex flex-wrap items-center gap-5"><PilotButton disabled={!canJoin || submitting}>{submitting ? "Saving…" : "Join the pilot"}</PilotButton><Link href="/privacy" className="min-h-11 content-center text-[13px] text-accent-text underline">Read the privacy summary</Link></div>
+            <p className="font-mono text-[11px] text-muted">Protocol {status.protocolVersion ?? "pending"} · Privacy notice {status.privacyVersion ?? "pending"} · Backup retention {status.backupRetentionDays ? `${status.backupRetentionDays} days` : "pending"}</p>
+          </form>
+        </PilotCard>
+      </div>
     </main>
   );
 }

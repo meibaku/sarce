@@ -83,6 +83,7 @@ export interface PilotStatus {
   answers: { yes: number; partly: number; no: number };
   withdrawnAt: string | null;
   backupRetentionDays: number | null;
+  admissionOpen: boolean;
   consent: { consented_at: string; withdrawn_at: string | null } | null;
 }
 

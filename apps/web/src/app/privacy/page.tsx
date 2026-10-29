@@ -1,22 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { AppShell } from "@/components/shell/app-shell";
-import { deleteAccount, downloadAccountExport, withdrawFromPilot } from "@/lib/api";
+import { PilotCard, PilotMessage } from "@/components/pilot/pilot-ui";
+import { usePilotStatus } from "@/components/pilot/pilot-status";
+import { SarceMark } from "@/components/ui/icons";
 
 export default function PrivacyPage() {
-  const [confirm, setConfirm] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
-  return <AppShell title="privacy"><h1 className="text-[22px] font-medium">Pilot privacy</h1>
-    <section className="space-y-3 rounded-[8px] border border-line bg-surface p-[18px] text-[13px] leading-[1.6] text-ink-2">
-      <p>Sarce stores your sign-in identity, connected chess usernames, completed games, analysis, notes and pilot answers. The purpose is to test whether the Brilliant style read resonates with you.</p>
-      <p>Supabase stores Auth and PostgreSQL data in Singapore, the persistent analysis server runs at Hetzner Singapore, and Vercel delivers the web interface. Anthropic receives nothing in this pilot because AI video help is disabled.</p>
-      <p>Only the pilot operator can access participant-level operations. Pilot reports use participant-first aggregates. Backups expire under the documented retention schedule; deleted data may remain in encrypted backups until expiry and is not restored into active service.</p>
-      <p>Participation is voluntary. You may withdraw, export your data, request correction, or delete the account.</p>
-    </section>
-    <div className="flex flex-wrap gap-3"><button onClick={() => downloadAccountExport().catch(() => setMessage("Export failed. Try again."))} className="h-10 rounded-[6px] border-[1.5px] border-ink px-4 text-[13px] font-medium">Export all my data</button><button onClick={() => withdrawFromPilot().then(() => setMessage("Withdrawn. Export and deletion remain available.")).catch(() => setMessage("Withdrawal failed."))} className="h-10 rounded-[6px] border-[1.5px] border-ink px-4 text-[13px] font-medium">Withdraw</button></div>
-    <section className="space-y-2 rounded-[8px] border border-line p-[18px]"><h2 className="text-[16px] font-medium">Delete account permanently</h2><p className="text-[12px] text-muted">Type DELETE. This removes active account data and cannot be undone.</p><input value={confirm} onChange={(e) => setConfirm(e.target.value)} className="h-10 rounded-[6px] border-[1.5px] border-line-2 px-3" aria-label="Type DELETE to confirm" /><button disabled={confirm !== "DELETE"} onClick={() => deleteAccount().then((r) => { setMessage(`Deletion complete. Receipt ${r.id}`); }).catch(() => setMessage("Deletion is incomplete. Sign in and retry or contact the pilot operator."))} className="h-10 rounded-[6px] bg-ink px-4 text-[13px] font-medium text-white disabled:opacity-40">Delete my account</button></section>
-    {message && <p className="text-[13px] text-ink-2">{message}</p>}<Link href="/pilot" className="text-[13px] text-accent-text">Back to pilot status</Link>
-  </AppShell>;
+  const { status } = usePilotStatus();
+  return (
+    <main data-pilot-shell className="min-h-dvh bg-page px-5 py-10 text-ink">
+      <div className="mx-auto max-w-[760px] space-y-6">
+        <div className="flex items-center gap-3"><SarceMark height={23} /><span className="text-[18px] font-medium">sarce</span><span className="font-mono text-[11px] text-muted">Style pilot privacy</span></div>
+        <div><p className="font-mono text-[11px] text-muted">Version {status?.privacyVersion ?? "pending"}</p><h1 className="pilot-serif mt-2 text-[34px]">Pilot privacy summary</h1></div>
+        <PilotMessage role="alert">This is the supplied participant summary, not a signed privacy notice. Admission stays closed until the full notice, protocol, retention period, and cross-border basis are approved.</PilotMessage>
+        <PilotCard className="space-y-5 p-5 text-[14px] leading-6 text-ink-2">
+          <section><h2 className="font-medium text-ink">What Sarce uses</h2><p>Your sign-in identity, connected chess username, finished games, analysis, private notes, and your Yes, Partly or No answers and comments.</p></section>
+          <section><h2 className="font-medium text-ink">Why</h2><p>To test whether Sarce&apos;s post-game style reads, built around Brilliant moves, sound like the participant who played the game. This pilot does not measure chess improvement.</p></section>
+          <section><h2 className="font-medium text-ink">Where and for how long</h2><p>The selected topology uses managed Supabase and persistent analysis hosting in Singapore. The approved cross-border basis and backup retention period must appear in the signed notice before admission opens. Current configured backup retention: {status?.backupRetentionDays ? `${status.backupRetentionDays} days` : "not approved"}.</p></section>
+          <section><h2 className="font-medium text-ink">Your choices</h2><p>You may correct an answer or note during the collection window, withdraw, export your data, or delete your account. Existing reads, export, and deletion remain available after the pilot becomes read-only.</p></section>
+        </PilotCard>
+        <div className="flex gap-5"><Link href="/pilot" className="min-h-11 content-center text-accent-text underline">Back to admission</Link>{status?.admitted && <Link href="/account" className="min-h-11 content-center text-accent-text underline">Account and privacy controls</Link>}</div>
+      </div>
+    </main>
+  );
 }
