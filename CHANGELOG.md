@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add the seven-screen notebook-style participant experience, first-ten lifecycle contract, durable feedback, Review-only Brilliant evidence, read-only terminal states, and restore-safe account deletion. Admission remains fail-closed pending signed legal, deployment, isolation, durability, restore and browser evidence.
+
 - Add an exact-artifact, fail-closed admission manifest and operating runbook for the two-week Style Pilot.
 
 - Add reproducible persistent API packaging, fail-closed pilot readiness checks, and a Singapore deployment/restore runbook.

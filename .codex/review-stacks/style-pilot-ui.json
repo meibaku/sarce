@@ -1,0 +1,191 @@
+{
+  "version": 1,
+  "task": "style-pilot-ui",
+  "targetBranch": "codex/pilot-07-release",
+  "budgets": {
+    "softLines": 600,
+    "hardLines": 800,
+    "maxFiles": 20
+  },
+  "generatedPatterns": [
+    "package-lock.json",
+    "apps/web/public/fonts/**"
+  ],
+  "slices": [
+    {
+      "id": "01-contract",
+      "title": "Define pilot collection lifecycle",
+      "branch": "codex/pilot-ui-01-contract",
+      "dependsOn": null,
+      "reviewerFocus": "First-ten lifecycle, mutation boundaries, canonical feedback, and configured retention",
+      "paths": [
+        "apps/api/app/config.py",
+        "apps/api/app/deps.py",
+        "apps/api/app/routers/games.py",
+        "apps/api/app/routers/pilot.py",
+        "apps/api/app/services/pilot.py",
+        "apps/api/app/services/readiness.py",
+        "apps/api/tests/test_pilot.py",
+        "apps/api/tests/test_readiness.py",
+        "apps/web/src/lib/api.ts",
+        "supabase/migrations/**"
+      ],
+      "tests": [
+        "python -m pytest apps/api/tests/test_pilot.py apps/api/tests/test_readiness.py -q"
+      ],
+      "expectedHumanLines": 560,
+      "status": "published"
+    },
+    {
+      "id": "02-foundation",
+      "title": "Add the pilot notebook foundation",
+      "branch": "codex/pilot-ui-02-foundation",
+      "dependsOn": "01-contract",
+      "reviewerFocus": "Pilot-only routing, local typography, shell, shared status, and state banners",
+      "paths": [
+        "apps/web/public/fonts/**",
+        "apps/web/src/app/globals.css",
+        "apps/web/src/app/layout.tsx",
+        "apps/web/src/components/pilot/**",
+        "apps/web/src/lib/api.ts"
+      ],
+      "tests": [
+        "npm run lint:web",
+        "npm run build:web"
+      ],
+      "expectedHumanLines": 580,
+      "status": "published"
+    },
+    {
+      "id": "03-admission",
+      "title": "Build pilot admission and privacy notice",
+      "branch": "codex/pilot-ui-03-admission",
+      "dependsOn": "02-foundation",
+      "reviewerFocus": "Recoverable invitation and exact-version consent across all admission states",
+      "paths": [
+        "apps/web/src/app/pilot/**",
+        "apps/web/src/app/privacy/**",
+        "apps/web/src/components/pilot/**",
+        "apps/web/src/lib/api.ts"
+      ],
+      "tests": [
+        "npm run lint:web",
+        "npm run build:web"
+      ],
+      "expectedHumanLines": 500,
+      "status": "published"
+    },
+    {
+      "id": "04-home-games-progress",
+      "title": "Build pilot home games and progress",
+      "branch": "codex/pilot-ui-04-home-games-progress",
+      "dependsOn": "03-admission",
+      "reviewerFocus": "Notebook home, newest-first queue, recovery actions, and factual progress",
+      "paths": [
+        "apps/api/app/routers/games.py",
+        "apps/api/app/services/game_store.py",
+        "apps/api/tests/test_api.py",
+        "apps/web/src/app/page.tsx",
+        "apps/web/src/app/games/**",
+        "apps/web/src/app/pilot/progress/**",
+        "apps/web/src/components/pilot/**",
+        "apps/web/src/lib/api.ts"
+      ],
+      "tests": [
+        "python -m pytest apps/api/tests/test_api.py -q",
+        "npm run lint:web",
+        "npm run build:web"
+      ],
+      "expectedHumanLines": 600,
+      "status": "published"
+    },
+    {
+      "id": "05-style-read",
+      "title": "Build the durable pilot style read",
+      "branch": "codex/pilot-ui-05-style-read",
+      "dependsOn": "04-home-games-progress",
+      "reviewerFocus": "Neutral Brilliant read and persistence-accurate answer and comment form",
+      "paths": [
+        "apps/web/src/app/games/[id]/**",
+        "apps/web/src/components/pilot/**",
+        "apps/web/src/lib/api.ts"
+      ],
+      "tests": [
+        "npm run lint:web",
+        "npm run build:web"
+      ],
+      "expectedHumanLines": 520,
+      "status": "published"
+    },
+    {
+      "id": "06-evidence",
+      "title": "Build pilot Brilliant evidence",
+      "branch": "codex/pilot-ui-06-evidence",
+      "dependsOn": "05-style-read",
+      "reviewerFocus": "Review-only board and admitted Brilliant evidence without experimental lenses",
+      "paths": [
+        "apps/api/app/services/explain.py",
+        "apps/api/tests/test_explain.py",
+        "apps/web/src/app/games/[id]/evidence/**",
+        "apps/web/src/components/pilot/**",
+        "apps/web/src/lib/api.ts"
+      ],
+      "tests": [
+        "python -m pytest apps/api/tests/test_explain.py -q",
+        "npm run lint:web",
+        "npm run build:web"
+      ],
+      "expectedHumanLines": 580,
+      "status": "published"
+    },
+    {
+      "id": "07-account-deletion",
+      "title": "Make pilot privacy deletion restore-safe",
+      "branch": "codex/pilot-ui-07-account-deletion",
+      "dependsOn": "06-evidence",
+      "reviewerFocus": "Account controls, durable tombstones, opaque receipts, and restore re-deletion",
+      "paths": [
+        "apps/api/app/routers/privacy.py",
+        "apps/api/app/services/privacy.py",
+        "apps/api/tests/test_privacy.py",
+        "apps/api/scripts/**",
+        "apps/web/src/app/account/**",
+        "apps/web/src/components/pilot/**",
+        "apps/web/src/lib/api.ts",
+        "supabase/migrations/**"
+      ],
+      "tests": [
+        "python -m pytest apps/api/tests/test_privacy.py -q",
+        "npm run lint:web",
+        "npm run build:web"
+      ],
+      "expectedHumanLines": 600,
+      "status": "published"
+    },
+    {
+      "id": "08-integrated-qa",
+      "title": "Bind pilot UI release evidence",
+      "branch": "codex/pilot-ui-08-integrated-qa",
+      "dependsOn": "07-account-deletion",
+      "reviewerFocus": "Integrated browser fixes, documentation, and exact-tip blocked readiness evidence",
+      "paths": [
+        ".codex/review-stacks/style-pilot-ui.json",
+        "CHANGELOG.md",
+        "docs/PILOT_RELEASE_RUNBOOK.md",
+        "docs/PHASES.md",
+        "docs/evidence/style-pilot-readiness.json",
+        "scripts/release/validate-pilot-readiness.mjs",
+        "apps/web/src/**",
+        "apps/api/tests/**"
+      ],
+      "tests": [
+        "npm run ci",
+        "npm run test:arch",
+        "npm run test:golden",
+        "npm run pilot:admit -- <full-artifact-sha>"
+      ],
+      "expectedHumanLines": 500,
+      "status": "published"
+    }
+  ]
+}

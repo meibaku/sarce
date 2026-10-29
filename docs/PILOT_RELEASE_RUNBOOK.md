@@ -12,6 +12,18 @@ The repository contains a functioning pilot path, but code completion is not pil
 6. Record immutable deployment URL, API image digest, database region, evidence identifiers, verifier and UTC timestamp.
 7. Change each gate to `true` and status to `admitted` only after the linked evidence exists. Run `npm run pilot:admit -- <full-artifact-sha>`; invitation creation remains prohibited if it fails.
 
+## Restore deletion check
+
+Completed deletion jobs are durable tombstones. Export their ledger before a restore, then reapply it to the restored database before that environment can report ready:
+
+```powershell
+cd apps/api
+python -m scripts.restore_deletion_check --export <durable-ledger.json>
+python -m scripts.restore_deletion_check --apply <durable-ledger.json> --result <restore-check.json>
+```
+
+Store the ledger outside the restored database. Configure `PILOT_RESTORE_CHECK_PATH` with the passing result and `PILOT_BACKUP_RETENTION_DAYS` with the approved retention period. Readiness must fail when either value is absent or invalid. Attach the result, retention period, restored project and rehearsal identifiers to the exact runtime SHA's release evidence.
+
 ## During the two-week pilot
 
 Invite 5–10 consenting adults. Cap each participant's success sample at their first 10 completed style reads. Do not tune the style definition mid-pilot. Monitor durable queue health and support withdrawal, export, correction and deletion requests promptly. Stop invitations on any correctness, privacy, isolation or durability uncertainty.
