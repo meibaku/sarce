@@ -19,6 +19,7 @@ All notable changes to Sarce are documented here. Format based on [Keep a Change
 ## [Unreleased]
 
 ### Changed
+- Pilot screens now use clearer game status hierarchy, a fully labelled Brilliant reference band, compact Brilliant markers, a comparison-first soundness explanation and a structured deletion danger zone; Style Read also tolerates incomplete moment criteria without crashing.
 - Pilot Brilliant Evidence now shows game context, captured material, readable glyph pieces, coordinates, played-move arrows, board flipping, continuation navigation, focus-linked criteria and the classifier's exact soundness boundary without changing the normal board.
 - Pilot Style Read now consumes a dedicated Brilliant-only contract, uses factual game narrative and marks feedback saved only while the visible values match the canonical response.
 - Style Pilot admission, Home, Games, Progress and Account now match the notebook handoff more closely with truthful waiting states, richer finished-game context and a labelled Brilliant band.

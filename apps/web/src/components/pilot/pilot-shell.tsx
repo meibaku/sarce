@@ -39,12 +39,12 @@ export function PilotShell({ children }: { children: ReactNode }) {
   return (
     <div data-pilot-shell className="flex min-h-dvh flex-col bg-page text-ink">
       <header className="border-b border-line bg-page">
-        <div className="mx-auto flex h-[60px] max-w-[1120px] items-center gap-5 px-5">
+        <div className="mx-auto flex h-[60px] max-w-[1120px] items-center gap-3 px-5 sm:gap-5">
           <Link href="/" className="flex min-h-11 items-center gap-2" aria-label="Sarce pilot home">
             <SarceMark height={23} />
             <span className="text-[19px] font-medium">sarce</span>
           </Link>
-          <span className="rounded-full border border-line-2 px-2 py-1 font-mono text-[11px]">Style pilot</span>
+          <span className="shrink-0 whitespace-nowrap rounded-full border border-line-2 px-2 py-1 font-mono text-[11px]">Style pilot</span>
           <nav className="hidden self-stretch md:flex" aria-label="Pilot">
             {NAV.map((item) => (
               <Link key={item.href} href={item.href} aria-current={active(pathname, item.href) ? "page" : undefined}
@@ -53,7 +53,7 @@ export function PilotShell({ children }: { children: ReactNode }) {
               </Link>
             ))}
           </nav>
-          <span className="ml-auto font-mono text-[11px] text-muted">{label}</span>
+          <span className="ml-auto font-mono text-[11px] text-muted max-[360px]:hidden">{label}</span>
         </div>
       </header>
       <div aria-live="polite">

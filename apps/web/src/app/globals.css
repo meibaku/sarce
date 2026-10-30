@@ -170,6 +170,17 @@
   to { background-position: -240% 0; }
 }
 
+/* A single, quiet acknowledgement for a Brilliant marker. It is intentionally
+   not a mascot system, and reduced-motion users receive no visible movement. */
+.pilot-brilliant-mark {
+  animation: pilot-brilliant-pop 420ms var(--ease-sarce) both;
+}
+
+@keyframes pilot-brilliant-pop {
+  from { opacity: 0; transform: scale(0.82) rotate(-4deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
+}
+
 body {
   margin: 0;
   background: var(--page);
