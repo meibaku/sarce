@@ -91,6 +91,9 @@ def test_why_with_engine_lines(monkeypatch):
     assert out["label"] == "4. Bxf7+" and out["isBrilliant"] and out["badge"].startswith("Brilliant")
     assert out["lines"][0]["title"] == "What you played" and out["lines"][0]["steps"][0]["san"] == "Bxf7+"
     assert {c["rule"] for c in out["brilliant"]} >= {"A real sacrifice", "Hard to find"}
+    assert out["playedUci"] == "c4f7" and out["bestMove"] == "Bxf7+"
+    assert out["playedEp"] is not None and out["bestEp"] is not None
+    assert out["minimumEp"] == round(out["bestEp"] - 0.03, 3)
     assert out["privateNote"] == ""
 
 
