@@ -14,6 +14,7 @@ def pilot_settings(engine: Path) -> Settings:
         supabase_url="https://example.supabase.co",
         supabase_service_role_key="secret",
         pilot_operators=["operator"],
+        pilot_backup_retention_days=30,
     )
 
 
@@ -38,3 +39,15 @@ def test_local_defaults_are_not_pilot_ready():
     assert checks["pilot_mode"] is False
     assert checks["authentication"] is False
     assert checks["durable_queue"] is False
+    assert checks["backup_retention"] is False
+
+
+def test_backup_retention_must_be_in_the_approved_range(tmp_path):
+    engine = tmp_path / "stockfish"
+    engine.write_text("test", encoding="utf-8")
+    assert readiness_checks(
+        pilot_settings(engine).model_copy(update={"pilot_backup_retention_days": 0}), lambda: None
+    )["backup_retention"] is False
+    assert readiness_checks(
+        pilot_settings(engine).model_copy(update={"pilot_backup_retention_days": 91}), lambda: None
+    )["backup_retention"] is False

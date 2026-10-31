@@ -1,10 +1,12 @@
 from pathlib import Path
+from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.services.pilot import token_hash
+from app.services.pilot import PILOT_READ_TARGET, PilotService, lifecycle, token_hash
 
 MIGRATION = Path(__file__).resolve().parents[3] / "supabase" / "migrations" / "20261027010000_style_pilot.sql"
 
@@ -33,3 +35,103 @@ def test_feedback_validation_rejects_unknown_resonance():
     with patch("app.routers.pilot.current_user_id", return_value="00000000-0000-4000-8000-000000000001"):
         response = TestClient(app).put("/pilot/games/game/feedback", json={"resonance": "score"})
     assert response.status_code == 422
+
+
+def test_lifecycle_uses_first_ten_reads_and_the_consent_deadline():
+    started = datetime(2026, 10, 1, tzinfo=timezone.utc)
+    feedback = [
+        {"id": str(index), "created_at": (started + timedelta(minutes=index)).isoformat(), "resonance": "yes"}
+        for index in range(11)
+    ]
+    feedback[10]["resonance"] = "no"
+    state = lifecycle(
+        {"consented_at": started.isoformat(), "withdrawn_at": None},
+        list(reversed(feedback)),
+        started + timedelta(days=1),
+    )
+    assert state["state"] == "complete"
+    assert state["completedReads"] == PILOT_READ_TARGET
+    assert state["answers"] == {"yes": 10, "partly": 0, "no": 0}
+    assert state["endsAt"] == (started + timedelta(days=14)).isoformat()
+
+
+def test_lifecycle_expires_at_fourteen_days_and_withdrawal_wins():
+    started = datetime(2026, 10, 1, tzinfo=timezone.utc)
+    consent = {"consented_at": started.isoformat(), "withdrawn_at": None}
+    assert lifecycle(consent, [], started + timedelta(days=14))["state"] == "expired"
+    consent["withdrawn_at"] = (started + timedelta(days=2)).isoformat()
+    assert lifecycle(consent, [], started + timedelta(days=14))["state"] == "withdrawn"
+
+
+class ScriptedClient:
+    """Small fluent Supabase stand-in; each execute consumes one declared result."""
+
+    def __init__(self, results):
+        self.results = list(results)
+
+    def table(self, _name):
+        return self
+
+    def __getattr__(self, _name):
+        return lambda *_args, **_kwargs: self
+
+    def execute(self):
+        return SimpleNamespace(data=self.results.pop(0))
+
+
+def consent_row(days_ago=1):
+    return {
+        "protocol_version": "style-v1",
+        "privacy_version": "pilot-privacy-v1",
+        "consented_at": (datetime.now(timezone.utc) - timedelta(days=days_ago)).isoformat(),
+        "withdrawn_at": None,
+    }
+
+
+def completed_feedback():
+    now = datetime.now(timezone.utc)
+    return [
+        {"id": str(index), "resonance": "yes", "created_at": (now - timedelta(minutes=index)).isoformat()}
+        for index in range(10)
+    ]
+
+
+def test_eleventh_distinct_feedback_is_rejected_but_an_existing_read_can_be_edited():
+    rejected = PilotService(ScriptedClient([
+        [{"id": "game"}], [consent_row()], completed_feedback(), [{"id": "invite"}], [],
+    ]))
+    try:
+        rejected.feedback("user", "game", "no", None)
+    except ValueError as exc:
+        assert "at most 10" in str(exc)
+    else:
+        raise AssertionError("an eleventh distinct read was accepted")
+
+    updated = {
+        "id": "answer",
+        "game_id": "game",
+        "resonance": "partly",
+        "comment": "Closer than before",
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    service = PilotService(ScriptedClient([
+        [{"id": "game"}], [consent_row()], completed_feedback(), [{"id": "invite"}],
+        [{**updated, "created_at": datetime.now(timezone.utc).isoformat()}], [updated],
+    ]))
+    assert service.feedback("user", "game", "partly", "Closer than before") == {
+        "id": "answer",
+        "gameId": "game",
+        "resonance": "partly",
+        "comment": "Closer than before",
+        "savedAt": updated["updated_at"],
+    }
+
+
+def test_feedback_lookup_rejects_a_game_owned_by_another_participant():
+    service = PilotService(ScriptedClient([[]]))
+    try:
+        service.get_feedback("user-a", "user-b-game")
+    except ValueError as exc:
+        assert str(exc) == "Game not found"
+    else:
+        raise AssertionError("cross-tenant feedback was exposed")

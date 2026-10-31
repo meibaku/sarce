@@ -110,6 +110,9 @@ class Settings(BaseSettings):
     pilot_protocol_version: str = "style-v1"
     pilot_privacy_version: str = "pilot-privacy-v1"
     pilot_operators: list[str] = []
+    # Legal approval supplies this value. Readiness remains false when it is
+    # absent or outside the operationally rehearsed range.
+    pilot_backup_retention_days: int | None = None
     analysis_nodes: int = 1_500_000
     analysis_multipv: int = 4
     analysis_multipv_cap: int = 8

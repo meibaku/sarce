@@ -74,7 +74,15 @@ export interface PilotStatus {
   privacyVersion: string | null;
   invitationRedeemed: boolean;
   admitted: boolean;
+  collectionActive: boolean;
+  state: "invited" | "active" | "complete" | "expired" | "withdrawn";
+  startsAt: string | null;
+  endsAt: string | null;
+  targetReads: 10;
   completedReads: number;
+  answers: { yes: number; partly: number; no: number };
+  withdrawnAt: string | null;
+  backupRetentionDays: number | null;
   consent: { consented_at: string; withdrawn_at: string | null } | null;
 }
 
@@ -87,7 +95,9 @@ export const consentToPilot = (protocolVersion: string, privacyVersion: string) 
 });
 export const withdrawFromPilot = () => fetchApi<{ withdrawn: boolean }>("/pilot/withdraw", { method: "POST" });
 export const savePilotFeedback = (gameId: string, resonance: "yes" | "partly" | "no", comment?: string) =>
-  fetchApi(`/pilot/games/${gameId}/feedback`, { method: "PUT", body: JSON.stringify({ resonance, comment: comment || null }) });
+  fetchApi<PilotFeedback>(`/pilot/games/${gameId}/feedback`, { method: "PUT", body: JSON.stringify({ resonance, comment: comment || null }) });
+export interface PilotFeedback { id: string; gameId: string; resonance: "yes" | "partly" | "no"; comment: string | null; savedAt: string }
+export const getPilotFeedback = (gameId: string) => fetchApi<PilotFeedback | null>(`/pilot/games/${gameId}/feedback`);
 export const savePilotExitSurvey = (body: { continueUsing: "yes" | "maybe" | "no"; mostValuable: string; leastTrusted: string; willingnessToPay: "yes" | "maybe" | "no" }) =>
   fetchApi("/pilot/exit-survey", { method: "PUT", body: JSON.stringify(body) });
 

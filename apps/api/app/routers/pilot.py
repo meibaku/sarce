@@ -95,6 +95,12 @@ async def feedback(game_id: str, body: FeedbackRequest):
     return invalid(lambda: PilotService().feedback(owner, game_id, body.resonance, body.comment))
 
 
+@router.get("/games/{game_id}/feedback")
+async def get_feedback(game_id: str):
+    owner = user_id()
+    return invalid(lambda: PilotService().get_feedback(owner, game_id))
+
+
 @router.put("/exit-survey")
 async def exit_survey(body: ExitSurveyRequest):
     owner = user_id()

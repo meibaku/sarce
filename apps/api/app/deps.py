@@ -87,6 +87,19 @@ def require_pilot_admission() -> None:
         raise HTTPException(status_code=403, detail="Pilot invitation and consent required")
 
 
+def require_pilot_collection_active() -> None:
+    """Reject pilot mutations after withdrawal, expiry, or the tenth read."""
+    if not PilotPolicy.current().enabled:
+        return
+    user = current_user_id()
+    if not user:
+        raise HTTPException(status_code=401, detail="Sign in required")
+    from app.services.pilot import PilotService
+
+    if not PilotService().collection_active(user):
+        raise HTTPException(status_code=409, detail="Pilot collection is read-only")
+
+
 def require_capability(capability: str):
     """Build a FastAPI dependency for a named pilot capability."""
     def check() -> None:
