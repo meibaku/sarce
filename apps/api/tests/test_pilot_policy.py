@@ -28,3 +28,11 @@ def test_experimental_route_policy_fails_closed_and_home_is_filtered():
 
     filtered = policy.filter_home({"latest": {"chaos": [0.7], "highlight": 2}, "focus": {"trait": "Chaos"}, "stats": {"real": 1}})
     assert filtered == {"latest": {"chaos": [], "highlight": None}, "focus": None, "stats": None}
+
+
+def test_core_review_strips_unvalidated_lens_content():
+    policy = PilotPolicy("style_v1")
+    review = policy.filter_review({"moments": [1], "ideas": [2], "closingOut": [3], "fightingBack": [4], "theirIdeas": [5]})
+    assert review["moments"] == [1]
+    assert review["ideas"] == review["closingOut"] == review["fightingBack"] == review["theirIdeas"] == []
+    assert policy.filter_explanation({"brilliant": [1], "chaos": {"pFail": 0.5}}) == {"brilliant": [1], "chaos": None}

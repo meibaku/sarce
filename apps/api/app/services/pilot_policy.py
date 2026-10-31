@@ -76,3 +76,14 @@ class PilotPolicy:
         if latest:
             latest = {**latest, "chaos": [], "highlight": None}
         return {**payload, "latest": latest, "focus": None, "stats": None}
+
+    def filter_review(self, payload: dict) -> dict:
+        """Retain the Brilliant review while withholding unvalidated lens narratives."""
+        if not self.enabled:
+            return payload
+        return {**payload, "closingOut": [], "fightingBack": [], "theirIdeas": [], "ideas": []}
+
+    def filter_explanation(self, payload: dict) -> dict:
+        if not self.enabled:
+            return payload
+        return {**payload, "chaos": None}

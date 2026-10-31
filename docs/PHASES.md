@@ -10,6 +10,8 @@
 
 This file tracks **what's built vs planned**. The phase definitions below match PRODUCT_SPEC.md.
 
+The invite-only Style Pilot implementation is tracked separately in [STYLE_PILOT.md](./STYLE_PILOT.md). It is not admitted until the fail-closed [release evidence](./evidence/style-pilot-readiness.json) passes `npm run pilot:admit -- <artifact-sha>`.
+
 ---
 
 ## Product Phase 1 — MVP ✅ Complete

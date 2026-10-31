@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "artifactSha": "91b575624ce7e42d96c6ecef359d29fc728efaae",
+  "status": "blocked",
+  "participantCap": 10,
+  "durationDays": 14,
+  "minimumReadsPerParticipant": 10,
+  "successThresholds": {
+    "medianFeelsLikeMePercent": 70,
+    "minimumContinueFraction": 0.5
+  },
+  "gates": {
+    "legalOwnerApproval": null,
+    "privacyNoticeApproval": null,
+    "productionCi": null,
+    "productionMigrations": null,
+    "tenantIsolation": null,
+    "durableRestartSmoke": null,
+    "backupRestore": null,
+    "exportAndDeletion": null,
+    "desktopAndMobileSmoke": null,
+    "operatorRunbookDryRun": null
+  },
+  "evidence": {
+    "deploymentUrl": null,
+    "apiImageDigest": null,
+    "databaseRegion": null,
+    "backupId": null,
+    "restoreProject": null,
+    "verifiedAt": null,
+    "verifiedBy": null
+  },
+  "notes": "No participant may be invited while status is blocked or any gate lacks evidence."
+}
