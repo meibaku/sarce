@@ -67,6 +67,7 @@ class PilotService:
         self.sb = client or get_supabase()
 
     def create_invitation(self, operator_id: str, hours: int = 168) -> dict:
+        self._require_admission_open()
         token = secrets.token_urlsafe(32)
         expires = datetime.now(timezone.utc) + timedelta(hours=hours)
         row = self.sb.table("pilot_invitations").insert(
@@ -75,6 +76,7 @@ class PilotService:
         return {"id": row["id"], "token": token, "expiresAt": row["expires_at"]}
 
     def redeem(self, user_id: str, token: str) -> dict:
+        self._require_admission_open()
         now = datetime.now(timezone.utc)
         rows = self.sb.table("pilot_invitations").select("id, expires_at, redeemed_by").eq(
             "token_hash", token_hash(token)
@@ -94,6 +96,7 @@ class PilotService:
         return {"redeemed": True}
 
     def consent(self, user_id: str, adult: bool, protocol: str, privacy: str) -> dict:
+        self._require_admission_open()
         if not adult:
             raise ValueError("The pilot is limited to adults aged 18 or older")
         if protocol != settings.pilot_protocol_version or privacy != settings.pilot_privacy_version:
@@ -111,6 +114,11 @@ class PilotService:
         }
         self.sb.table("pilot_consents").upsert(row, on_conflict="user_id").execute()
         return self.status(user_id)
+
+    @staticmethod
+    def _require_admission_open() -> None:
+        if not settings.pilot_admission_open:
+            raise ValueError("Pilot admission is not open")
 
     def admitted(self, user_id: str) -> bool:
         # Terminal participants keep read-only access to their existing games.

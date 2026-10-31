@@ -113,6 +113,9 @@ class Settings(BaseSettings):
     # Legal approval supplies this value. Readiness remains false when it is
     # absent or outside the operationally rehearsed range.
     pilot_backup_retention_days: int | None = None
+    # Set only after signed protocol/privacy/cross-border approval and the
+    # exact deployed artifact has passed admission evidence.
+    pilot_admission_open: bool = False
     analysis_nodes: int = 1_500_000
     analysis_multipv: int = 4
     analysis_multipv_cap: int = 8
