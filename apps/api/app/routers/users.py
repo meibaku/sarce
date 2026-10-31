@@ -5,6 +5,7 @@ from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
 from app.deps import current_user_id, resolve_user_id, scoped_user_id
+from app.services.pilot_policy import PilotPolicy
 
 from app.services.chaos_map import CHAOS_DRILL, ChaosMapService
 from app.services.chess_com import normalize_chess_com_username
@@ -39,7 +40,8 @@ async def get_home(username: str | None = Query(None), user_id: str | None = Que
     name = normalize_chess_com_username(username) if username else None
     try:
         # Heavy, synchronous database work: run it off the event loop so other requests keep flowing.
-        return await asyncio.to_thread(home_service.home, scoped_user_id(user_id, username), name, since)
+        data = await asyncio.to_thread(home_service.home, scoped_user_id(user_id, username), name, since)
+        return PilotPolicy.current().filter_home(data)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -47,6 +49,7 @@ async def get_home(username: str | None = Query(None), user_id: str | None = Que
 @router.get("/you")
 async def get_you(username: str | None = Query(None), user_id: str | None = Query(None)):
     """You: Brilliant trend and formula, style fingerprint, reference axes, time controls, survival."""
+    PilotPolicy.current().require("style_fingerprint")
     name = normalize_chess_com_username(username) if username else None
     try:
         return await asyncio.to_thread(you_service.you, scoped_user_id(user_id, username), name)
@@ -72,6 +75,7 @@ class FocusRequest(BaseModel):
 @router.get("/recap")
 async def get_recap(user_id: str | None = Query(None)):
     """Weekly recap: the week's games, Brilliant, best moment, last focus and next week's options."""
+    PilotPolicy.current().require("focus")
     data = await asyncio.to_thread(recap_service.recap, scoped_user_id(user_id, None), resolve_user_id(user_id))
     if data is None:
         raise HTTPException(status_code=404, detail="No analysed games yet")
@@ -81,6 +85,7 @@ async def get_recap(user_id: str | None = Query(None)):
 @router.get("/focus")
 async def get_focus(user_id: str | None = Query(None)):
     """The current weekly focus and today's intention, with the choices for each."""
+    PilotPolicy.current().require("focus")
     owner = resolve_user_id(user_id)
     return {
         "weekly": recap_service.current_focus(owner, "weekly"),
@@ -93,6 +98,7 @@ async def get_focus(user_id: str | None = Query(None)):
 @router.put("/focus")
 async def set_focus(body: FocusRequest, user_id: str | None = Query(None)):
     """Sets next week's focus (kind=weekly) or today's intention (kind=today)."""
+    PilotPolicy.current().require("focus")
     if body.kind not in ("weekly", "today"):
         raise HTTPException(status_code=422, detail="kind must be weekly or today")
     try:
@@ -177,6 +183,7 @@ async def delete_position(position_id: str, user_id: str | None = Query(None)):
 @router.get("/train")
 async def get_train(user_id: str | None = Query(None), drill: str | None = Query(None, max_length=200)):
     """Train queue: drills from your games, the trap atlas and saved positions, aimed at this week's focus."""
+    PilotPolicy.current().require("quests")
     from app.services.focus import FocusService
     from app.services.quests import QuestService
 
@@ -197,6 +204,7 @@ async def get_train(user_id: str | None = Query(None), drill: str | None = Query
 @router.post("/train/answer")
 async def answer_drill(body: DrillAnswer, user_id: str | None = Query(None)):
     """Records "How sure were you?" and schedules the drill (tomorrow / 3 days / 9 days)."""
+    PilotPolicy.current().require("quests")
     try:
         return train_service.answer(resolve_user_id(user_id), body.drillKey, body.confidence)
     except ValueError as exc:
@@ -256,6 +264,7 @@ async def sync_now(background_tasks: BackgroundTasks, user_id: str | None = Quer
 @router.get("/chaos-map")
 async def get_chaos_map(user_id: str | None = Query(None)):
     """Your chaos map: frequent opening positions and the sound move that asks the most of your opponents."""
+    PilotPolicy.current().require("chaos")
     owner = resolve_user_id(user_id)
     return {"positions": chaos_map_service.get(owner), "building": owner in _chaos_map_building}
 
@@ -270,6 +279,7 @@ def _build_chaos_map(owner: str) -> None:
 @router.post("/chaos-map")
 async def rebuild_chaos_map(background_tasks: BackgroundTasks, user_id: str | None = Query(None)):
     """Rebuilds the map in the background (a minute or two of engine work); GET shows it when done."""
+    PilotPolicy.current().require("chaos")
     owner = resolve_user_id(user_id)
     if owner not in _chaos_map_building:
         _chaos_map_building.add(owner)
@@ -280,6 +290,7 @@ async def rebuild_chaos_map(background_tasks: BackgroundTasks, user_id: str | No
 @router.get("/traps-set")
 async def get_traps_set(user_id: str | None = Query(None)):
     """Your traps: opening positions you steer into where opponents most often go wrong on the next move."""
+    PilotPolicy.current().require("traps")
     owner = resolve_user_id(user_id)
     return {"traps": await asyncio.to_thread(traps_set_service.get, owner), "building": owner in _traps_building}
 
@@ -294,6 +305,7 @@ def _build_traps(owner: str) -> None:
 @router.post("/traps-set")
 async def rebuild_traps_set(background_tasks: BackgroundTasks, user_id: str | None = Query(None)):
     """Rebuilds your traps in the background from stored evaluations (no engine); GET shows them when done."""
+    PilotPolicy.current().require("traps")
     owner = resolve_user_id(user_id)
     if owner not in _traps_building:
         _traps_building.add(owner)
@@ -304,6 +316,7 @@ async def rebuild_traps_set(background_tasks: BackgroundTasks, user_id: str | No
 @router.get("/{username}/chaos-summary")
 async def get_chaos_summary(username: str):
     """Counts of real / cheap / calculated chaos and the survival rate for a player."""
+    PilotPolicy.current().require("chaos")
     try:
         return lens_service.chaos_summary(
             normalize_chess_com_username(username), user_id=current_user_id()

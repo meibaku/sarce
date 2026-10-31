@@ -6,7 +6,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.deps import authenticate, require_pilot_admission
+from app.deps import authenticate, require_capability, require_pilot_admission
 from app.routers import analysis, brilliant, games, health, monitor, pilot, play, privacy, reference, scouting, shares, traps, users, videos
 from app.services.sync import sync_loop
 from app.services.job_queue import JobQueue, analysis_handlers, worker_loop
@@ -120,13 +120,13 @@ app.include_router(privacy.router, prefix="/privacy", tags=["privacy"], dependen
 app.include_router(privacy.public_router, prefix="/public/privacy", tags=["privacy"])
 app.include_router(games.router, prefix="/games", tags=["games"], dependencies=ADMITTED)
 app.include_router(analysis.router, prefix="/analysis", tags=["analysis"], dependencies=ADMITTED)
-app.include_router(reference.router, prefix="/reference", tags=["reference"], dependencies=ADMITTED)
+app.include_router(reference.router, prefix="/reference", tags=["reference"], dependencies=[*ADMITTED, Depends(require_capability("references"))])
 app.include_router(users.router, prefix="/users", tags=["users"], dependencies=ADMITTED)
-app.include_router(traps.router, prefix="/traps", tags=["traps"], dependencies=ADMITTED)
-app.include_router(scouting.router, prefix="/scouting", tags=["scouting"], dependencies=ADMITTED)
-app.include_router(play.router, prefix="/play", tags=["play"], dependencies=ADMITTED)
-app.include_router(videos.router, prefix="/videos", tags=["videos"], dependencies=ADMITTED)
-app.include_router(shares.router, prefix="/shares", tags=["shares"], dependencies=ADMITTED)
+app.include_router(traps.router, prefix="/traps", tags=["traps"], dependencies=[*ADMITTED, Depends(require_capability("traps"))])
+app.include_router(scouting.router, prefix="/scouting", tags=["scouting"], dependencies=[*ADMITTED, Depends(require_capability("opponent_prep"))])
+app.include_router(play.router, prefix="/play", tags=["play"], dependencies=[*ADMITTED, Depends(require_capability("play"))])
+app.include_router(videos.router, prefix="/videos", tags=["videos"], dependencies=[*ADMITTED, Depends(require_capability("video_help"))])
+app.include_router(shares.router, prefix="/shares", tags=["shares"], dependencies=[*ADMITTED, Depends(require_capability("sharing"))])
 app.include_router(monitor.router, prefix="/monitor", tags=["monitor"], dependencies=AUTH)
 # Public on purpose: anyone with a share token reads that link's stored snapshot, nothing else.
 app.include_router(shares.public_router, prefix="/public/shares", tags=["shares"])
