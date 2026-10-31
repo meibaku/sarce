@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { getPilotStatus, type PilotStatus } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { getPilotPublicConfig, getPilotStatus, type PilotStatus } from "@/lib/api";
 
 interface PilotStatusContextValue {
   status: PilotStatus | null;
@@ -22,7 +23,12 @@ export function PilotStatusProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      setStatus(await getPilotStatus());
+      const config = await getPilotPublicConfig();
+      if (config.mode !== "style_v1") {
+        setStatus({ ...config, invitationRedeemed: false, admitted: false, collectionActive: false, state: "invited", startsAt: null, endsAt: null, targetReads: 10, completedReads: 0, answers: { yes: 0, partly: 0, no: 0 }, withdrawnAt: null, consent: null });
+      } else {
+        setStatus(await getPilotStatus());
+      }
       setError(null);
     } catch {
       setError(`PILOT-${Date.now().toString(36).toUpperCase()}`);
@@ -69,4 +75,15 @@ export function PilotPageSkeleton() {
       </div>
     </main>
   );
+}
+
+export function PilotModePage({ normal, pilot }: { normal: ReactNode; pilot: ReactNode }) {
+  const router = useRouter();
+  const { status, loading } = usePilotStatus();
+  useEffect(() => {
+    if (!loading && !status) router.replace("/login");
+    else if (!loading && status?.mode === "style_v1" && !status.admitted) router.replace("/pilot");
+  }, [loading, router, status]);
+  if (loading || !status || (status.mode === "style_v1" && !status.admitted)) return <PilotPageSkeleton />;
+  return status.mode === "style_v1" ? pilot : normal;
 }

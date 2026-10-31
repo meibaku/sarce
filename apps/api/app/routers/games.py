@@ -1,4 +1,5 @@
 import asyncio
+from urllib.parse import urlsplit, urlunsplit
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -52,6 +53,23 @@ class AnalyzeRequest(BaseModel):
 
 
 STYLE_MOMENT_QUALITIES = ("brilliant", "miss", "blunder")
+
+
+def safe_external_game_url(source: str | None, external_id: str | None) -> str | None:
+    """Return only a public game URL on the declared provider, without query data."""
+    if not source or not external_id:
+        return None
+    try:
+        parsed = urlsplit(external_id)
+    except ValueError:
+        return None
+    host = (parsed.hostname or "").lower()
+    allowed = (
+        source == "chess_com" and (host == "chess.com" or host.endswith(".chess.com"))
+    ) or (source == "lichess" and (host == "lichess.org" or host.endswith(".lichess.org")))
+    if parsed.scheme != "https" or not allowed or parsed.username or parsed.password:
+        return None
+    return urlunsplit(("https", host, parsed.path, "", ""))
 
 
 @router.post("/import", response_model=ImportResponse)
@@ -139,7 +157,7 @@ async def list_games(
     sb = get_supabase()
     query = (
         sb.table("games")
-        .select("id, played_at, opponent, opponent_rating, result, time_control, analysis_status, game_analyses(brilliant_pct, total_moves)")
+        .select("id, played_at, opponent, opponent_rating, result, time_control, analysis_status, source, external_id, game_analyses(brilliant_pct, total_moves)")
         .order("played_at", desc=True)
         .limit(limit)
     )
@@ -158,8 +176,19 @@ async def list_games(
         query = query.in_("id", list(ranked))
 
     res = await asyncio.to_thread(query.execute)
+    rows = res.data or []
+    feedback_by_game: dict[str, str] = {}
+    if uid and rows:
+        feedback_rows = sb.table("pilot_read_feedback").select("game_id, resonance").eq(
+            "user_id", uid
+        ).in_("game_id", [row["id"] for row in rows]).execute().data or []
+        feedback_by_game = {
+            row["game_id"]: row["resonance"]
+            for row in feedback_rows
+            if row.get("game_id") and row.get("resonance")
+        }
     games = []
-    for row in res.data or []:
+    for row in rows:
         analysis = row.pop("game_analyses", None)
         summary = analysis[0] if isinstance(analysis, list) and analysis else analysis
         games.append(
@@ -173,6 +202,8 @@ async def list_games(
                 "analysisStatus": row.get("analysis_status"),
                 "brilliantPct": summary.get("brilliant_pct") if summary else None,
                 "totalMoves": summary.get("total_moves") if summary else None,
+                "pilotResonance": feedback_by_game.get(row["id"]),
+                "externalUrl": safe_external_game_url(row.get("source"), row.get("external_id")),
                 **({k: v for k, v in ranked[row["id"]].items() if k != "gameId"} if row["id"] in ranked else {}),
             }
         )

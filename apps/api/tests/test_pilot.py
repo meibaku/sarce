@@ -31,6 +31,13 @@ def test_status_requires_a_verified_user_even_when_local_mode_is_open():
     assert response.status_code == 401
 
 
+def test_public_mode_does_not_expose_participant_state():
+    response = TestClient(app).get("/public/pilot")
+    assert response.status_code == 200
+    assert "admitted" not in response.json()
+    assert "completedReads" not in response.json()
+
+
 def test_feedback_validation_rejects_unknown_resonance():
     with patch("app.routers.pilot.current_user_id", return_value="00000000-0000-4000-8000-000000000001"):
         response = TestClient(app).put("/pilot/games/game/feedback", json={"resonance": "score"})

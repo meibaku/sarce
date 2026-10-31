@@ -88,6 +88,8 @@ export interface PilotStatus {
 }
 
 export const getPilotStatus = () => fetchApi<PilotStatus>("/pilot/status");
+export type PilotPublicConfig = Pick<PilotStatus, "mode" | "inviteOnly" | "capabilities" | "experimentalHidden" | "protocolVersion" | "privacyVersion" | "backupRetentionDays" | "admissionOpen">;
+export const getPilotPublicConfig = () => fetchApi<PilotPublicConfig>("/public/pilot");
 export const redeemPilotInvitation = (token: string) => fetchApi<{ redeemed: boolean }>("/pilot/invitations/redeem", {
   method: "POST", body: JSON.stringify({ token }),
 });
@@ -378,6 +380,8 @@ export interface GameListItem {
   timeControl: string | null;
   analysisStatus: string | null;
   brilliantPct: number | null;
+  pilotResonance?: "yes" | "partly" | "no" | null;
+  externalUrl?: string | null;
   chaosPeak?: number;
   realChaos?: number;
   cheapChaos?: number;
