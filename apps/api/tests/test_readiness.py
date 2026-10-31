@@ -1,10 +1,13 @@
 from pathlib import Path
+import json
 
 from app.config import Settings
 from app.services.readiness import readiness_checks
 
 
 def pilot_settings(engine: Path) -> Settings:
+    restore_result = engine.parent / "restore-deletion-check.json"
+    restore_result.write_text(json.dumps({"status": "passed", "remaining": 0, "checkedAt": "2026-10-29T00:00:00Z"}), encoding="utf-8")
     return Settings(
         pilot_mode="style_v1",
         auth_required=True,
@@ -15,6 +18,7 @@ def pilot_settings(engine: Path) -> Settings:
         supabase_service_role_key="secret",
         pilot_operators=["operator"],
         pilot_backup_retention_days=30,
+        pilot_restore_check_path=str(restore_result),
     )
 
 
@@ -40,6 +44,7 @@ def test_local_defaults_are_not_pilot_ready():
     assert checks["authentication"] is False
     assert checks["durable_queue"] is False
     assert checks["backup_retention"] is False
+    assert checks["restore_deletion_check"] is False
 
 
 def test_backup_retention_must_be_in_the_approved_range(tmp_path):
@@ -48,6 +53,16 @@ def test_backup_retention_must_be_in_the_approved_range(tmp_path):
     assert readiness_checks(
         pilot_settings(engine).model_copy(update={"pilot_backup_retention_days": 0}), lambda: None
     )["backup_retention"] is False
+
+
+def test_restore_deletion_check_must_be_a_passing_result(tmp_path):
+    engine = tmp_path / "stockfish"
+    engine.write_text("test", encoding="utf-8")
+    failed = tmp_path / "failed.json"
+    failed.write_text(json.dumps({"status": "failed", "remaining": 1, "checkedAt": "now"}), encoding="utf-8")
+    assert readiness_checks(
+        pilot_settings(engine).model_copy(update={"pilot_restore_check_path": str(failed)}), lambda: None
+    )["restore_deletion_check"] is False
     assert readiness_checks(
         pilot_settings(engine).model_copy(update={"pilot_backup_retention_days": 91}), lambda: None
     )["backup_retention"] is False

@@ -116,6 +116,7 @@ class Settings(BaseSettings):
     # Set only after signed protocol/privacy/cross-border approval and the
     # exact deployed artifact has passed admission evidence.
     pilot_admission_open: bool = False
+    pilot_restore_check_path: str = ""
     analysis_nodes: int = 1_500_000
     analysis_multipv: int = 4
     analysis_multipv_cap: int = 8

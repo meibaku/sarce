@@ -1,12 +1,23 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 
 from app.config import Settings
 
 
 MIN_BACKUP_RETENTION_DAYS = 1
 MAX_BACKUP_RETENTION_DAYS = 90
+
+
+def restore_check_passed(path: str) -> bool:
+    if not path or not Path(path).is_file():
+        return False
+    try:
+        result = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return result.get("status") == "passed" and result.get("remaining") == 0 and bool(result.get("checkedAt"))
 
 
 def readiness_checks(config: Settings, database_probe) -> dict[str, bool]:
@@ -25,6 +36,7 @@ def readiness_checks(config: Settings, database_probe) -> dict[str, bool]:
             <= config.pilot_backup_retention_days
             <= MAX_BACKUP_RETENTION_DAYS
         ),
+        "restore_deletion_check": restore_check_passed(config.pilot_restore_check_path),
     }
     if checks["supabase_configured"]:
         try:
