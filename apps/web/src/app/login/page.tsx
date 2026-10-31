@@ -19,7 +19,7 @@ export default function LoginPage() {
     // Passwordless: Supabase emails a one-time link; no password is ever handled here.
     const { error } = await createClient().auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: `${window.location.origin}/pilot` },
     });
     setStatus(error ? error.message : "Check your email for the sign-in link.");
     setBusy(false);
