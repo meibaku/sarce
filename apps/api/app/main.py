@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.deps import authenticate, require_pilot_admission
-from app.routers import analysis, brilliant, games, health, monitor, pilot, play, reference, scouting, shares, traps, users, videos
+from app.routers import analysis, brilliant, games, health, monitor, pilot, play, privacy, reference, scouting, shares, traps, users, videos
 from app.services.sync import sync_loop
 from app.services.job_queue import JobQueue, analysis_handlers, worker_loop
 
@@ -116,6 +116,8 @@ ADMITTED = [Depends(authenticate), Depends(require_pilot_admission)]
 
 app.include_router(health.router)
 app.include_router(pilot.router, prefix="/pilot", tags=["pilot"], dependencies=AUTH)
+app.include_router(privacy.router, prefix="/privacy", tags=["privacy"], dependencies=AUTH)
+app.include_router(privacy.public_router, prefix="/public/privacy", tags=["privacy"])
 app.include_router(games.router, prefix="/games", tags=["games"], dependencies=ADMITTED)
 app.include_router(analysis.router, prefix="/analysis", tags=["analysis"], dependencies=ADMITTED)
 app.include_router(reference.router, prefix="/reference", tags=["reference"], dependencies=ADMITTED)
