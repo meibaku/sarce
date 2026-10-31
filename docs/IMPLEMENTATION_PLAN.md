@@ -98,6 +98,9 @@ Detailed plan, waves and PR order: [PHASE3_PLAN.md](./PHASE3_PLAN.md).
 
 ## Phase 5 — Launch: deploy, legal, sustainability (owner decisions)
 
+The first launch slice is the narrow invite-only contract in [STYLE_PILOT.md](./STYLE_PILOT.md). It deliberately hides
+unvalidated lenses and keeps the separate Learning Evidence experiment out of the release.
+
 | # | Item | Approach | Size | Needs | Depends on |
 | --- | --- | --- | --- | --- | --- |
 | 5.1 | **Hosted beta (§3.1)** | API plus Stockfish on a dedicated server, managed Supabase in a region chosen for PDPC transfers, web on a static/edge host | M | you (provider, region, budget, accounts) | 4.4 (where analysis runs) |

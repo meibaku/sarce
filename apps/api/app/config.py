@@ -104,6 +104,12 @@ class Settings(BaseSettings):
     # Signed-in users (Supabase ids) allowed to read the analysis monitor, which shows every user's games.
     # Local-first (nobody signed in) the machine's owner is the operator; signed in, only these ids are.
     monitor_operators: list[str] = []
+    # Invite-only pilot. `style_v1` exposes only the calibrated Brilliant journey;
+    # `off` preserves the full local/self-hosted product.
+    pilot_mode: str = "off"
+    pilot_protocol_version: str = "style-v1"
+    pilot_privacy_version: str = "pilot-privacy-v1"
+    pilot_operators: list[str] = []
     analysis_nodes: int = 1_500_000
     analysis_multipv: int = 4
     analysis_multipv_cap: int = 8

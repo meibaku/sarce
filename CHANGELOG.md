@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Define the fail-closed, invite-only adult style-pilot surface and its admission contract.
+
 All notable changes to Sarce are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
