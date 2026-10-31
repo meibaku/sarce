@@ -1,0 +1,16 @@
+services:
+  api:
+    build:
+      context: ../../apps/api
+      args:
+        STOCKFISH_DOWNLOAD_URL: ${STOCKFISH_DOWNLOAD_URL:?pin the approved Stockfish archive URL}
+        STOCKFISH_SHA256: ${STOCKFISH_SHA256:?pin the approved Stockfish archive checksum}
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:8000:8000"
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 14G
