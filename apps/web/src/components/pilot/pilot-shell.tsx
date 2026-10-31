@@ -7,10 +7,10 @@ import { SarceMark } from "@/components/ui/icons";
 import { usePilotStatus } from "@/components/pilot/pilot-status";
 
 const NAV = [
-  { label: "Home", short: "Home", href: "/" },
-  { label: "Games and review", short: "Games", href: "/games" },
-  { label: "Pilot progress", short: "Progress", href: "/pilot/progress" },
-  { label: "Account and privacy", short: "Account", href: "/account" },
+  { label: "Home", href: "/" },
+  { label: "Games", href: "/games" },
+  { label: "Progress", href: "/pilot/progress" },
+  { label: "Account", href: "/account" },
 ];
 
 function active(path: string, href: string) {
@@ -24,9 +24,10 @@ function windowLabel(startsAt: string | null, endsAt: string | null) {
   const now = Date.now();
   const start = new Date(startsAt).getTime();
   const end = new Date(endsAt).getTime();
-  const day = Math.min(14, Math.max(1, Math.floor((now - start) / 86_400_000) + 1));
+  const total = Math.min(14, Math.max(1, Math.ceil((end - start) / 86_400_000)));
+  const day = Math.min(total, Math.max(1, Math.floor((now - start) / 86_400_000) + 1));
   const left = Math.max(0, Math.ceil((end - now) / 86_400_000));
-  return `Day ${day} of 14 · ${left} days left`;
+  return `Day ${day} of ${total} · ${left} ${left === 1 ? "day" : "days"} left`;
 }
 
 export function PilotShell({ children }: { children: ReactNode }) {
@@ -38,7 +39,7 @@ export function PilotShell({ children }: { children: ReactNode }) {
   return (
     <div data-pilot-shell className="flex min-h-dvh flex-col bg-page text-ink">
       <header className="border-b border-line bg-page">
-        <div className="mx-auto flex h-[60px] max-w-[1080px] items-center gap-5 px-5">
+        <div className="mx-auto flex h-[60px] max-w-[1120px] items-center gap-5 px-5">
           <Link href="/" className="flex min-h-11 items-center gap-2" aria-label="Sarce pilot home">
             <SarceMark height={23} />
             <span className="text-[19px] font-medium">sarce</span>
@@ -65,7 +66,7 @@ export function PilotShell({ children }: { children: ReactNode }) {
         {NAV.map((item) => (
           <Link key={item.href} href={item.href} aria-current={active(pathname, item.href) ? "page" : undefined}
             className={`grid min-h-11 place-items-center text-[12px] font-medium ${active(pathname, item.href) ? "text-ink" : "text-muted"}`}>
-            {item.short}
+            {item.label}
           </Link>
         ))}
       </nav>
