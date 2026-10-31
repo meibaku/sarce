@@ -10,7 +10,7 @@ MIGRATION = Path(__file__).resolve().parents[3] / "supabase" / "migrations" / "2
 
 
 def test_invitation_hash_is_stable_and_not_plaintext():
-    invitation_code = "this-is-a-long-one-use-invitation"
+    invitation_code = "invite-" + ("x" * 32)
     digest = token_hash(invitation_code)
     assert len(digest) == 64 and digest != invitation_code and digest == token_hash(invitation_code)
 
