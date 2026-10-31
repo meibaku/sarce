@@ -378,9 +378,12 @@ export interface GameListItem {
   opponent: string | null;
   opponentRating: number | null;
   result: string | null;
+  userColor?: "white" | "black" | null;
   timeControl: string | null;
   analysisStatus: string | null;
   brilliantPct: number | null;
+  totalMoves?: number | null;
+  analysisProgress?: number | null;
   pilotResonance?: "yes" | "partly" | "no" | null;
   externalUrl?: string | null;
   chaosPeak?: number;

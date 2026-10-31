@@ -157,7 +157,7 @@ async def list_games(
     sb = get_supabase()
     query = (
         sb.table("games")
-        .select("id, played_at, opponent, opponent_rating, result, time_control, analysis_status, source, external_id, game_analyses(brilliant_pct, total_moves)")
+        .select("id, played_at, opponent, opponent_rating, result, user_color, time_control, analysis_status, source, external_id, game_analyses(brilliant_pct, total_moves)")
         .order("played_at", desc=True)
         .limit(limit)
     )
@@ -198,6 +198,7 @@ async def list_games(
                 "opponent": row.get("opponent"),
                 "opponentRating": row.get("opponent_rating"),
                 "result": row.get("result"),
+                "userColor": row.get("user_color"),
                 "timeControl": row.get("time_control"),
                 "analysisStatus": row.get("analysis_status"),
                 "brilliantPct": summary.get("brilliant_pct") if summary else None,
