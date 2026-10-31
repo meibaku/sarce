@@ -423,7 +423,8 @@ export interface WhyApi {
   evalBefore: number | null;
   evalAfter: number | null;
   best: string | null;
-  chaos: { verdict: string | null; faced: boolean; pFail: number[] | null; rungs: number[]; safeReplies: string[] };
+  privateNote: string;
+  chaos: { verdict: string | null; faced: boolean; pFail: number[] | null; rungs: number[]; safeReplies: string[] } | null;
   lines: { title: string; note: string; eval: string; kind: "played" | "engine" | "brilliant"; steps: { san: string; uci: string; fen: string }[] }[];
 }
 
