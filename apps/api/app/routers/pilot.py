@@ -7,6 +7,7 @@ from app.config import settings
 from app.deps import current_user_id
 from app.services.pilot import PilotService
 from app.services.pilot_policy import PilotPolicy
+from app.services.pilot_read import PilotReadService
 
 router = APIRouter()
 public_router = APIRouter()
@@ -110,6 +111,15 @@ async def feedback(game_id: str, body: FeedbackRequest):
 async def get_feedback(game_id: str):
     owner = user_id()
     return invalid(lambda: PilotService().get_feedback(owner, game_id))
+
+
+@router.get("/games/{game_id}/read")
+async def get_style_read(game_id: str):
+    """Return only the participant-facing Brilliant narrative admitted to the pilot."""
+    data = PilotReadService().read(user_id(), game_id)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Game not found")
+    return data
 
 
 @router.put("/exit-survey")
