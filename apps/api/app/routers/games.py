@@ -178,7 +178,7 @@ async def list_games(
     res = await asyncio.to_thread(query.execute)
     rows = res.data or []
     feedback_by_game: dict[str, str] = {}
-    if uid and rows:
+    if PilotPolicy.current().enabled and uid and rows:
         feedback_rows = sb.table("pilot_read_feedback").select("game_id, resonance").eq(
             "user_id", uid
         ).in_("game_id", [row["id"] for row in rows]).execute().data or []

@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 1,
-  "artifactSha": "91b575624ce7e42d96c6ecef359d29fc728efaae",
+  "schemaVersion": 2,
+  "artifactSha": "2878cdf143db09711b741ef9ff3aee94da5cf963",
   "status": "blocked",
   "participantCap": 10,
   "durationDays": 14,
@@ -12,11 +12,14 @@
   "gates": {
     "legalOwnerApproval": null,
     "privacyNoticeApproval": null,
+    "crossBorderBasisApproval": null,
+    "backupRetentionConfigured": null,
     "productionCi": null,
     "productionMigrations": null,
     "tenantIsolation": null,
     "durableRestartSmoke": null,
     "backupRestore": null,
+    "restoreDeletionCheck": null,
     "exportAndDeletion": null,
     "desktopAndMobileSmoke": null,
     "operatorRunbookDryRun": null
@@ -27,6 +30,11 @@
     "databaseRegion": null,
     "backupId": null,
     "restoreProject": null,
+    "backupRetentionDays": null,
+    "restoreDeletionCheckResult": null,
+    "protocolApprovalId": null,
+    "privacyApprovalId": null,
+    "crossBorderBasisId": null,
     "verifiedAt": null,
     "verifiedBy": null
   },
