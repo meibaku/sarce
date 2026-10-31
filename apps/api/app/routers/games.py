@@ -182,7 +182,11 @@ async def list_games(
         feedback_rows = sb.table("pilot_read_feedback").select("game_id, resonance").eq(
             "user_id", uid
         ).in_("game_id", [row["id"] for row in rows]).execute().data or []
-        feedback_by_game = {row["game_id"]: row["resonance"] for row in feedback_rows}
+        feedback_by_game = {
+            row["game_id"]: row["resonance"]
+            for row in feedback_rows
+            if row.get("game_id") and row.get("resonance")
+        }
     games = []
     for row in rows:
         analysis = row.pop("game_analyses", None)
