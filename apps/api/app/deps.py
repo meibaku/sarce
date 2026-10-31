@@ -15,6 +15,7 @@ from fastapi import Header, HTTPException
 
 from app.config import settings
 from app.db.supabase import get_supabase
+from app.services.pilot_policy import PilotPolicy
 
 # Set per request by `authenticate`; None means "not signed in".
 _current_user: ContextVar[str | None] = ContextVar("sarce_current_user", default=None)
@@ -71,3 +72,16 @@ def require_game_access(game_id: str) -> None:
     )
     if not res.data:
         raise HTTPException(status_code=404, detail="Game not found")
+
+
+def require_pilot_admission() -> None:
+    """Hosted pilot data routes fail closed until current consent exists."""
+    if not PilotPolicy.current().enabled:
+        return
+    user = current_user_id()
+    if not user:
+        raise HTTPException(status_code=401, detail="Sign in required")
+    from app.services.pilot import PilotService
+
+    if not PilotService().admitted(user):
+        raise HTTPException(status_code=403, detail="Pilot invitation and consent required")
