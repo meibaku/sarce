@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a destructive, secret-free two-user pilot rehearsal covering consent identity, durable restart, cross-tenant denial, Brilliant-only DTOs, first-ten feedback, withdrawal, export, and deletion.
+
 - Pin the pilot image to Stockfish 19 and Maia-2 0.11.0, prewarm both Maia checkpoints, and fail readiness when the baked runtime identity differs from the reviewed artifact.
 
 - Add the seven-screen notebook-style participant experience, first-ten lifecycle contract, durable feedback, Review-only Brilliant evidence, read-only terminal states, and restore-safe account deletion. Admission remains fail-closed pending signed legal, deployment, isolation, durability, restore and browser evidence.

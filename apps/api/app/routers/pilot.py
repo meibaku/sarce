@@ -60,6 +60,16 @@ def invalid(call):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+def private_game(call):
+    """Do not reveal whether a game belongs to another participant."""
+    try:
+        return call()
+    except ValueError as exc:
+        if str(exc) == "Game not found":
+            raise HTTPException(status_code=404, detail="Game not found") from exc
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @public_router.get("")
 async def public_mode():
     """Let the web choose its shell without requiring a participant session."""
@@ -104,13 +114,13 @@ async def withdraw():
 @router.put("/games/{game_id}/feedback")
 async def feedback(game_id: str, body: FeedbackRequest):
     owner = user_id()
-    return invalid(lambda: PilotService().feedback(owner, game_id, body.resonance, body.comment))
+    return private_game(lambda: PilotService().feedback(owner, game_id, body.resonance, body.comment))
 
 
 @router.get("/games/{game_id}/feedback")
 async def get_feedback(game_id: str):
     owner = user_id()
-    return invalid(lambda: PilotService().get_feedback(owner, game_id))
+    return private_game(lambda: PilotService().get_feedback(owner, game_id))
 
 
 @router.get("/games/{game_id}/read")
