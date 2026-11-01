@@ -22,6 +22,7 @@
     "pr:promote": "node scripts/gh-pr-promote.mjs",
     "pilot:admit": "node scripts/release/validate-pilot-readiness.mjs docs/evidence/style-pilot-readiness.json",
     "pilot:runtime-check": "cd apps/api && python scripts/pilot_runtime_check.py",
-    "pilot:smoke": "cd apps/api && python scripts/pilot_smoke.py"
+    "pilot:smoke": "cd apps/api && python scripts/pilot_smoke.py",
+    "pilot:ops-check": "cd apps/api && python scripts/pilot_ops_check.py"
   }
 }

@@ -1,0 +1,11 @@
+services:
+  api:
+    image: ${PILOT_IMAGE_REPOSITORY:?set the registry repository}:${PILOT_ARTIFACT_SHA:?set the reviewed Git SHA}
+    build:
+      context: ../../apps/api
+      args:
+        STOCKFISH_DOWNLOAD_URL: ${STOCKFISH_DOWNLOAD_URL:-https://github.com/official-stockfish/Stockfish/releases/download/sf_19/stockfish-linux-x86-64-universal.tar.gz}
+        STOCKFISH_SHA256: ${STOCKFISH_SHA256:-9defc0d4e55d49c65a6d042f3e571a39fcea499ade6dbe741b53b8c65e03611f}
+        PILOT_ARTIFACT_SHA: ${PILOT_ARTIFACT_SHA:?set the reviewed 40-character Git SHA}
+        BUILD_TIME: ${BUILD_TIME:?set the UTC image build time}
+        SOURCE_REVISION: ${SOURCE_REVISION:-https://github.com/meibaku/sarce}

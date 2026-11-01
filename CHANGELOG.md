@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add immutable-digest SGP1 deployment configuration, Caddy TLS hardening, host bootstrap, operational evidence, and restore evidence bound to the candidate SHA and image digest.
+
 - Add a destructive, secret-free two-user pilot rehearsal covering consent identity, durable restart, cross-tenant denial, Brilliant-only DTOs, first-ten feedback, withdrawal, export, and deletion.
 
 - Pin the pilot image to Stockfish 19 and Maia-2 0.11.0, prewarm both Maia checkpoints, and fail readiness when the baked runtime identity differs from the reviewed artifact.
