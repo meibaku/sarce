@@ -17,12 +17,14 @@
     "lint:web": "npm run lint --workspace=apps/web",
     "scan:secrets": "node scripts/ci/secret-scan.mjs",
     "ci:security": "npm run scan:secrets && npm audit --audit-level=critical",
-    "ci": "npm run scan:secrets && npm run test:api && npm run lint:web && npm run build:web",
+    "ci": "npm run scan:secrets && npm run test:pilot-admission && npm run test:api && npm run lint:web && npm run build:web",
     "pr:create": "node scripts/gh-pr-staging.mjs",
     "pr:promote": "node scripts/gh-pr-promote.mjs",
     "pilot:admit": "node scripts/release/validate-pilot-readiness.mjs docs/evidence/style-pilot-readiness.json",
     "pilot:runtime-check": "cd apps/api && python scripts/pilot_runtime_check.py",
     "pilot:smoke": "cd apps/api && python scripts/pilot_smoke.py",
-    "pilot:ops-check": "cd apps/api && python scripts/pilot_ops_check.py"
+    "pilot:ops-check": "cd apps/api && python scripts/pilot_ops_check.py",
+    "pilot:report": "cd apps/api && python scripts/pilot_report.py",
+    "test:pilot-admission": "node scripts/release/test-pilot-admission.mjs"
   }
 }

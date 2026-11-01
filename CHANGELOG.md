@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an exact-artifact claims ledger, first-ten pseudonymous pilot outcome report with Wilson intervals, and fail-closed admission validation for machine-readable runtime, isolation, restart, privacy, restore, browser and operations evidence.
+
 - Add immutable-digest SGP1 deployment configuration, Caddy TLS hardening, host bootstrap, operational evidence, and restore evidence bound to the candidate SHA and image digest.
 
 - Add a destructive, secret-free two-user pilot rehearsal covering consent identity, durable restart, cross-tenant denial, Brilliant-only DTOs, first-ten feedback, withdrawal, export, and deletion.
