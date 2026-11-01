@@ -4,6 +4,7 @@ from pathlib import Path
 import json
 
 from app.config import Settings
+from app.services.runtime_identity import runtime_identity_checks
 
 
 MIN_BACKUP_RETENTION_DAYS = 1
@@ -37,7 +38,11 @@ def readiness_checks(config: Settings, database_probe) -> dict[str, bool]:
             <= MAX_BACKUP_RETENTION_DAYS
         ),
         "restore_deletion_check": restore_check_passed(config.pilot_restore_check_path),
+        "backup_retention_30_days": config.pilot_backup_retention_days == 30,
+        "analysis_workers": config.analysis_workers == 2,
+        "experimental_lenses_disabled": not config.position_evals_enabled,
     }
+    checks.update(runtime_identity_checks(config))
     if checks["supabase_configured"]:
         try:
             database_probe()
