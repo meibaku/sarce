@@ -117,6 +117,12 @@ class Settings(BaseSettings):
     # exact deployed artifact has passed admission evidence.
     pilot_admission_open: bool = False
     pilot_restore_check_path: str = ""
+    # Exact reviewed runtime identity. The image-baked manifest is generated only
+    # after Stockfish and both Maia checkpoints have executed successfully.
+    pilot_artifact_sha: str = ""
+    pilot_runtime_manifest_path: str = "/opt/sarce/runtime-manifest.json"
+    pilot_expected_stockfish_version: str = "19"
+    pilot_expected_maia_version: str = "0.11.0"
     analysis_nodes: int = 1_500_000
     analysis_multipv: int = 4
     analysis_multipv_cap: int = 8

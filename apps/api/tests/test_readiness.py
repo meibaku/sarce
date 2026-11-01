@@ -8,6 +8,15 @@ from app.services.readiness import readiness_checks
 def pilot_settings(engine: Path) -> Settings:
     restore_result = engine.parent / "restore-deletion-check.json"
     restore_result.write_text(json.dumps({"status": "passed", "remaining": 0, "checkedAt": "2026-10-29T00:00:00Z"}), encoding="utf-8")
+    artifact_sha = "a" * 40
+    runtime_manifest = engine.parent / "runtime-manifest.json"
+    runtime_manifest.write_text(json.dumps({
+        "schemaVersion": 1, "status": "passed", "artifactSha": artifact_sha,
+        "checkedAt": "2026-10-29T00:00:00Z", "stockfishVersion": "19",
+        "maiaVersion": "0.11.0",
+        "maiaCheckpoints": {"blitz": {"normalized": True}, "rapid": {"normalized": True}},
+        "brilliantV4": {"soundEpLoss": 0.03, "lostEp": 0.1, "alternativeEp": 0.1, "findRateMax": 0.2},
+    }), encoding="utf-8")
     return Settings(
         pilot_mode="style_v1",
         auth_required=True,
@@ -19,6 +28,9 @@ def pilot_settings(engine: Path) -> Settings:
         pilot_operators=["operator"],
         pilot_backup_retention_days=30,
         pilot_restore_check_path=str(restore_result),
+        pilot_artifact_sha=artifact_sha,
+        pilot_runtime_manifest_path=str(runtime_manifest),
+        analysis_workers=2,
     )
 
 
@@ -45,6 +57,7 @@ def test_local_defaults_are_not_pilot_ready():
     assert checks["durable_queue"] is False
     assert checks["backup_retention"] is False
     assert checks["restore_deletion_check"] is False
+    assert checks["artifact_identity"] is False
 
 
 def test_backup_retention_must_be_in_the_approved_range(tmp_path):
@@ -66,3 +79,12 @@ def test_restore_deletion_check_must_be_a_passing_result(tmp_path):
     assert readiness_checks(
         pilot_settings(engine).model_copy(update={"pilot_backup_retention_days": 91}), lambda: None
     )["backup_retention"] is False
+
+
+def test_runtime_identity_mismatch_is_not_ready(tmp_path):
+    engine = tmp_path / "stockfish"
+    engine.write_text("test", encoding="utf-8")
+    config = pilot_settings(engine).model_copy(update={"pilot_artifact_sha": "b" * 40})
+    checks = readiness_checks(config, lambda: None)
+    assert checks["artifact_identity"] is False
+    assert checks["runtime_manifest"] is True
