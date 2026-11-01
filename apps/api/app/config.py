@@ -120,6 +120,7 @@ class Settings(BaseSettings):
     # Exact reviewed runtime identity. The image-baked manifest is generated only
     # after Stockfish and both Maia checkpoints have executed successfully.
     pilot_artifact_sha: str = ""
+    pilot_image_digest: str = ""
     pilot_runtime_manifest_path: str = "/opt/sarce/runtime-manifest.json"
     pilot_expected_stockfish_version: str = "19"
     pilot_expected_maia_version: str = "0.11.0"

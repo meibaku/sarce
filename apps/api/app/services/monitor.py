@@ -253,6 +253,9 @@ def snapshot() -> dict:
         return sb.table("games").select("id", count="exact").eq("analysis_status", status).limit(1).execute().count or 0
 
     queue = {s: count(s) for s in ("pending", "processing", "complete", "failed")}
+    oldest_pending = sb.table("games").select("created_at").eq(
+        "analysis_status", "pending"
+    ).order("created_at").limit(1).execute().data or []
     t = now()
     hour_ago = (t - timedelta(hours=1)).isoformat()
     per_hour = sb.table("games").select("id", count="exact").gt("analysed_at", hour_ago).limit(1).execute().count or 0
@@ -283,6 +286,7 @@ def snapshot() -> dict:
     return {
         "at": t.isoformat(),
         "queue": {**queue, "total": sum(queue.values())},
+        "oldestPendingAt": oldest_pending[0]["created_at"] if oldest_pending else None,
         "perHour": per_hour,
         "etaHours": round(queue["pending"] / per_hour, 1) if per_hour else None,
         "machines": out_machines,

@@ -11,14 +11,22 @@ MIN_BACKUP_RETENTION_DAYS = 1
 MAX_BACKUP_RETENTION_DAYS = 90
 
 
-def restore_check_passed(path: str) -> bool:
+def restore_check_passed(path: str, artifact_sha: str = "", image_digest: str = "") -> bool:
     if not path or not Path(path).is_file():
         return False
     try:
         result = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return False
-    return result.get("status") == "passed" and result.get("remaining") == 0 and bool(result.get("checkedAt"))
+    return (
+        result.get("status") == "passed"
+        and result.get("remaining") == 0
+        and bool(result.get("checkedAt"))
+        and result.get("artifactSha") == artifact_sha
+        and result.get("imageDigest") == image_digest
+        and bool(result.get("checks"))
+        and all(result["checks"].values())
+    )
 
 
 def readiness_checks(config: Settings, database_probe) -> dict[str, bool]:
@@ -37,7 +45,9 @@ def readiness_checks(config: Settings, database_probe) -> dict[str, bool]:
             <= config.pilot_backup_retention_days
             <= MAX_BACKUP_RETENTION_DAYS
         ),
-        "restore_deletion_check": restore_check_passed(config.pilot_restore_check_path),
+        "restore_deletion_check": restore_check_passed(
+            config.pilot_restore_check_path, config.pilot_artifact_sha, config.pilot_image_digest
+        ),
         "backup_retention_30_days": config.pilot_backup_retention_days == 30,
         "analysis_workers": config.analysis_workers == 2,
         "experimental_lenses_disabled": not config.position_evals_enabled,

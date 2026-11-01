@@ -7,8 +7,13 @@ from app.services.readiness import readiness_checks
 
 def pilot_settings(engine: Path) -> Settings:
     restore_result = engine.parent / "restore-deletion-check.json"
-    restore_result.write_text(json.dumps({"status": "passed", "remaining": 0, "checkedAt": "2026-10-29T00:00:00Z"}), encoding="utf-8")
     artifact_sha = "a" * 40
+    image_digest = "sha256:" + ("b" * 64)
+    restore_result.write_text(json.dumps({
+        "status": "passed", "remaining": 0, "checkedAt": "2026-10-29T00:00:00Z",
+        "artifactSha": artifact_sha, "imageDigest": image_digest,
+        "checks": {"ownerTableCountsMatch": True, "deletedOwnerRowsRemaining": True},
+    }), encoding="utf-8")
     runtime_manifest = engine.parent / "runtime-manifest.json"
     runtime_manifest.write_text(json.dumps({
         "schemaVersion": 1, "status": "passed", "artifactSha": artifact_sha,
@@ -29,6 +34,7 @@ def pilot_settings(engine: Path) -> Settings:
         pilot_backup_retention_days=30,
         pilot_restore_check_path=str(restore_result),
         pilot_artifact_sha=artifact_sha,
+        pilot_image_digest=image_digest,
         pilot_runtime_manifest_path=str(runtime_manifest),
         analysis_workers=2,
     )
@@ -79,6 +85,13 @@ def test_restore_deletion_check_must_be_a_passing_result(tmp_path):
     assert readiness_checks(
         pilot_settings(engine).model_copy(update={"pilot_backup_retention_days": 91}), lambda: None
     )["backup_retention"] is False
+
+
+def test_restore_evidence_must_match_the_deployed_digest(tmp_path):
+    engine = tmp_path / "stockfish"
+    engine.write_text("test", encoding="utf-8")
+    config = pilot_settings(engine).model_copy(update={"pilot_image_digest": "sha256:" + ("c" * 64)})
+    assert readiness_checks(config, lambda: None)["restore_deletion_check"] is False
 
 
 def test_runtime_identity_mismatch_is_not_ready(tmp_path):

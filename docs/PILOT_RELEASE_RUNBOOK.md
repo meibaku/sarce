@@ -19,7 +19,11 @@ Completed deletion jobs are durable tombstones. Export their ledger before a res
 ```powershell
 cd apps/api
 python -m scripts.restore_deletion_check --export <durable-ledger.json>
-python -m scripts.restore_deletion_check --apply <durable-ledger.json> --result <restore-check.json>
+python -m scripts.restore_deletion_check --apply <durable-ledger.json> --result <restore-check.json> `
+  --artifact-sha <candidate-sha> --image-digest <sha256:digest> `
+  --backup-id <provider-backup-id> --restore-project-id <isolated-project-id> `
+  --source-counts <source-owner-counts.json> --restored-counts <restored-owner-counts.json> `
+  --verified-by <operator-id>
 ```
 
 Store the ledger outside the restored database. Configure `PILOT_RESTORE_CHECK_PATH` with the passing result and `PILOT_BACKUP_RETENTION_DAYS` with the approved retention period. Readiness must fail when either value is absent or invalid. Attach the result, retention period, restored project and rehearsal identifiers to the exact runtime SHA's release evidence.
