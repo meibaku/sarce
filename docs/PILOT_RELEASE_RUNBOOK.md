@@ -9,8 +9,9 @@ The repository contains a functioning pilot path, but code completion is not pil
 3. Apply migrations to the Singapore production project and retain the ordered migration output.
 4. Verify two-user isolation across games, analyses, notes, consent, feedback, exports and operator endpoints.
 5. Complete the restart, backup/restore, export/deletion, and 390 px plus desktop browser smoke tests from `PILOT_DEPLOYMENT.md`.
-6. Record immutable deployment URL, API image digest, database region, evidence identifiers, verifier and UTC timestamp.
-7. Change each gate to `true` and status to `admitted` only after the linked evidence exists. Run `npm run pilot:admit -- <full-artifact-sha>`; invitation creation remains prohibited if it fails.
+6. Record immutable deployment URL, API image digest, database region, evidence identifiers, verifier and UTC timestamp. Every file referenced by `evidenceFiles` must report `passed` for the same artifact SHA and image digest.
+7. Record named approval identifiers for protocol, privacy, cross-border basis and 30-day retention; placeholders are rejected.
+8. Change each gate to `true` and status to `admitted` only after the linked evidence exists. Run `npm run pilot:admit -- <full-artifact-sha>`; invitation creation remains prohibited if it fails.
 
 ## Restore deletion check
 
@@ -56,3 +57,14 @@ Invite 5–10 consenting adults. Cap each participant's success sample at their 
 ## Decision
 
 Report participant-level distributions, not pooled game counts. The predeclared signal is a median of at least 70% “yes” responses and at least half of exit respondents choosing to continue. Missing responses, withdrawals and operational incidents remain visible. This pilot can justify a larger validation round; it cannot prove chess improvement, clinical efficacy, or general population fit.
+
+Generate the outcome only after the declared cutoff. The salt is secret input and is not written to the report:
+
+```powershell
+$env:PILOT_REPORT_SALT = "<run-specific-secret>"
+$env:PILOT_ARTIFACT_SHA = "<candidate-sha>"
+$env:PILOT_IMAGE_DIGEST = "sha256:<deployed-image-digest>"
+npm run pilot:report -- --as-of 2026-12-01T00:00:00Z --output docs/evidence/pilot-outcome.json
+```
+
+Interpret it within `docs/evidence/pilot-claims.json`: Brilliant runtime behavior and the fixed-corpus reference may be proven by their recorded evidence; participant resonance and continued-use intent remain pilot questions; experimental lenses and broader personality or improvement claims are not admitted.

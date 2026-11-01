@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "claims": [
+    {
+      "id": "brilliant-v4",
+      "status": "proven",
+      "claim": "The recorded runtime applies the Brilliant v4 criteria and thresholds.",
+      "evidenceFile": "runtime"
+    },
+    {
+      "id": "tal-reference-band",
+      "status": "proven",
+      "claim": "The fixed 200-game Tal corpus produces a 0.2–0.6% Brilliant reference under the recorded runtime.",
+      "evidenceFile": "talBenchmark"
+    },
+    {
+      "id": "participant-resonance",
+      "status": "pilot_question",
+      "claim": "Whether each style read feels like the participant."
+    },
+    {
+      "id": "continue-using",
+      "status": "pilot_question",
+      "claim": "Whether the participant would continue using Sarce."
+    },
+    {
+      "id": "experimental-lenses",
+      "status": "not_admitted",
+      "claim": "Chaos, Survival, Squeeze, Swindle, Clock and Prophylaxis style claims."
+    },
+    {
+      "id": "broader-personality",
+      "status": "not_admitted",
+      "claim": "Chess improvement, objective strength, personality or population-general claims."
+    }
+  ]
+}
