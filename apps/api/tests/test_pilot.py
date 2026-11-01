@@ -144,6 +144,20 @@ def test_feedback_lookup_rejects_a_game_owned_by_another_participant():
         raise AssertionError("cross-tenant feedback was exposed")
 
 
+def test_feedback_route_hides_cross_tenant_game(monkeypatch):
+    monkeypatch.setattr("app.routers.pilot.current_user_id", lambda: "user-a")
+    monkeypatch.setattr(
+        "app.routers.pilot.PilotService",
+        lambda: type("MissingGame", (), {
+            "get_feedback": lambda _service, _owner, _game: (
+                _ for _ in ()
+            ).throw(ValueError("Game not found"))
+        })(),
+    )
+    response = TestClient(app).get("/pilot/games/user-b-game/feedback")
+    assert response.status_code == 404
+
+
 def test_admission_fails_closed_until_legal_and_release_approval(monkeypatch):
     monkeypatch.setattr("app.services.pilot.settings.pilot_admission_open", False)
     service = PilotService(ScriptedClient([]))
